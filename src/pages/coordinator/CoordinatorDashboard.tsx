@@ -1,0 +1,109 @@
+import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
+import { userApi, projectApi, partyApi } from '../../api/services'
+import { Users, FolderKanban, UserCheck, Award, ArrowRight, Clock } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
+
+export default function CoordinatorDashboard() {
+  const { user } = useAuth()
+
+  const { data: pending } = useQuery({
+    queryKey: ['pending-users'],
+    queryFn: () => userApi.getPending().then(r => r.data)
+  })
+  const { data: projects } = useQuery({
+    queryKey: ['all-projects'],
+    queryFn: () => projectApi.getAll(0, 5).then(r => r.data)
+  })
+  const { data: parties } = useQuery({
+    queryKey: ['all-parties'],
+    queryFn: () => partyApi.getAll().then(r => r.data)
+  })
+
+  const pendingProjects = projects?.content.filter(p => p.status === 'PENDING_REVIEW').length ?? 0
+  const assignedParties = parties?.filter(p => p.assignedProjectId).length ?? 0
+
+  const stats = [
+    { label: 'Pending approvals', value: pending?.totalElements ?? 0, icon: UserCheck, color: 'bg-amber-500/15 text-amber-400', to: '/coordinator/users' },
+    { label: 'Projects to review', value: pendingProjects, icon: FolderKanban, color: 'bg-ember-500/15 text-ember-400', to: '/coordinator/projects' },
+    { label: 'Total parties', value: parties?.length ?? 0, icon: Users, color: 'bg-violet-500/15 text-violet-400', to: '/coordinator/parties' },
+    { label: 'Assigned parties', value: assignedParties, icon: Award, color: 'bg-jade-500/15 text-jade-400', to: '/coordinator/evaluations' },
+  ]
+
+  return (
+    <div className="animate-fade-up">
+      <div className="page-header">
+        <h1 className="page-title">Coordinator Dashboard</h1>
+        <p className="page-subtitle">Welcome back, {user?.firstName}. Here's today's overview.</p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {stats.map(s => (
+          <Link key={s.label} to={s.to} className="stat-card hover:border-ink-600/60 transition-colors">
+            <div className={`stat-icon ${s.color}`}><s.icon size={20} /></div>
+            <div>
+              <p className="text-2xl font-display font-bold text-white">{s.value}</p>
+              <p className="text-xs text-ink-400 mt-0.5">{s.label}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Pending users */}
+        <div className="card overflow-hidden">
+          <div className="px-5 py-4 border-b border-ink-700/50 flex items-center justify-between">
+            <h2 className="font-display font-semibold text-white">Pending Approvals</h2>
+            <Link to="/coordinator/users" className="text-xs text-ember-400 flex items-center gap-1">View all <ArrowRight size={12} /></Link>
+          </div>
+          {!pending || pending.content.length === 0 ? (
+            <p className="px-5 py-6 text-sm text-ink-400">No pending approvals.</p>
+          ) : (
+            <div className="divide-y divide-ink-800/50">
+              {pending.content.slice(0, 5).map(u => (
+                <div key={u.id} className="px-5 py-3 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-ink-700 flex items-center justify-center text-xs font-bold text-ink-200">
+                    {u.firstName[0]}{u.lastName[0]}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-ink-100">{u.firstName} {u.lastName}</p>
+                    <p className="text-xs text-ink-500">{u.role} · {u.email}</p>
+                  </div>
+                  <span className="badge badge-pending text-[10px]">PENDING</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Recent projects */}
+        <div className="card overflow-hidden">
+          <div className="px-5 py-4 border-b border-ink-700/50 flex items-center justify-between">
+            <h2 className="font-display font-semibold text-white">Recent Projects</h2>
+            <Link to="/coordinator/projects" className="text-xs text-ember-400 flex items-center gap-1">View all <ArrowRight size={12} /></Link>
+          </div>
+          {!projects || projects.content.length === 0 ? (
+            <p className="px-5 py-6 text-sm text-ink-400">No projects yet.</p>
+          ) : (
+            <div className="divide-y divide-ink-800/50">
+              {projects.content.map(p => (
+                <div key={p.id} className="px-5 py-3 flex items-center gap-3">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-ink-100 truncate">{p.title}</p>
+                    <p className="text-xs text-ink-500">{p.companyName}</p>
+                  </div>
+                  <span className={`badge text-[10px] ${
+                    p.status === 'OPEN' ? 'badge-open' :
+                    p.status === 'PENDING_REVIEW' ? 'badge-pending' :
+                    p.status === 'ASSIGNED' ? 'badge-assigned' : 'bg-ink-700/50 text-ink-400 border-ink-600/30'
+                  }`}>{p.status.replace('_',' ')}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
