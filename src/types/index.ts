@@ -8,12 +8,14 @@ export type SubmissionStatus = 'DRAFT' | 'SUBMITTED' | 'UNDER_EVALUATION' | 'EVA
 export interface User {
   id: string
   email: string
+  fullName?: string
   firstName: string
   lastName: string
   role: UserRole
   status: UserStatus
   phoneNumber?: string
   githubUsername?: string
+  createdAt?: string
   studentProfile?: StudentProfile
   companyProfile?: CompanyProfile
 }
@@ -203,6 +205,18 @@ export interface PageResponse<T> {
   last: boolean
 }
 
+export interface CoordinatorAnalytics {
+  projectsByStatus: Record<string, number>
+  usersByRole: Record<string, number>
+  usersByStatus: Record<string, number>
+  submissionsByStatus: Record<string, number>
+  totalParties: number
+  assignedParties: number
+  unassignedParties: number
+  finalizedEvaluations: number
+  draftEvaluations: number
+}
+
 // ── Project field options ─────────────────────────────────────────────────────
 export const PROJECT_FIELDS = [
   'Fintech',
@@ -215,3 +229,12 @@ export const PROJECT_FIELDS = [
 ] as const;
 
 export type ProjectFieldOption = (typeof PROJECT_FIELDS)[number];
+
+export function getUserName(user?: Partial<User> | null): string {
+  if (!user) return 'Unknown user';
+  const fullName = user.fullName?.trim();
+  if (fullName) return fullName;
+  const firstLast = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+  if (firstLast) return firstLast;
+  return user.email ?? 'Unknown user';
+}

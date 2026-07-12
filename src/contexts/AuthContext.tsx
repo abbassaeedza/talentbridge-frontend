@@ -5,9 +5,21 @@ import {
   useEffect,
   useCallback,
   ReactNode,
+  useRef,
 } from 'react';
 import { authApi, userApi } from '../api/services';
 import type { User, UserRole } from '../types';
+import SessionTimeoutModal from '../components/shared/SessionTimeoutModal';
+import {
+  AUTH_TOKEN_CHANGED_EVENT,
+  clearAuthTokens,
+  getAccessToken,
+  getJwtExpiryMs,
+  getRefreshToken,
+  setAuthTokens,
+} from '../utils/authTokens';
+
+const SESSION_WARNING_MS = 30_000;
 
 interface AuthContextType {
   user: User | null;
@@ -25,6 +37,18 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionWarningOpen, setSessionWarningOpen] = useState(false);
+  const [secondsRemaining, setSecondsRemaining] = useState(30);
+  const [refreshingSession, setRefreshingSession] = useState(false);
+  const warningTimerRef = useRef<number | null>(null);
+  const expiryTimerRef = useRef<number | null>(null);
+
+  const clearSessionTimers = useCallback(() => {
+    if (warningTimerRef.current) window.clearTimeout(warningTimerRef.current);
+    if (expiryTimerRef.current) window.clearTimeout(expiryTimerRef.current);
+    warningTimerRef.current = null;
+    expiryTimerRef.current = null;
+  }, []);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -32,10 +56,92 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data);
     } catch {
       setUser(null);
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      clearAuthTokens();
     }
   }, []);
+
+  const redirectToLogin = useCallback(() => {
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
+  }, []);
+
+  const logout = useCallback(() => {
+    clearSessionTimers();
+    setSessionWarningOpen(false);
+    clearAuthTokens();
+    setUser(null);
+  }, [clearSessionTimers]);
+
+  const expireSession = useCallback(() => {
+    logout();
+    redirectToLogin();
+  }, [logout, redirectToLogin]);
+
+  const scheduleSessionTimeout = useCallback(() => {
+    clearSessionTimers();
+
+    const token = getAccessToken();
+    if (!user || !token) {
+      setSessionWarningOpen(false);
+      return;
+    }
+
+    const expiryMs = getJwtExpiryMs(token);
+    if (!expiryMs) {
+      setSessionWarningOpen(false);
+      return;
+    }
+
+    const msUntilExpiry = expiryMs - Date.now();
+    if (msUntilExpiry <= 0) {
+      expireSession();
+      return;
+    }
+
+    const msUntilWarning = Math.max(0, msUntilExpiry - SESSION_WARNING_MS);
+    warningTimerRef.current = window.setTimeout(() => {
+      setSessionWarningOpen(true);
+      setSecondsRemaining(Math.max(0, Math.ceil((expiryMs - Date.now()) / 1000)));
+    }, msUntilWarning);
+
+    expiryTimerRef.current = window.setTimeout(expireSession, msUntilExpiry);
+  }, [clearSessionTimers, expireSession, user]);
+
+  useEffect(() => {
+    const syncSessionTimers = () => scheduleSessionTimeout();
+
+    window.addEventListener(AUTH_TOKEN_CHANGED_EVENT, syncSessionTimers);
+    window.addEventListener('storage', syncSessionTimers);
+    scheduleSessionTimeout();
+
+    return () => {
+      window.removeEventListener(AUTH_TOKEN_CHANGED_EVENT, syncSessionTimers);
+      window.removeEventListener('storage', syncSessionTimers);
+      clearSessionTimers();
+    };
+  }, [clearSessionTimers, scheduleSessionTimeout]);
+
+  useEffect(() => {
+    if (!sessionWarningOpen) return;
+
+    const tick = () => {
+      const token = getAccessToken();
+      const expiryMs = token ? getJwtExpiryMs(token) : null;
+      if (!expiryMs) {
+        expireSession();
+        return;
+      }
+
+      const seconds = Math.max(0, Math.ceil((expiryMs - Date.now()) / 1000));
+      setSecondsRemaining(seconds);
+      if (seconds <= 0) expireSession();
+    };
+
+    tick();
+    const interval = window.setInterval(tick, 1000);
+    return () => window.clearInterval(interval);
+  }, [expireSession, sessionWarningOpen]);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -48,8 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const { data } = await authApi.login(email, password);
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
+    setAuthTokens(data.accessToken, data.refreshToken);
 
     // Redirect based on status before loading full user — avoids extra round trip
     if (data.user.status === 'REJECTED') {
@@ -70,10 +175,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await refreshUser();
   };
 
-  const logout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    setUser(null);
+  const stayLoggedIn = async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+      expireSession();
+      return;
+    }
+
+    setRefreshingSession(true);
+    try {
+      const { data } = await authApi.refresh(refreshToken);
+      setAuthTokens(data.accessToken, data.refreshToken);
+      setUser(data.user as unknown as User);
+      await refreshUser();
+      setSessionWarningOpen(false);
+    } catch {
+      expireSession();
+    } finally {
+      setRefreshingSession(false);
+    }
   };
 
   const isRole = (...roles: UserRole[]) => !!user && roles.includes(user.role);
@@ -94,6 +214,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+      <SessionTimeoutModal
+        open={sessionWarningOpen}
+        secondsRemaining={secondsRemaining}
+        refreshing={refreshingSession}
+        onStayLoggedIn={stayLoggedIn}
+        onSignOut={expireSession}
+      />
     </AuthContext.Provider>
   );
 }

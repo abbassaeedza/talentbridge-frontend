@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { partyApi, submissionApi } from '../../api/services'
 import { Github, Upload, Send, Save, CheckCircle2, AlertCircle } from 'lucide-react'
@@ -24,12 +24,14 @@ export default function SubmissionPage() {
     queryFn: () => submissionApi.get(party!.id).then(r => r.data),
     enabled: !!party?.id,
     retry: false,
-    onSuccess: (s) => {
-      if (s.repoUrl) setRepoUrl(s.repoUrl)
-      if (s.repoBranch) setBranch(s.repoBranch)
-      if (s.notes) setNotes(s.notes)
-    }
   })
+
+  useEffect(() => {
+    if (!submission) return
+    if (submission.repoUrl) setRepoUrl(submission.repoUrl)
+    if (submission.repoBranch) setBranch(submission.repoBranch)
+    if (submission.notes) setNotes(submission.notes)
+  }, [submission])
 
   const saveDraftMutation = useMutation({
     mutationFn: () => {

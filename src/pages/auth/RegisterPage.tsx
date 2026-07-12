@@ -5,6 +5,8 @@ import { Layers, GraduationCap, Building2, UserCog, ArrowRight } from 'lucide-re
 import toast from 'react-hot-toast'
 import type { UserRole } from '../../types'
 import clsx from 'clsx'
+import { setAuthTokens } from '../../utils/authTokens'
+import { useAuth } from '../../contexts/AuthContext'
 
 const ROLES: { value: UserRole; label: string; desc: string; icon: React.ElementType }[] = [
   { value: 'STUDENT', label: 'Student', desc: 'Join teams & work on real projects', icon: GraduationCap },
@@ -14,6 +16,7 @@ const ROLES: { value: UserRole; label: string; desc: string; icon: React.Element
 
 export default function RegisterPage() {
   const navigate = useNavigate()
+  const { refreshUser } = useAuth()
   const [role, setRole] = useState<UserRole>('STUDENT')
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
@@ -29,8 +32,8 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       const { data } = await authApi.register({ ...form, role })
-      localStorage.setItem('accessToken', data.accessToken)
-      localStorage.setItem('refreshToken', data.refreshToken)
+      setAuthTokens(data.accessToken, data.refreshToken)
+      await refreshUser()
       if (data.user.status === 'PENDING') {
         navigate('/pending')
       } else if (role === 'STUDENT') {

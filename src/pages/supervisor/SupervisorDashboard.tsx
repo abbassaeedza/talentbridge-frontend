@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { Users, Briefcase, Send, Clock } from 'lucide-react'
 import { format } from 'date-fns'
 import clsx from 'clsx'
+import DeadlineCountdown from '../../components/shared/DeadlineCountdown'
 
 export default function SupervisorDashboard() {
   const { user } = useAuth()
@@ -72,9 +73,14 @@ export default function SupervisorDashboard() {
                   <p className="text-xs font-semibold text-ink-500 uppercase tracking-wider mb-2">Members</p>
                   <div className="flex -space-x-1.5">
                     {party.members.map(m => (
-                      <div key={m.id} title={`${m.firstName} ${m.lastName}`}
-                        className="w-7 h-7 rounded-full bg-ink-700 border-2 border-ink-900 flex items-center justify-center text-[10px] font-bold text-ink-200">
+                      <div key={m.id} title={`${m.firstName} ${m.lastName}${party.leader?.id === m.id ? ' · Leader' : ''}`}
+                        className={clsx("relative w-7 h-7 rounded-full bg-ink-700 border-2 border-ink-900 flex items-center justify-center text-[10px] font-bold text-ink-200",
+                          party.leader?.id === m.id && "ring-2 ring-ember-400/50"
+                        )}>
                         {m.firstName[0]}{m.lastName[0]}
+                        {party.leader?.id === m.id && (
+                          <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-ember-500 border border-ink-900" />
+                        )}
                       </div>
                     ))}
                     <span className="ml-3 text-xs text-ink-400 self-center">{party.members.length} members</span>
@@ -88,6 +94,13 @@ export default function SupervisorDashboard() {
                       <Briefcase size={11} /> Project
                     </p>
                     <p className="text-xs text-ink-200">{party.assignedProjectTitle}</p>
+                    <div className="mt-2">
+                      <DeadlineCountdown
+                        deadline={party.assignedProjectDeadline ?? null}
+                        submitted={party.status === 'SUBMITTED' || party.status === 'COMPLETED'}
+                        compact
+                      />
+                    </div>
                   </div>
                 ) : (
                   <p className="text-xs text-ink-500 mb-3">No project assigned yet.</p>

@@ -9,20 +9,21 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.9.0",
+    "@tanstack/react-query": "^5.51.1",
+    "axios": "^1.7.2",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "framer-motion": "^11.3.8",
+    "lucide-react": "^0.407.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.24.1",
-    "axios": "^1.7.2",
-    "@tanstack/react-query": "^5.51.1",
     "react-hook-form": "^7.52.1",
-    "zod": "^3.23.8",
-    "@hookform/resolvers": "^3.9.0",
     "react-hot-toast": "^2.4.1",
-    "lucide-react": "^0.407.0",
-    "date-fns": "^3.6.0",
     "react-markdown": "^9.0.1",
-    "clsx": "^2.1.1",
-    "framer-motion": "^11.3.8"
+    "react-router-dom": "^6.24.1",
+    "recharts": "^3.9.2",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",

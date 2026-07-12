@@ -26,6 +26,7 @@ import MyPartyPage from './pages/student/MyPartyPage';
 import JoinPartyPage from './pages/student/JoinPartyPage';
 import SubmissionPage from './pages/student/SubmissionPage';
 import ScorecardPage from './pages/student/ScorecardPage';
+import SupervisorsPage from './pages/student/SupervisorsPage';
 
 // Company pages
 import CompanyDashboard from './pages/company/CompanyDashboard';
@@ -40,6 +41,8 @@ import ManageUsersPage from './pages/coordinator/ManageUsersPage';
 import ManageProjectsPage from './pages/coordinator/ManageProjectsPage';
 import ManagePartiesPage from './pages/coordinator/ManagePartiesPage';
 import EvaluationsPage from './pages/coordinator/EvaluationsPage';
+import StudentsDirectoryPage from './pages/coordinator/StudentsDirectoryPage';
+import CompaniesDirectoryPage from './pages/coordinator/CompaniesDirectoryPage';
 
 // Supervisor pages
 import SupervisorDashboard from './pages/supervisor/SupervisorDashboard';
@@ -340,6 +343,14 @@ export default function App() {
                 }
               />
               <Route
+                path='/student/supervisors'
+                element={
+                  <RoleRoute roles={['STUDENT']}>
+                    <SupervisorsPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
                 path='/student/profile'
                 element={
                   <RoleRoute roles={['STUDENT']}>
@@ -448,12 +459,11 @@ export default function App() {
                 }
               />
 
-              {/* Coordinator — new Stage 2 pages (stub — built in Stage 4) */}
               <Route
                 path='/coordinator/students'
                 element={
                   <RoleRoute roles={['COORDINATOR']}>
-                    <ManageUsersPage />
+                    <StudentsDirectoryPage />
                   </RoleRoute>
                 }
               />
@@ -461,7 +471,7 @@ export default function App() {
                 path='/coordinator/companies'
                 element={
                   <RoleRoute roles={['COORDINATOR']}>
-                    <ManageUsersPage />
+                    <CompaniesDirectoryPage />
                   </RoleRoute>
                 }
               />

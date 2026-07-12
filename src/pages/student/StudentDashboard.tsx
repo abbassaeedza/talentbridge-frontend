@@ -8,11 +8,10 @@ import {
   Star,
   Github,
   ArrowRight,
-  Clock,
   Briefcase,
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
 import clsx from 'clsx';
+import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
 
 function StatCard({
   icon: Icon,
@@ -73,7 +72,6 @@ export default function StudentDashboard() {
   const hasGithub = !!user?.githubUsername;
   const members = party?.members ?? [];
   const entries = scorecard?.entries ?? [];
-  const projectList = projects?.content ?? [];
 
   return (
     <div className='animate-fade-up'>
@@ -192,9 +190,12 @@ export default function StudentDashboard() {
               )}
 
               {party.assignedProjectTitle && (
-                <p className='text-xs text-jade-400 mt-3 flex items-center gap-1.5'>
-                  <Briefcase size={11} /> Assigned: {party.assignedProjectTitle}
-                </p>
+                <div className='mt-3 space-y-2'>
+                  <p className='text-xs text-jade-400 flex items-center gap-1.5'>
+                    <Briefcase size={11} /> Assigned: {party.assignedProjectTitle}
+                  </p>
+                  <DeadlineCountdown deadline={party.assignedProjectDeadline ?? null} compact />
+                </div>
               )}
             </div>
           ) : (
@@ -255,61 +256,6 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      {/* Recent projects */}
-      <div>
-        <div className='flex items-center justify-between mb-4'>
-          <h2 className='font-display font-semibold text-white'>
-            Open Projects
-          </h2>
-          <Link
-            to='/student/projects'
-            className='text-xs text-ember-400 hover:text-ember-300 flex items-center gap-1'
-          >
-            Browse all <ArrowRight size={12} />
-          </Link>
-        </div>
-
-        {projectList.length > 0 ? (
-          <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-4'>
-            {projectList.map((p) => (
-              <Link
-                key={p.id}
-                to={`/student/projects/${p.id}`}
-                className='card p-4 hover:border-ink-600/60 hover:bg-ink-800/30 transition-all duration-200 group'
-              >
-                <div className='flex items-start justify-between gap-2 mb-3'>
-                  <div className='w-8 h-8 rounded-lg bg-ink-700 flex items-center justify-center text-xs font-bold text-ink-200 flex-shrink-0'>
-                    {p.companyName?.[0] ?? '?'}
-                  </div>
-                  <span className='badge badge-open text-[10px]'>OPEN</span>
-                </div>
-                <h3 className='font-semibold text-white text-sm mb-1 line-clamp-2 group-hover:text-ember-300 transition-colors'>
-                  {p.title}
-                </h3>
-                <p className='text-xs text-ink-400 mb-3 line-clamp-2'>
-                  {p.description}
-                </p>
-                <div className='flex items-center justify-between text-xs text-ink-500'>
-                  <span>{p.companyName}</span>
-                  {p.deadline && (
-                    <span className='flex items-center gap-1'>
-                      <Clock size={11} />
-                      {formatDistanceToNow(new Date(p.deadline), {
-                        addSuffix: true,
-                      })}
-                    </span>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className='card p-12 text-center'>
-            <FolderKanban size={32} className='text-ink-600 mx-auto mb-3' />
-            <p className='text-ink-400 text-sm'>No open projects right now.</p>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

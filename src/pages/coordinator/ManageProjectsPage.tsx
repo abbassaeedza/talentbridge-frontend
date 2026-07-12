@@ -44,6 +44,12 @@ export default function ManageProjectsPage() {
     onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed'),
   });
 
+  const retractMutation = useMutation({
+    mutationFn: (id: string) => projectApi.retract(id),
+    onSuccess: () => { toast.success('Project retracted and pending applications reassigned.'); invalidate(); },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to retract'),
+  });
+
   const deadlineMutation = useMutation({
     mutationFn: ({ id, deadline }: { id: string; deadline: string }) =>
       projectApi.setDeadline(id, new Date(deadline).toISOString()),
@@ -187,6 +193,17 @@ export default function ManageProjectsPage() {
                             disabled={!deadlines[p.id] || deadlineMutation.isPending}
                             className='btn-secondary text-xs px-3 py-1.5'>
                             <Clock size={12} /> Set
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm('Retract this open project? Pending applications will be reassigned.')) {
+                                retractMutation.mutate(p.id);
+                              }
+                            }}
+                            disabled={retractMutation.isPending}
+                            className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 text-xs font-medium transition-colors'
+                          >
+                            <XCircle size={13} /> Retract
                           </button>
                         </div>
                       )}

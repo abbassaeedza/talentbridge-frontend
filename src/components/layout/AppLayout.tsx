@@ -18,6 +18,10 @@ import {
   UserCircle,
   ChevronUp,
   Shield,
+  Menu,
+  X,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -57,16 +61,19 @@ function NavItem({
   icon: Icon,
   label,
   end,
+  onNavigate,
 }: {
   to: string;
   icon: React.ElementType;
   label: string;
   end?: boolean;
+  onNavigate?: () => void;
 }) {
   return (
     <NavLink
       to={to}
       end={end}
+      onClick={onNavigate}
       className={({ isActive }) =>
         clsx('nav-link', isActive && 'nav-link-active')
       }
@@ -85,6 +92,7 @@ const NAV_BY_ROLE: Record<
     { to: '/student/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/student/projects', icon: FolderKanban, label: 'Browse Projects' },
     { to: '/student/party', icon: Users, label: 'My Party' },
+    { to: '/student/supervisors', icon: UserCheck, label: 'Supervisors' },
     { to: '/student/submission', icon: Send, label: 'Submission' },
     { to: '/student/scorecard', icon: Star, label: 'Scorecard' },
   ],
@@ -140,6 +148,10 @@ export default function AppLayout() {
   const qc = useQueryClient();
   const [notifOpen, setNotifOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>(() =>
+    document.documentElement.classList.contains('light') ? 'light' : 'dark',
+  );
   const notifRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -198,6 +210,14 @@ export default function AppLayout() {
     navigate('/login');
   };
 
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    document.documentElement.classList.toggle('dark', next === 'dark');
+    document.documentElement.classList.toggle('light', next === 'light');
+    localStorage.setItem('talentbridge-theme', next);
+  };
+
   if (!user) return null;
 
   const navItems = NAV_BY_ROLE[user.role] || [];
@@ -218,9 +238,20 @@ export default function AppLayout() {
   };
 
   return (
-    <div className='flex h-screen bg-ink-950 relative'>
+    <div className='flex h-screen bg-ink-950 relative overflow-hidden'>
+      {sidebarOpen && (
+        <button
+          aria-label='Close sidebar overlay'
+          className='fixed inset-0 bg-black/50 z-40 lg:hidden'
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* ── Sidebar ── */}
-      <aside className='w-64 flex-shrink-0 flex flex-col bg-ink-950'>
+      <aside className={clsx(
+        'fixed lg:static inset-y-0 left-0 z-50 w-64 flex-shrink-0 flex flex-col bg-ink-950 transform transition-transform duration-200',
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+      )}>
         {/* Logo — no border-b */}
         <div className='px-5 py-5'>
           <div className='flex items-center gap-3'>
@@ -230,6 +261,13 @@ export default function AppLayout() {
             <span className='font-display font-bold text-white text-lg tracking-tight'>
               TalentBridge
             </span>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className='ml-auto lg:hidden w-10 h-10 rounded-xl flex items-center justify-center text-ink-400 hover:bg-ink-800 hover:text-ink-100'
+              aria-label='Close sidebar'
+            >
+              <X size={18} />
+            </button>
           </div>
         </div>
 
@@ -256,6 +294,7 @@ export default function AppLayout() {
               icon={item.icon}
               label={item.label}
               end={item.end}
+              onNavigate={() => setSidebarOpen(false)}
             />
           ))}
         </nav>
@@ -310,11 +349,25 @@ export default function AppLayout() {
       </aside>
 
       {/* ── Main ── */}
-      <div className='flex-1 flex flex-col overflow-hidden border-l border-ink-800/60'>
+      <div className='flex-1 flex flex-col overflow-hidden border-l border-ink-800/60 min-w-0'>
         {/* Top bar */}
-        <header className='h-14 flex items-center justify-between px-6 border-b border-ink-800/60 bg-ink-950 flex-shrink-0 relative'>
-          <div />
+        <header className='h-14 flex items-center justify-between px-4 sm:px-6 border-b border-ink-800/60 bg-ink-950 flex-shrink-0 relative'>
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className='lg:hidden w-10 h-10 rounded-xl flex items-center justify-center text-ink-400 hover:text-ink-100 hover:bg-ink-800 transition-colors'
+            aria-label='Open sidebar'
+          >
+            <Menu size={19} />
+          </button>
           <div className='flex items-center gap-2'>
+            <button
+              onClick={toggleTheme}
+              className='w-9 h-9 rounded-xl flex items-center justify-center text-ink-400 hover:text-ink-100 hover:bg-ink-800 transition-all'
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+            </button>
+
             {/* Notification bell */}
             <div ref={notifRef} className='relative'>
               <button
@@ -409,7 +462,7 @@ export default function AppLayout() {
 
         {/* Page content */}
         <main className='flex-1 overflow-y-auto'>
-          <div className='max-w-7xl mx-auto px-6 py-8'>
+          <div className='max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8'>
             <Outlet />
           </div>
         </main>

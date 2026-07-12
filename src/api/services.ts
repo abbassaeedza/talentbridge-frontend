@@ -12,6 +12,7 @@ import type {
   User,
   StudentProfile,
   Notification,
+  CoordinatorAnalytics,
 } from '../types';
 
 // ── Auth ────────────────────────────────────────────────────────────
@@ -40,9 +41,17 @@ export const userApi = {
     api.get<PageResponse<User>>('/api/users/pending', {
       params: { page, size },
     }),
+  getStudents: () => api.get<User[]>('/api/users/students'),
+  getCompanies: () => api.get<User[]>('/api/users/companies'),
+  getSupervisors: () => api.get<User[]>('/api/users/supervisors'),
+  getCoordinators: () => api.get<User[]>('/api/users/coordinators'),
   approve: (userId: string) => api.put<User>(`/api/users/${userId}/approve`),
   reject: (userId: string, reason?: string) =>
     api.put<User>(`/api/users/${userId}/reject`, null, { params: { reason } }),
+  suspend: (userId: string) => api.put<User>(`/api/users/${userId}/suspend`),
+  unsuspend: (userId: string) => api.put<User>(`/api/users/${userId}/unsuspend`),
+  broadcast: (data: { title: string; message: string; role?: string }) =>
+    api.post('/api/users/broadcast', data),
   githubCallback: (code: string) =>
     api.post('/api/users/github/callback', null, { params: { code } }),
   getNotifications: (page = 0) =>
@@ -81,6 +90,7 @@ export const projectApi = {
     api.put('/api/projects/global-deadline', { deadline }),
   assign: (projectId: string, partyId: string) =>
     api.put<Project>(`/api/projects/${projectId}/assign/${partyId}`),
+  retract: (id: string) => api.put<Project>(`/api/projects/${id}/retract`),
   patchInternalName: (id: string, name: string) =>
     api.patch<Project>(`/api/projects/${id}/internal-name`, null, {
       params: { name },
@@ -103,6 +113,12 @@ export const partyApi = {
   getSupervised: () => api.get<Party[]>('/api/parties/supervised'),
   assignSupervisor: (partyId: string, supervisorId: string) =>
     api.put<Party>(`/api/parties/${partyId}/supervisor`, { supervisorId }),
+  rename: (partyId: string, name: string) =>
+    api.put<Party>(`/api/parties/${partyId}/name`, { name }),
+  removeMember: (partyId: string, userId: string) =>
+    api.delete<Party>(`/api/parties/${partyId}/members/${userId}`),
+  unassignProject: (partyId: string) =>
+    api.delete<Party>(`/api/parties/${partyId}/project`),
   getApplicationsByParty: (partyId: string) =>
     api.get<Application[]>(`/api/parties/${partyId}/applications`),
   changeLeader: (partyId: string, newLeaderId: string) =>
@@ -150,4 +166,9 @@ export const chatApi = {
       context,
       projectId,
     }),
+};
+
+// ── Coordinator Analytics ──────────────────────────────────────────
+export const coordinatorApi = {
+  getAnalytics: () => api.get<CoordinatorAnalytics>('/api/coordinator/analytics'),
 };

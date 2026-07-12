@@ -122,7 +122,7 @@ export default function ProjectDetailPage() {
                 <p className="text-xs text-ink-400 mb-3">You need to be in a party before applying.</p>
               ) : party.status === 'FORMING' ? (
                 <p className="text-xs text-amber-400 mb-3">Your party needs at least 2 members before applying.</p>
-              ) : party.assignedProject ? (
+              ) : party.assignedProjectId ? (
                 <p className="text-xs text-jade-400">Your party is already assigned to a project.</p>
               ) : !applyOpen ? (
                 <button onClick={() => setApplyOpen(true)} className="btn-primary w-full">
