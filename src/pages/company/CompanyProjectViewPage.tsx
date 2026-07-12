@@ -105,7 +105,7 @@ export default function CompanyProjectViewPage() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 pt-4 border-t border-ink-800/50">
           <div className="text-center">
-            <p className="text-xl font-display font-bold text-white">{project.applicantCount}</p>
+            <p className="text-xl font-display font-bold text-white">{project.partyApplicationCount}</p>
             <p className="text-[10px] text-ink-500 mt-0.5 flex items-center justify-center gap-1">
               <Users size={10} /> Applicants
             </p>

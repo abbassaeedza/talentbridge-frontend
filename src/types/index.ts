@@ -75,7 +75,8 @@ export interface Project {
   projectSupervisorName?: string
   projectSupervisorId?: string
   createdByName: string
-  applicantCount: number
+  partyApplicationCount: number
+  projectField?: string
   createdAt: string
 }
 
@@ -99,6 +100,7 @@ export interface Party {
   supervisorId?: string
   assignedProjectId?: string
   assignedProjectTitle?: string
+  assignedProjectDeadline?: string
 }
 
 export interface Application {
@@ -200,3 +202,16 @@ export interface PageResponse<T> {
   first: boolean
   last: boolean
 }
+
+// ── Project field options ─────────────────────────────────────────────────────
+export const PROJECT_FIELDS = [
+  'Fintech',
+  'Software',
+  'Healthcare',
+  'Education',
+  'Marketing',
+  'Engineering',
+  'Other',
+] as const;
+
+export type ProjectFieldOption = (typeof PROJECT_FIELDS)[number];

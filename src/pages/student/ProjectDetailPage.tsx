@@ -74,7 +74,7 @@ export default function ProjectDetailPage() {
             <h1 className="font-display text-2xl font-bold text-white mb-1">{project.title}</h1>
             <div className="flex flex-wrap items-center gap-4 text-sm text-ink-400">
               <span className="flex items-center gap-1.5"><Building2 size={14} />{project.companyName}</span>
-              <span className="flex items-center gap-1.5"><Users size={14} />{project.applicantCount} applicants</span>
+              <span className="flex items-center gap-1.5"><Users size={14} />{project.partyApplicationCount} party application{project.partyApplicationCount !== 1 ? 's' : ''}</span>
               {project.deadline && (
                 <span className="flex items-center gap-1.5 text-amber-400">
                   <Clock size={14} />
