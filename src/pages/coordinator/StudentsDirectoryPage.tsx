@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { userApi } from '../../api/services';
 import { getUserName } from '../../types';
 import { ChevronDown, ChevronUp, Mail, PauseCircle, PlayCircle, Search } from 'lucide-react';
-import toast from 'react-hot-toast';
 import clsx from 'clsx';
+import useUserStatusMutation from '../../hooks/useUserStatusMutation';
 
 export default function StudentsDirectoryPage() {
-  const qc = useQueryClient();
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('ALL');
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -17,17 +16,7 @@ export default function StudentsDirectoryPage() {
     queryFn: () => userApi.getStudents().then((r) => r.data),
   });
 
-  const suspendMutation = useMutation({
-    mutationFn: (id: string) => userApi.suspend(id),
-    onSuccess: () => { toast.success('Student suspended'); qc.invalidateQueries({ queryKey: ['directory-students'] }); },
-    onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to suspend'),
-  });
-
-  const unsuspendMutation = useMutation({
-    mutationFn: (id: string) => userApi.unsuspend(id),
-    onSuccess: () => { toast.success('Student unsuspended'); qc.invalidateQueries({ queryKey: ['directory-students'] }); },
-    onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to unsuspend'),
-  });
+  const statusMutation = useUserStatusMutation([['directory-students']], 'Student');
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -99,10 +88,10 @@ export default function StudentsDirectoryPage() {
                     </div>
                     <div className='flex gap-2'>
                       {student.status === 'APPROVED' && (
-                        <button onClick={() => suspendMutation.mutate(student.id)} className='btn-secondary text-xs px-3 py-1.5'><PauseCircle size={13} /> Suspend</button>
+                        <button onClick={() => statusMutation.mutate({ id: student.id, suspended: true })} className='btn-secondary text-xs px-3 py-1.5'><PauseCircle size={13} /> Suspend</button>
                       )}
                       {student.status === 'SUSPENDED' && (
-                        <button onClick={() => unsuspendMutation.mutate(student.id)} className='btn-primary text-xs px-3 py-1.5'><PlayCircle size={13} /> Unsuspend</button>
+                        <button onClick={() => statusMutation.mutate({ id: student.id, suspended: false })} className='btn-primary text-xs px-3 py-1.5'><PlayCircle size={13} /> Unsuspend</button>
                       )}
                       <button onClick={() => setExpanded(isOpen ? null : student.id)} className='btn-ghost text-xs'>
                         {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />} Profile

@@ -79,6 +79,7 @@ export interface Project {
   createdByName: string
   partyApplicationCount: number
   projectField?: string
+  internalName?: string
   createdAt: string
 }
 

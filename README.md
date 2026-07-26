@@ -1,106 +1,78 @@
 # TalentBridge Frontend
 
-React + Vite + TypeScript frontend for TalentBridge — an AI-powered platform connecting university student teams with industry projects.
+TalentBridge is an AI-assisted platform connecting university student teams with industry projects.
+This repository contains its React single-page application.
 
-## Tech Stack
+## Features
 
-| Concern | Technology |
-|---|---|
-| Framework | React 18 + TypeScript |
-| Build tool | Vite 5 |
-| Routing | React Router v6 |
-| Data fetching | TanStack Query v5 |
-| Forms | React Hook Form + Zod |
-| Styling | Tailwind CSS |
-| Animation | Framer Motion |
-| Markdown | react-markdown |
-| Icons | Lucide React |
-| HTTP client | Axios |
-| Toasts | react-hot-toast |
-| Fonts | Sora (display) + DM Sans (body) |
+- Role-specific experiences for students, companies, coordinators, and supervisors
+- Project discovery, applications, team management, submissions, and scorecards
+- Coordinator workflows for user approval, project management, assignments, and evaluations
+- GitHub account integration and AI-assisted project evaluation
+- Responsive interface built with a shared Tailwind CSS design system
 
-## Quick Start
+## Technology
+
+- React 18 and TypeScript
+- Vite 5
+- React Router 6
+- TanStack Query 5
+- Axios
+- Tailwind CSS
+- Recharts
+- Lucide React
+
+## Requirements
+
+- Node.js 20 or newer
+- npm
+- A running TalentBridge backend
+
+## Local development
 
 ```bash
-# Install dependencies
-npm install
-
-# Copy env and fill in values
 cp .env.example .env
-
-# Start dev server
+npm ci
 npm run dev
 ```
 
-Runs on **http://localhost:3000** and proxies `/api` to `http://localhost:8080`.
+The development server runs at `http://localhost:3000`.
+Vite proxies local `/api` requests to `http://localhost:8080`.
 
----
+## Environment variables
 
-## Environment Variables
+| Variable | Required | Description |
+| --- | --- | --- |
+| `VITE_API_URL` | Yes | Public base URL of the TalentBridge backend |
+| `VITE_GITHUB_CLIENT_ID` | For GitHub OAuth | Client ID of the GitHub OAuth App |
 
-| Variable | Description |
-|---|---|
-| `VITE_API_URL` | Backend URL (default: `http://localhost:8080`) |
-| `VITE_GITHUB_CLIENT_ID` | GitHub OAuth App client ID |
+Only variables prefixed with `VITE_` are exposed to browser code.
+Never place private keys or client secrets in frontend environment variables.
 
----
+## Commands
 
-## Pages by Role
+```bash
+npm run dev      # Start development server
+npm run build    # Type-check and create production build
+npm run preview  # Preview production build locally
+```
 
-### Student
-| Path | Description |
-|---|---|
-| `/student/dashboard` | Overview: stats, party status, open projects |
-| `/student/projects` | Browse + search open projects |
-| `/student/projects/:id` | Project detail + apply form (rank 1–5) |
-| `/student/party` | Create/join/manage party + view applications |
-| `/student/submission` | Draft/final submit GitHub repo + documents |
-| `/student/scorecard` | Evaluation scores across all projects |
+Production files are written to `dist/`.
 
-### Company
-| Path | Description |
-|---|---|
-| `/company/dashboard` | Projects overview with status |
-| `/company/projects/new` | Post a new project (AI-assisted) |
+## Main routes
 
-### Coordinator
-| Path | Description |
-|---|---|
-| `/coordinator/dashboard` | High-level stats |
-| `/coordinator/users` | Approve/reject pending registrations |
-| `/coordinator/projects` | Approve projects, set deadlines |
-| `/coordinator/parties` | Assign projects & supervisors |
-| `/coordinator/evaluations` | Trigger AI eval, view/finalize reports |
+| Area | Routes |
+| --- | --- |
+| Authentication | `/login`, `/register`, `/pending`, `/onboarding` |
+| Student | `/student/dashboard`, `/student/projects`, `/student/party`, `/student/submission`, `/student/scorecard` |
+| Company | `/company/dashboard`, `/company/projects` |
+| Coordinator | `/coordinator/dashboard`, `/coordinator/users`, `/coordinator/projects`, `/coordinator/parties`, `/coordinator/evaluations` |
+| Supervisor | `/supervisor/dashboard` |
 
-### Supervisor
-| Path | Description |
-|---|---|
-| `/supervisor/dashboard` | Supervised parties + submission status |
+## Backend
 
----
+Backend source lives in the separate [`talentbridge-backend`](https://github.com/abbassaeedza/talentbridge-backend) repository.
 
-## Design System
+## License
 
-**Colors**
-- `ink-*` — deep navy/midnight blue (backgrounds, surfaces)
-- `ember-*` — orange accent (CTAs, highlights)
-- `jade-*` — green (success, active states)
-
-**Typography**
-- Display: **Sora** (headings, numbers)
-- Body: **DM Sans** (all text)
-- Mono: **JetBrains Mono** (code, IDs)
-
-**Components (global CSS)**
-- `.card` `.card-glass` — surface containers
-- `.btn-primary` `.btn-secondary` `.btn-ghost` `.btn-danger` — buttons
-- `.input` `.textarea` `.input-label` — form elements
-- `.badge-*` — status indicators
-- `.nav-link` `.nav-link-active` — sidebar navigation
-
----
-
-## AI Features
-
-- **ChatBot** (bottom-right): Floating AI assistant, context-aware for company project creation vs. student project Q&A. Powered by GPT-4o-mini.
-- **Evaluation**: Coordinator-triggered; GPT-4o analyses GitHub repo against project scope, scores 5 dimensions, per-student scoring based on commit distribution.
+Licensed under the [MIT License](LICENSE).

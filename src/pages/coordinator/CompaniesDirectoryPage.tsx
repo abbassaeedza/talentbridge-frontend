@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { projectApi, userApi } from '../../api/services';
 import { getUserName } from '../../types';
 import { Building2, ChevronDown, ChevronUp, ExternalLink, PauseCircle, PlayCircle, Search } from 'lucide-react';
-import toast from 'react-hot-toast';
 import clsx from 'clsx';
+import useUserStatusMutation from '../../hooks/useUserStatusMutation';
 
 export default function CompaniesDirectoryPage() {
-  const qc = useQueryClient();
   const [query, setQuery] = useState('');
   const [industry, setIndustry] = useState('ALL');
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -21,14 +20,7 @@ export default function CompaniesDirectoryPage() {
     queryFn: () => projectApi.getAll(0, 200).then((r) => r.data.content),
   });
 
-  const suspendMutation = useMutation({
-    mutationFn: (id: string) => userApi.suspend(id),
-    onSuccess: () => { toast.success('Company suspended'); qc.invalidateQueries({ queryKey: ['directory-companies'] }); },
-  });
-  const unsuspendMutation = useMutation({
-    mutationFn: (id: string) => userApi.unsuspend(id),
-    onSuccess: () => { toast.success('Company unsuspended'); qc.invalidateQueries({ queryKey: ['directory-companies'] }); },
-  });
+  const statusMutation = useUserStatusMutation([['directory-companies']], 'Company');
 
   const industries = useMemo(() => ['ALL', ...Array.from(new Set((companies ?? []).map((c) => c.companyProfile?.industry).filter(Boolean)))], [companies]);
   const filtered = useMemo(() => {
@@ -100,8 +92,8 @@ export default function CompaniesDirectoryPage() {
                   )}
                 </div>
                 <div className='flex gap-2'>
-                  {company.status === 'APPROVED' && <button onClick={() => suspendMutation.mutate(company.id)} className='btn-secondary text-xs px-3 py-1.5'><PauseCircle size={13} /> Suspend</button>}
-                  {company.status === 'SUSPENDED' && <button onClick={() => unsuspendMutation.mutate(company.id)} className='btn-primary text-xs px-3 py-1.5'><PlayCircle size={13} /> Unsuspend</button>}
+                  {company.status === 'APPROVED' && <button onClick={() => statusMutation.mutate({ id: company.id, suspended: true })} className='btn-secondary text-xs px-3 py-1.5'><PauseCircle size={13} /> Suspend</button>}
+                  {company.status === 'SUSPENDED' && <button onClick={() => statusMutation.mutate({ id: company.id, suspended: false })} className='btn-primary text-xs px-3 py-1.5'><PlayCircle size={13} /> Unsuspend</button>}
                   <button onClick={() => setExpanded(isOpen ? null : company.id)} className='btn-ghost text-xs'>
                     {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />} Projects ({relatedProjects.length})
                   </button>

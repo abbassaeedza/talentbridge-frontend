@@ -3,6 +3,7 @@ import {
   Routes,
   Route,
   Navigate,
+  Outlet,
   useNavigate,
 } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -182,14 +183,12 @@ function AppGuard({ children }: { children: React.ReactNode }) {
 
 function RoleRoute({
   roles,
-  children,
 }: {
   roles: UserRole[];
-  children: React.ReactNode;
 }) {
   const { user } = useAuth();
   if (!user || !roles.includes(user.role)) return <NotFoundPage />;
-  return <>{children}</>;
+  return <Outlet />;
 }
 
 // ── Dashboard router ──────────────────────────────────────────────────────────
@@ -293,206 +292,41 @@ export default function App() {
                 </AppGuard>
               }
             >
-              {/* ── Student ── */}
-              <Route
-                path='/student/dashboard'
-                element={
-                  <RoleRoute roles={['STUDENT']}>
-                    <StudentDashboard />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/student/projects'
-                element={
-                  <RoleRoute roles={['STUDENT']}>
-                    <ProjectsListPage />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/student/projects/:id'
-                element={
-                  <RoleRoute roles={['STUDENT']}>
-                    <ProjectDetailPage />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/student/party'
-                element={
-                  <RoleRoute roles={['STUDENT']}>
-                    <MyPartyPage />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/student/submission'
-                element={
-                  <RoleRoute roles={['STUDENT']}>
-                    <SubmissionPage />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/student/scorecard'
-                element={
-                  <RoleRoute roles={['STUDENT']}>
-                    <ScorecardPage />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/student/supervisors'
-                element={
-                  <RoleRoute roles={['STUDENT']}>
-                    <SupervisorsPage />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/student/profile'
-                element={
-                  <RoleRoute roles={['STUDENT']}>
-                    <ProfilePage />
-                  </RoleRoute>
-                }
-              />
+              <Route element={<RoleRoute roles={['STUDENT']} />}>
+                <Route path='/student/dashboard' element={<StudentDashboard />} />
+                <Route path='/student/projects' element={<ProjectsListPage />} />
+                <Route path='/student/projects/:id' element={<ProjectDetailPage />} />
+                <Route path='/student/party' element={<MyPartyPage />} />
+                <Route path='/student/submission' element={<SubmissionPage />} />
+                <Route path='/student/scorecard' element={<ScorecardPage />} />
+                <Route path='/student/supervisors' element={<SupervisorsPage />} />
+                <Route path='/student/profile' element={<ProfilePage />} />
+              </Route>
 
-              {/* ── Company ── */}
-              <Route
-                path='/company/dashboard'
-                element={
-                  <RoleRoute roles={['COMPANY']}>
-                    <CompanyDashboard />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/company/projects'
-                element={
-                  <RoleRoute roles={['COMPANY']}>
-                    <CompanyProjectsPage />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/company/projects/new'
-                element={
-                  <RoleRoute roles={['COMPANY']}>
-                    <CreateProjectPage />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/company/projects/:id'
-                element={
-                  <RoleRoute roles={['COMPANY']}>
-                    <CompanyProjectViewPage />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/company/projects/:id/edit'
-                element={
-                  <RoleRoute roles={['COMPANY']}>
-                    <CompanyProjectEditPage />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/company/profile'
-                element={
-                  <RoleRoute roles={['COMPANY']}>
-                    <ProfilePage />
-                  </RoleRoute>
-                }
-              />
+              <Route element={<RoleRoute roles={['COMPANY']} />}>
+                <Route path='/company/dashboard' element={<CompanyDashboard />} />
+                <Route path='/company/projects' element={<CompanyProjectsPage />} />
+                <Route path='/company/projects/new' element={<CreateProjectPage />} />
+                <Route path='/company/projects/:id' element={<CompanyProjectViewPage />} />
+                <Route path='/company/projects/:id/edit' element={<CompanyProjectEditPage />} />
+                <Route path='/company/profile' element={<ProfilePage />} />
+              </Route>
 
-              {/* ── Coordinator ── */}
-              <Route
-                path='/coordinator/dashboard'
-                element={
-                  <RoleRoute roles={['COORDINATOR']}>
-                    <CoordinatorDashboard />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/coordinator/users'
-                element={
-                  <RoleRoute roles={['COORDINATOR']}>
-                    <ManageUsersPage />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/coordinator/projects'
-                element={
-                  <RoleRoute roles={['COORDINATOR']}>
-                    <ManageProjectsPage />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/coordinator/parties'
-                element={
-                  <RoleRoute roles={['COORDINATOR']}>
-                    <ManagePartiesPage />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/coordinator/evaluations'
-                element={
-                  <RoleRoute roles={['COORDINATOR']}>
-                    <EvaluationsPage />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/coordinator/profile'
-                element={
-                  <RoleRoute roles={['COORDINATOR']}>
-                    <ProfilePage />
-                  </RoleRoute>
-                }
-              />
+              <Route element={<RoleRoute roles={['COORDINATOR']} />}>
+                <Route path='/coordinator/dashboard' element={<CoordinatorDashboard />} />
+                <Route path='/coordinator/users' element={<ManageUsersPage />} />
+                <Route path='/coordinator/projects' element={<ManageProjectsPage />} />
+                <Route path='/coordinator/parties' element={<ManagePartiesPage />} />
+                <Route path='/coordinator/evaluations' element={<EvaluationsPage />} />
+                <Route path='/coordinator/profile' element={<ProfilePage />} />
+                <Route path='/coordinator/students' element={<StudentsDirectoryPage />} />
+                <Route path='/coordinator/companies' element={<CompaniesDirectoryPage />} />
+              </Route>
 
-              <Route
-                path='/coordinator/students'
-                element={
-                  <RoleRoute roles={['COORDINATOR']}>
-                    <StudentsDirectoryPage />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/coordinator/companies'
-                element={
-                  <RoleRoute roles={['COORDINATOR']}>
-                    <CompaniesDirectoryPage />
-                  </RoleRoute>
-                }
-              />
-
-              {/* ── Supervisor ── */}
-              <Route
-                path='/supervisor/dashboard'
-                element={
-                  <RoleRoute roles={['PARTY_SUPERVISOR', 'PROJECT_SUPERVISOR']}>
-                    <SupervisorDashboard />
-                  </RoleRoute>
-                }
-              />
-              <Route
-                path='/supervisor/profile'
-                element={
-                  <RoleRoute roles={['PARTY_SUPERVISOR', 'PROJECT_SUPERVISOR']}>
-                    <ProfilePage />
-                  </RoleRoute>
-                }
-              />
+              <Route element={<RoleRoute roles={['PARTY_SUPERVISOR', 'PROJECT_SUPERVISOR']} />}>
+                <Route path='/supervisor/dashboard' element={<SupervisorDashboard />} />
+                <Route path='/supervisor/profile' element={<ProfilePage />} />
+              </Route>
 
               {/* 404 inside app */}
               <Route path='*' element={<NotFoundPage />} />

@@ -15,6 +15,7 @@ import {
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import clsx from 'clsx';
+import useUserStatusMutation from '../../hooks/useUserStatusMutation';
 
 const ROLE_OPTIONS: ('ALL' | UserRole)[] = [
   'ALL',
@@ -101,17 +102,13 @@ export default function ManageUsersPage() {
     onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to reject'),
   });
 
-  const suspendMutation = useMutation({
-    mutationFn: (id: string) => userApi.suspend(id),
-    onSuccess: () => { toast.success('User suspended'); invalidate(); },
-    onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to suspend'),
-  });
-
-  const unsuspendMutation = useMutation({
-    mutationFn: (id: string) => userApi.unsuspend(id),
-    onSuccess: () => { toast.success('User unsuspended'); invalidate(); },
-    onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to unsuspend'),
-  });
+  const statusMutation = useUserStatusMutation([
+    ['pending-users'],
+    ['directory-students'],
+    ['directory-companies'],
+    ['directory-supervisors'],
+    ['directory-coordinators'],
+  ], 'User');
 
   const users = useMemo(() => {
     const merged = new Map<string, User>();
@@ -286,8 +283,8 @@ export default function ManageUsersPage() {
                     )}
                     {u.status === 'APPROVED' && u.role !== 'COORDINATOR' && (
                       <button
-                        onClick={() => suspendMutation.mutate(u.id)}
-                        disabled={suspendMutation.isPending}
+                        onClick={() => statusMutation.mutate({ id: u.id, suspended: true })}
+                        disabled={statusMutation.isPending}
                         className='btn-secondary text-xs px-3 py-1.5'
                       >
                         <PauseCircle size={13} /> Suspend
@@ -295,8 +292,8 @@ export default function ManageUsersPage() {
                     )}
                     {u.status === 'SUSPENDED' && (
                       <button
-                        onClick={() => unsuspendMutation.mutate(u.id)}
-                        disabled={unsuspendMutation.isPending}
+                        onClick={() => statusMutation.mutate({ id: u.id, suspended: false })}
+                        disabled={statusMutation.isPending}
                         className='btn-primary text-xs px-3 py-1.5'
                       >
                         <PlayCircle size={13} /> Unsuspend
