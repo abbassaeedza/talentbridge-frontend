@@ -5,7 +5,7 @@ import { Layers, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, demoLogin } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,9 +27,17 @@ export default function LoginPage() {
     }
   };
 
-  const fill = (e: string, p: string) => {
-    setEmail(e);
-    setPassword(p);
+  const handleDemoLogin = async () => {
+    setLoading(true);
+    try {
+      await demoLogin();
+      navigate('/dashboard');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Demo login is unavailable';
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -170,24 +178,19 @@ export default function LoginPage() {
               Demo credentials
             </p>
             <div className='space-y-2'>
-              {[
-                {
-                  label: 'Coordinator',
-                  e: 'coordinator@talentbridge.com',
-                  p: 'AdminTest123!',
-                },
-              ].map((d) => (
-                <button
-                  key={d.label}
-                  onClick={() => fill(d.e, d.p)}
-                  className='w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-ink-800 transition-colors text-left'
-                >
-                  <span className='text-xs text-ink-300 font-medium'>
-                    {d.label}
-                  </span>
-                  <span className='text-xs text-ink-500 font-mono'>{d.e}</span>
-                </button>
-              ))}
+              <button
+                type='button'
+                onClick={handleDemoLogin}
+                disabled={loading}
+                className='w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-ink-800 transition-colors text-left disabled:opacity-50'
+              >
+                <span className='text-xs text-ink-300 font-medium'>
+                  Coordinator
+                </span>
+                <span className='text-xs text-ink-500 font-mono'>
+                  coordinator@talentbridge.com
+                </span>
+              </button>
             </div>
           </div>
         </div>

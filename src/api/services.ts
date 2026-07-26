@@ -21,6 +21,7 @@ export const authApi = {
     api.post<AuthResponse>('/api/auth/register', data),
   login: (email: string, password: string) =>
     api.post<AuthResponse>('/api/auth/login', { email, password }),
+  demoLogin: () => api.post<AuthResponse>('/api/auth/demo-login'),
   refresh: (refreshToken: string) =>
     api.post<AuthResponse>('/api/auth/refresh', { refreshToken }),
   changePassword: (currentPassword: string, newPassword: string) =>

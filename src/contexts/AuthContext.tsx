@@ -8,7 +8,7 @@ import {
   useRef,
 } from 'react';
 import { authApi, userApi } from '../api/services';
-import type { User, UserRole } from '../types';
+import type { AuthResponse, User, UserRole } from '../types';
 import SessionTimeoutModal from '../components/shared/SessionTimeoutModal';
 import {
   AUTH_TOKEN_CHANGED_EVENT,
@@ -25,6 +25,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  demoLogin: () => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   isRole: (...roles: UserRole[]) => boolean;
@@ -152,13 +153,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshUser]);
 
-  const login = async (email: string, password: string) => {
-    const { data } = await authApi.login(email, password);
+  const completeLogin = async (data: AuthResponse) => {
     setAuthTokens(data.accessToken, data.refreshToken);
 
-    // Redirect based on status before loading full user — avoids extra round trip
+    // Redirect based on status before loading the full user.
     if (data.user.status === 'REJECTED') {
-      // Store user info so /rejected page can display reason
       setUser(data.user as unknown as User);
       setLoading(false);
       window.location.href = '/rejected';
@@ -173,6 +172,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     await refreshUser();
+  };
+
+  const login = async (email: string, password: string) => {
+    const { data } = await authApi.login(email, password);
+    await completeLogin(data);
+  };
+
+  const demoLogin = async () => {
+    const { data } = await authApi.demoLogin();
+    await completeLogin(data);
   };
 
   const stayLoggedIn = async () => {
@@ -206,6 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         loading,
         login,
+        demoLogin,
         logout,
         refreshUser,
         isRole,
