@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
+import toast from 'react-hot-toast';
+import { createGitHubOAuthRequest } from '../../utils/githubOAuth';
 
 function StatCard({
   icon: Icon,
@@ -42,6 +44,20 @@ function StatCard({
 
 export default function StudentDashboard() {
   const { user } = useAuth();
+
+  const connectGitHub = () => {
+    const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
+    if (!clientId) {
+      toast.error('GitHub OAuth is not configured');
+      return;
+    }
+    const request = createGitHubOAuthRequest(
+      clientId,
+      `${window.location.origin}/github/callback`,
+    );
+    sessionStorage.setItem('github_oauth_state', request.state);
+    window.location.assign(request.url);
+  };
 
   const { data: projects } = useQuery({
     queryKey: ['open-projects'],
@@ -97,12 +113,13 @@ export default function StudentDashboard() {
               Required for project submission and AI evaluation scoring.
             </p>
           </div>
-          <a
-            href={`https://github.com/login/oauth/authorize?client_id=${import.meta.env.VITE_GITHUB_CLIENT_ID}&scope=repo,read:user`}
+          <button
+            type='button'
+            onClick={connectGitHub}
             className='btn-secondary text-xs px-3 py-2 flex-shrink-0'
           >
             Connect GitHub
-          </a>
+          </button>
         </div>
       )}
 

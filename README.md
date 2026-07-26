@@ -59,6 +59,10 @@ npm run preview  # Preview production build locally
 
 Production files are written to `dist/`.
 
+## Deployment
+
+See [Vercel deployment](docs/DEPLOYMENT.md) for production variables, SPA routing, GitHub OAuth, and verification.
+
 ## Main routes
 
 | Area | Routes |

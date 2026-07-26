@@ -6,9 +6,12 @@ import {
   Outlet,
   useNavigate,
 } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { userApi } from './api/services';
+import { isGitHubOAuthStateValid } from './utils/githubOAuth';
 import AppLayout from './components/layout/AppLayout';
 import type { UserRole } from './types';
 import { Layers, AlertTriangle, Ghost } from 'lucide-react';
@@ -152,6 +155,38 @@ function FullScreenLoader() {
   );
 }
 
+function GitHubCallbackPage() {
+  const { refreshUser } = useAuth();
+  const navigate = useNavigate();
+  const started = useRef(false);
+
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const state = params.get('state');
+    const expectedState = sessionStorage.getItem('github_oauth_state');
+    sessionStorage.removeItem('github_oauth_state');
+
+    if (!code || !isGitHubOAuthStateValid(expectedState, state)) {
+      toast.error(params.get('error_description') || 'Invalid GitHub authorization response');
+      navigate('/student/dashboard', { replace: true });
+      return;
+    }
+
+    userApi
+      .githubCallback(code)
+      .then(refreshUser)
+      .then(() => toast.success('GitHub account connected'))
+      .catch(() => toast.error('Could not connect GitHub account'))
+      .finally(() => navigate('/student/dashboard', { replace: true }));
+  }, [navigate, refreshUser]);
+
+  return <FullScreenLoader />;
+}
+
 // ── Route guards ──────────────────────────────────────────────────────────────
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -257,6 +292,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <OnboardingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path='/github/callback'
+              element={
+                <ProtectedRoute>
+                  <GitHubCallbackPage />
                 </ProtectedRoute>
               }
             />
