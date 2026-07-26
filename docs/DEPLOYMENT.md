@@ -29,6 +29,8 @@ VITE_GITHUB_CLIENT_ID=your-github-oauth-client-id
 
 Do not add the GitHub client secret, Supabase key, JWT secret, database password, or OpenAI key to Vercel.
 Every `VITE_` value becomes public browser code.
+Do not add the demo coordinator password to Vercel.
+The demo card calls `POST /api/auth/demo-login`, and the Render backend owns the configured coordinator password.
 
 ## GitHub OAuth App
 
@@ -52,8 +54,18 @@ Changing a Vercel environment variable requires a new deployment before browser 
 1. Open `/login` directly and refresh the page.
 2. Register or sign in.
 3. Confirm API requests target the Render URL and do not show CORS errors.
-4. Sign in as a student and connect GitHub.
-5. Confirm GitHub returns to `/github/callback` and the student dashboard shows the linked username.
+4. Click the coordinator demo card and confirm it opens the coordinator dashboard.
+5. Sign in as a student and connect GitHub.
+6. Confirm GitHub returns to `/github/callback` and the student dashboard shows the linked username.
+
+## Before public launch
+
+1. Set `APP_DEMO_MODE=false` on Render and redeploy the backend.
+2. Confirm the old demo endpoint returns HTTP 404.
+3. Remove the demo credentials card from `src/pages/auth/LoginPage.tsx`.
+4. Redeploy Vercel.
+
+The backend switch fails closed even if an older frontend deployment still displays the card.
 
 ## Free-tier limits
 
