@@ -177,7 +177,7 @@ test('keeps notifications visible and closes the mobile sidebar', async ({ page 
     (button: HTMLButtonElement) => button.click(),
   );
 
-  await expect(page.getByRole('button', { name: 'Close sidebar', exact: true })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Close sidebar overlay' })).toBeHidden();
   const box = await page.locator('#notification-panel').boundingBox();
   expect(box).not.toBeNull();
   expect(box!.x).toBeGreaterThanOrEqual(0);

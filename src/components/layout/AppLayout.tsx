@@ -218,6 +218,27 @@ export default function AppLayout() {
     localStorage.setItem('talentbridge-theme', next);
   };
 
+  const toggleNotifications = () => {
+    const opening = !notifOpen;
+    setNotifOpen(opening);
+    if (opening) {
+      setSidebarOpen(false);
+      setUserMenuOpen(false);
+    }
+  };
+
+  const openSidebar = () => {
+    setNotifOpen(false);
+    setUserMenuOpen(false);
+    setSidebarOpen(true);
+  };
+
+  const toggleUserMenu = () => {
+    const opening = !userMenuOpen;
+    setUserMenuOpen(opening);
+    if (opening) setNotifOpen(false);
+  };
+
   if (!user) return null;
 
   const navItems = NAV_BY_ROLE[user.role] || [];
@@ -323,7 +344,7 @@ export default function AppLayout() {
           )}
 
           <button
-            onClick={() => setUserMenuOpen((v) => !v)}
+            onClick={toggleUserMenu}
             className='w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-ink-800/60 transition-colors'
           >
             <div className='w-8 h-8 rounded-lg bg-ink-700 border border-ink-600/50 flex items-center justify-center flex-shrink-0'>
@@ -353,7 +374,7 @@ export default function AppLayout() {
         {/* Top bar */}
         <header className='h-14 flex items-center justify-between px-4 sm:px-6 border-b border-ink-800/60 bg-ink-950 flex-shrink-0 relative'>
           <button
-            onClick={() => setSidebarOpen(true)}
+            onClick={openSidebar}
             className='lg:hidden w-10 h-10 rounded-xl flex items-center justify-center text-ink-400 hover:text-ink-100 hover:bg-ink-800 transition-colors'
             aria-label='Open sidebar'
           >
@@ -371,7 +392,10 @@ export default function AppLayout() {
             {/* Notification bell */}
             <div ref={notifRef} className='relative'>
               <button
-                onClick={() => setNotifOpen((v) => !v)}
+                onClick={toggleNotifications}
+                aria-label='Notifications'
+                aria-expanded={notifOpen}
+                aria-controls='notification-panel'
                 className='relative w-9 h-9 rounded-xl flex items-center justify-center text-ink-400 hover:text-ink-100 hover:bg-ink-800 transition-all'
               >
                 <Bell size={17} />
@@ -383,7 +407,10 @@ export default function AppLayout() {
               </button>
 
               {notifOpen && (
-                <div className='absolute right-0 top-11 w-80 z-[999] rounded-2xl border border-ink-700/50 bg-ink-900 shadow-2xl shadow-black/60 overflow-hidden'>
+                <div
+                  id='notification-panel'
+                  className='fixed right-4 top-16 w-[min(20rem,calc(100vw-2rem))] z-[60] rounded-2xl border border-ink-700/50 bg-ink-900 shadow-2xl shadow-black/60 overflow-hidden'
+                >
                   <div className='px-4 py-3 border-b border-ink-700/50 flex items-center justify-between'>
                     <span className='text-sm font-semibold text-white'>
                       Notifications
