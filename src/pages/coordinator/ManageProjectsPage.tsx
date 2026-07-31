@@ -59,7 +59,11 @@ export default function ManageProjectsPage() {
 
   const globalDeadlineMutation = useMutation({
     mutationFn: () => projectApi.setGlobalDeadline(new Date(globalDeadline).toISOString()),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['all-projects-admin'] }),
+        qc.invalidateQueries({ queryKey: ['all-projects'] }),
+      ]);
       toast.success('Global deadline applied to all open projects!');
       setGlobalDeadline('');
     },
