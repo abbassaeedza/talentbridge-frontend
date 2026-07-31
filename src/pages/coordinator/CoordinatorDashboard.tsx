@@ -28,7 +28,7 @@ export default function CoordinatorDashboard() {
 
   const { data: pending } = useQuery({
     queryKey: ['pending-users'],
-    queryFn: () => userApi.getPending().then(r => r.data)
+    queryFn: () => userApi.getPending(0, 100).then(r => r.data)
   })
   const { data: projects } = useQuery({
     queryKey: ['all-projects'],

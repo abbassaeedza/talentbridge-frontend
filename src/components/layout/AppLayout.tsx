@@ -390,7 +390,7 @@ export default function AppLayout() {
             </button>
 
             {/* Notification bell */}
-            <div ref={notifRef} className='relative'>
+            <div ref={notifRef} className='relative z-[60]'>
               <button
                 onClick={toggleNotifications}
                 aria-label='Notifications'
@@ -425,7 +425,7 @@ export default function AppLayout() {
                       </button>
                     )}
                   </div>
-                  <div className='max-h-80 overflow-y-auto'>
+                  <div className='max-h-[min(20rem,calc(100vh-8rem))] overflow-y-auto'>
                     {notifications.length === 0 ? (
                       <p className='px-4 py-8 text-center text-ink-400 text-sm'>
                         All caught up 🎉

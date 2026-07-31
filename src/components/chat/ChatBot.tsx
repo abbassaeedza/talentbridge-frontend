@@ -48,13 +48,14 @@ export default function ChatBot() {
         { role: 'assistant', content: data.message },
       ]);
     } catch (error: any) {
+      const backendMessage = error?.response?.data?.message;
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content:
-            error?.response?.data?.message ||
-            'Sorry, I ran into an error. Please try again.',
+          content: typeof backendMessage === 'string' && backendMessage.trim()
+            ? backendMessage
+            : 'Sorry, I ran into an error. Please try again.',
         },
       ]);
     } finally {
