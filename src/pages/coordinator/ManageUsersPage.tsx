@@ -63,7 +63,7 @@ export default function ManageUsersPage() {
 
   const pendingQuery = useQuery({
     queryKey: ['pending-users'],
-    queryFn: () => userApi.getPending(0, 100).then((r) => r.data.content),
+    queryFn: () => userApi.getPending(0, 100).then((r) => r.data),
   });
   const studentsQuery = useQuery({
     queryKey: ['directory-students'],
@@ -113,7 +113,7 @@ export default function ManageUsersPage() {
   const users = useMemo(() => {
     const merged = new Map<string, User>();
     [
-      ...(pendingQuery.data ?? []),
+      ...(pendingQuery.data?.content ?? []),
       ...(studentsQuery.data ?? []),
       ...(companiesQuery.data ?? []),
       ...(supervisorsQuery.data ?? []),
