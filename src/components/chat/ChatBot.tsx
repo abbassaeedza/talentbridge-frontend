@@ -47,12 +47,14 @@ export default function ChatBot() {
         ...prev,
         { role: 'assistant', content: data.message },
       ]);
-    } catch {
+    } catch (error: any) {
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: 'Sorry, I ran into an error. Please try again.',
+          content:
+            error?.response?.data?.message ||
+            'Sorry, I ran into an error. Please try again.',
         },
       ]);
     } finally {
@@ -73,6 +75,7 @@ export default function ChatBot() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
+          aria-label='Open AI assistant'
           className='fixed bottom-6 right-6 w-12 h-12 bg-ember-500 hover:bg-ember-600 text-white rounded-2xl shadow-xl shadow-ember-500/30 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 z-30'
         >
           <MessageCircle size={20} />
@@ -98,12 +101,14 @@ export default function ChatBot() {
             <div className='flex gap-1'>
               <button
                 onClick={() => setMessages([])}
+                aria-label='Clear conversation'
                 className='w-7 h-7 rounded-lg hover:bg-ink-700 flex items-center justify-center text-ink-500 hover:text-ink-300 transition-colors'
               >
                 <Minimize2 size={13} />
               </button>
               <button
                 onClick={() => setOpen(false)}
+                aria-label='Close AI assistant'
                 className='w-7 h-7 rounded-lg hover:bg-ink-700 flex items-center justify-center text-ink-500 hover:text-ink-300 transition-colors'
               >
                 <X size={13} />
@@ -185,6 +190,7 @@ export default function ChatBot() {
               />
               <button
                 onClick={send}
+                aria-label='Send message'
                 disabled={!input.trim() || loading}
                 className='w-8 h-8 bg-ember-500 hover:bg-ember-600 disabled:opacity-40 text-white rounded-xl flex items-center justify-center transition-all flex-shrink-0'
               >
