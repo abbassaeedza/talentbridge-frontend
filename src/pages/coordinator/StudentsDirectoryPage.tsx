@@ -7,6 +7,7 @@ import clsx from 'clsx';
 import useUserStatusMutation from '../../hooks/useUserStatusMutation';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+import BulkActionToolbar from '../../components/coordinator/BulkActionToolbar';
 
 export default function StudentsDirectoryPage() {
   const [query, setQuery] = useState('');
@@ -14,6 +15,7 @@ export default function StudentsDirectoryPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [rejectReason, setRejectReason] = useState('');
+  const [bulkAction, setBulkAction] = useState<'approve' | 'reject' | 'suspend' | null>(null);
   const qc = useQueryClient();
 
   const { data: students, isLoading } = useQuery({
@@ -40,6 +42,7 @@ export default function StudentsDirectoryPage() {
   });
 
   const runBulk = async (action: 'approve' | 'reject' | 'suspend') => {
+    setBulkAction(action);
     const chosen = (students ?? []).filter((student) => selected.includes(student.id));
     const requests = chosen.flatMap((student) => {
       if (action === 'approve' && (student.status === 'PENDING' || student.status === 'REJECTED'))
@@ -50,13 +53,17 @@ export default function StudentsDirectoryPage() {
         return [userApi.suspend(student.id)];
       return [];
     });
-    const results = await Promise.allSettled(requests);
-    const failed = results.filter((result) => result.status === 'rejected').length;
-    failed
-      ? toast.error(`${results.length - failed} updated, ${failed} failed`)
-      : toast.success(`${requests.length} student${requests.length === 1 ? '' : 's'} updated`);
-    setSelected([]);
-    invalidate();
+    try {
+      const results = await Promise.allSettled(requests);
+      const failed = results.filter((result) => result.status === 'rejected').length;
+      failed
+        ? toast.error(`${results.length - failed} updated, ${failed} failed`)
+        : toast.success(`${requests.length} student${requests.length === 1 ? '' : 's'} updated`);
+      setSelected([]);
+      invalidate();
+    } finally {
+      setBulkAction(null);
+    }
   };
 
   const filtered = useMemo(() => {
@@ -75,6 +82,13 @@ export default function StudentsDirectoryPage() {
       })
       .sort((a, b) => getUserName(a).localeCompare(getUserName(b)));
   }, [students, query, status]);
+  const selectedStudents = (students ?? []).filter((student) => selected.includes(student.id));
+  const eligible = {
+    approve: selectedStudents.filter((student) => student.status === 'PENDING' || student.status === 'REJECTED').length,
+    reject: selectedStudents.filter((student) => student.status === 'PENDING').length,
+    suspend: selectedStudents.filter((student) => student.status === 'APPROVED').length,
+  };
+  const allFilteredSelected = filtered.length > 0 && filtered.every((student) => selected.includes(student.id));
 
   return (
     <div className='animate-fade-up'>
@@ -95,21 +109,27 @@ export default function StudentsDirectoryPage() {
           <option value='SUSPENDED'>Suspended</option>
           <option value='REJECTED'>Rejected</option>
         </select>
-        {selected.length > 0 && (
-          <div className='md:col-span-2 flex flex-col gap-2 rounded-xl border border-ink-700/50 bg-ink-800/60 p-3 md:flex-row md:items-center'>
-            <p className='flex-1 text-xs text-ink-300'>{selected.length} selected</p>
-            <input
-              className='input py-2 text-xs md:w-64'
-              placeholder='Rejection reason…'
-              value={rejectReason}
-              onChange={(event) => setRejectReason(event.target.value)}
-            />
-            <button onClick={() => runBulk('approve')} className='btn-primary px-3 py-2 text-xs'><CheckCircle size={13} /> Approve</button>
-            <button onClick={() => runBulk('reject')} className='btn-secondary px-3 py-2 text-xs text-red-300'><XCircle size={13} /> Reject</button>
-            <button onClick={() => runBulk('suspend')} className='btn-secondary px-3 py-2 text-xs'><PauseCircle size={13} /> Suspend</button>
-          </div>
-        )}
+        <label className='md:col-span-2 flex w-fit items-center gap-2 text-xs text-ink-300'>
+          <input
+            type='checkbox'
+            aria-label='Select all filtered students'
+            checked={allFilteredSelected}
+            onChange={() => setSelected(allFilteredSelected ? [] : filtered.map((student) => student.id))}
+            className='h-4 w-4 accent-orange-500'
+          />
+          Select all {filtered.length} filtered students
+        </label>
       </div>
+
+      <BulkActionToolbar
+        noun='student'
+        selectedCount={selected.length}
+        eligible={eligible}
+        rejectionReason={rejectReason}
+        onRejectionReasonChange={setRejectReason}
+        loadingAction={bulkAction}
+        onAction={runBulk}
+      />
 
       <div className='card overflow-hidden'>
         {isLoading ? (

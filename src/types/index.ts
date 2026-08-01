@@ -5,6 +5,7 @@ export type ProjectStatus = 'DRAFT' | 'PENDING_REVIEW' | 'OPEN' | 'ASSIGNED' | '
 export type ApplicationStatus = 'PENDING' | 'ASSIGNED' | 'REJECTED' | 'REASSIGNED' | 'WITHDRAWN'
 export type SubmissionStatus = 'DRAFT' | 'SUBMITTED' | 'UNDER_EVALUATION' | 'EVALUATED'
 export type ProjectSupervisorInvitationStatus = 'PENDING' | 'ACCEPTED' | 'REVOKED' | 'EXPIRED'
+export type NotificationType = 'ACCOUNT_APPROVED' | 'ACCOUNT_REJECTED' | 'PARTY_JOINED' | 'PARTY_LEFT' | 'PROJECT_ASSIGNED' | 'PROJECT_REJECTED' | 'APPLICATION_SUBMITTED' | 'SUBMISSION_RECEIVED' | 'EVALUATION_COMPLETE' | 'DEADLINE_REMINDER' | 'NEW_PROJECT_POSTED' | 'GENERAL'
 
 export interface User {
   id: string
@@ -114,6 +115,7 @@ export interface Project {
   projectSupervisorId?: string
   assignedPartyId?: string
   assignedPartyName?: string
+  finished?: boolean
   createdByName: string
   partyApplicationCount: number
   projectField?: string
@@ -233,6 +235,21 @@ export interface Notification {
   referenceId?: string
   referenceType?: string
   createdAt: string
+}
+
+export interface GlobalDeadlineSetting {
+  enabled: boolean
+  deadline: string | null
+}
+
+export interface GlobalDeadlinePreview {
+  affectedCounts: Record<'PENDING_REVIEW' | 'OPEN' | 'ASSIGNED', number>
+  excludedFinishedCount: number
+}
+
+export interface NotificationPreference {
+  type: NotificationType
+  emailEnabled: boolean
 }
 
 export interface ChatMessage {

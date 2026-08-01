@@ -49,6 +49,7 @@ export default function CoordinatorDashboard() {
   const assignmentPercent = totalParties > 0 ? Math.round((assignedParties / totalParties) * 100) : 0
   const upcomingDeadlines = (projects ?? [])
     .filter(p => p.deadline
+      && !p.finished
       && new Date(p.deadline).getTime() > Date.now()
       && (p.status === 'OPEN' || p.status === 'ASSIGNED'))
     .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())

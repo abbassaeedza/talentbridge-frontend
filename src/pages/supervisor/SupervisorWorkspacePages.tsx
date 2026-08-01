@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Award, Bell, Briefcase, ExternalLink, FileText, Search, Send, Users } from 'lucide-react';
+import { ArrowLeft, Award, Briefcase, ExternalLink, FileText, Search, Send, Users } from 'lucide-react';
 import { evaluationApi, partyApi, projectApi, submissionApi, userApi } from '../../api/services';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
 import { useAuth } from '../../contexts/AuthContext';
@@ -359,8 +359,4 @@ function EvaluationPanel({ submissionId }: { submissionId: string }) {
       {report.finalized && <span className='mt-4 inline-flex badge badge-open text-[9px]'>Finalized</span>}
     </div>
   );
-}
-
-export function NotificationSettingsPlaceholderPage() {
-  return <div className='animate-fade-up'><div className='page-header'><h1 className='page-title'>Notification Settings</h1><p className='page-subtitle'>Notification preferences will be configurable here in a future update.</p></div><EmptyState icon={Bell}>Your current TalentBridge notifications remain enabled.</EmptyState></div>;
 }

@@ -50,7 +50,7 @@ async function mockStudentApi(page: Page, party: object | null) {
   }));
   await page.route('**/api/projects/global-deadline', route => route.fulfill({
     contentType: 'application/json',
-    body: JSON.stringify(new Date(Date.now() + 10 * 86_400_000).toISOString()),
+    body: JSON.stringify({ enabled: true, deadline: new Date(Date.now() + 10 * 86_400_000).toISOString() }),
   }));
   await page.route('**/api/parties/my', route => party
     ? route.fulfill({ contentType: 'application/json', body: JSON.stringify(party) })

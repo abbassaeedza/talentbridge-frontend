@@ -53,7 +53,6 @@ import SupervisorsDirectoryPage from './pages/coordinator/SupervisorsDirectoryPa
 import {
   BrowsePartiesPage,
   MyPartiesPage as SupervisorPartiesPage,
-  NotificationSettingsPlaceholderPage,
   PartySupervisorDetailPage,
   ProjectSupervisorDetailPage,
   SupervisedProjectsPage,
@@ -64,6 +63,7 @@ import ProjectSupervisorInvitationPage from './pages/auth/ProjectSupervisorInvit
 // Shared
 import ProfilePage from './pages/shared/ProfilePage';
 import StudentProfilePage from './pages/shared/StudentProfilePage';
+import NotificationSettingsPage from './pages/shared/NotificationSettingsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -357,6 +357,7 @@ export default function App() {
                 <Route path='/student/scorecard' element={<ScorecardPage />} />
                 <Route path='/student/supervisors' element={<SupervisorsPage />} />
                 <Route path='/student/profile' element={<ProfilePage />} />
+                <Route path='/student/notification-settings' element={<NotificationSettingsPage />} />
               </Route>
 
               <Route element={<RoleRoute roles={['COMPANY']} />}>
@@ -367,6 +368,7 @@ export default function App() {
                 <Route path='/company/projects/:id/edit' element={<CompanyProjectEditPage />} />
                 <Route path='/company/project-supervisors' element={<ProjectSupervisorsPage />} />
                 <Route path='/company/profile' element={<ProfilePage />} />
+                <Route path='/company/notification-settings' element={<NotificationSettingsPage />} />
                 <Route path='/company/students/:id' element={<StudentProfilePage />} />
               </Route>
 
@@ -377,6 +379,7 @@ export default function App() {
                 <Route path='/coordinator/parties' element={<ManagePartiesPage />} />
                 <Route path='/coordinator/evaluations' element={<EvaluationsPage />} />
                 <Route path='/coordinator/profile' element={<ProfilePage />} />
+                <Route path='/coordinator/notification-settings' element={<NotificationSettingsPage />} />
                 <Route path='/coordinator/students' element={<StudentsDirectoryPage />} />
                 <Route path='/coordinator/companies' element={<CompaniesDirectoryPage />} />
                 <Route path='/coordinator/supervisors' element={<SupervisorsDirectoryPage />} />
@@ -388,7 +391,7 @@ export default function App() {
                 <Route path='/project-supervisor/projects' element={<SupervisedProjectsPage />} />
                 <Route path='/project-supervisor/projects/:id' element={<ProjectSupervisorDetailPage />} />
                 <Route path='/project-supervisor/profile' element={<ProfilePage />} />
-                <Route path='/project-supervisor/notification-settings' element={<NotificationSettingsPlaceholderPage />} />
+                <Route path='/project-supervisor/notification-settings' element={<NotificationSettingsPage />} />
               </Route>
 
               <Route element={<RoleRoute roles={['PARTY_SUPERVISOR']} />}>
@@ -398,7 +401,7 @@ export default function App() {
                 <Route path='/party-supervisor/browse' element={<BrowsePartiesPage />} />
                 <Route path='/party-supervisor/browse/:id' element={<PartySupervisorDetailPage browse />} />
                 <Route path='/party-supervisor/profile' element={<ProfilePage />} />
-                <Route path='/party-supervisor/notification-settings' element={<NotificationSettingsPlaceholderPage />} />
+                <Route path='/party-supervisor/notification-settings' element={<NotificationSettingsPage />} />
               </Route>
 
               <Route element={<RoleRoute roles={['PARTY_SUPERVISOR', 'PROJECT_SUPERVISOR']} />}>

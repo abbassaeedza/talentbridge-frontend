@@ -95,6 +95,7 @@ const NAV_BY_ROLE: Record<
     { to: '/student/supervisors', icon: UserCheck, label: 'Supervisors' },
     { to: '/student/submission', icon: Send, label: 'Submission' },
     { to: '/student/scorecard', icon: Star, label: 'Scorecard' },
+    { to: '/student/notification-settings', icon: Bell, label: 'Notification Settings' },
   ],
   COMPANY: [
     {
@@ -121,6 +122,7 @@ const NAV_BY_ROLE: Record<
       label: 'Project Supervisors',
       end: true,
     },
+    { to: '/company/notification-settings', icon: Bell, label: 'Notification Settings' },
   ],
   COORDINATOR: [
     { to: '/coordinator/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -130,6 +132,7 @@ const NAV_BY_ROLE: Record<
     { to: '/coordinator/projects', icon: FolderKanban, label: 'Projects' },
     { to: '/coordinator/parties', icon: ClipboardList, label: 'Parties' },
     { to: '/coordinator/evaluations', icon: Award, label: 'Evaluations' },
+    { to: '/coordinator/notification-settings', icon: Bell, label: 'Notification Settings' },
   ],
   PARTY_SUPERVISOR: [
     { to: '/party-supervisor/overview', icon: LayoutDashboard, label: 'Overview' },

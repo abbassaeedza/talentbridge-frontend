@@ -19,6 +19,10 @@ import type {
   ProjectSupervisorInvitationAcceptRequest,
   SupervisorProfessionalFields,
   SupervisorProfile,
+  GlobalDeadlinePreview,
+  GlobalDeadlineSetting,
+  NotificationPreference,
+  NotificationType,
 } from '../types';
 
 // ── Auth ────────────────────────────────────────────────────────────
@@ -97,6 +101,10 @@ export const userApi = {
     api.put(`/api/users/notifications/${id}/read`),
   markAllNotificationsRead: () => api.put('/api/users/notifications/read-all'),
   clearNotifications: () => api.delete('/api/users/notifications/clear'),
+  getNotificationPreferences: () =>
+    api.get<NotificationPreference[]>('/api/users/notification-preferences'),
+  updateNotificationPreference: (type: NotificationType, emailEnabled: boolean) =>
+    api.put<NotificationPreference>(`/api/users/notification-preferences/${type}`, { emailEnabled }),
 };
 
 // ── Projects ────────────────────────────────────────────────────────
@@ -128,10 +136,12 @@ export const projectApi = {
     api.put<Project>(`/api/projects/${id}/deadline`, null, {
       params: { deadline },
     }),
-  setGlobalDeadline: (deadline: string) =>
-    api.put('/api/projects/global-deadline', { deadline }),
+  setGlobalDeadline: (setting: GlobalDeadlineSetting) =>
+    api.put('/api/projects/global-deadline', setting),
   getGlobalDeadline: () =>
-    api.get<string | null>('/api/projects/global-deadline'),
+    api.get<GlobalDeadlineSetting>('/api/projects/global-deadline'),
+  previewGlobalDeadline: (setting: GlobalDeadlineSetting) =>
+    api.post<GlobalDeadlinePreview>('/api/projects/global-deadline/preview', setting),
   assign: (projectId: string, partyId: string) =>
     api.put<Project>(`/api/projects/${projectId}/assign/${partyId}`),
   retract: (id: string) => api.put<Project>(`/api/projects/${id}/retract`),

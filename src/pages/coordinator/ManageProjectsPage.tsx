@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectApi } from '../../api/services';
-import { CheckCircle, XCircle, Clock, Calendar, RefreshCw, Users } from 'lucide-react';
+import { AlertTriangle, CheckCircle, XCircle, Clock, Calendar, RefreshCw, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
 import clsx from 'clsx';
+import type { GlobalDeadlinePreview } from '../../types';
 
 type TabStatus = 'ALL' | 'PENDING_REVIEW' | 'OPEN' | 'ARCHIVED' | 'ASSIGNED';
 
@@ -23,12 +24,25 @@ export default function ManageProjectsPage() {
   const [page, setPage] = useState(0);
   const [deadlines, setDeadlines] = useState<Record<string, string>>({});
   const [globalDeadline, setGlobalDeadline] = useState('');
+  const [globalEnabled, setGlobalEnabled] = useState(false);
+  const [deadlinePreview, setDeadlinePreview] = useState<GlobalDeadlinePreview | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['all-projects-admin', tab, page],
     queryFn: () =>
       projectApi.getAll(page, 20, tab === 'ALL' ? undefined : tab).then((r) => r.data),
   });
+
+  const globalDeadlineQuery = useQuery({
+    queryKey: ['global-deadline'],
+    queryFn: () => projectApi.getGlobalDeadline().then((response) => response.data),
+  });
+
+  useEffect(() => {
+    if (!globalDeadlineQuery.data) return;
+    setGlobalEnabled(globalDeadlineQuery.data.enabled);
+    setGlobalDeadline(globalDeadlineQuery.data.deadline?.slice(0, 16) ?? '');
+  }, [globalDeadlineQuery.data]);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['all-projects-admin'] });
 
@@ -58,17 +72,35 @@ export default function ManageProjectsPage() {
   });
 
   const globalDeadlineMutation = useMutation({
-    mutationFn: () => projectApi.setGlobalDeadline(globalDeadline),
+    mutationFn: () => projectApi.setGlobalDeadline({
+      enabled: globalEnabled,
+      deadline: globalEnabled ? globalDeadline : globalDeadlineQuery.data?.deadline ?? null,
+    }),
     onSuccess: async () => {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['all-projects-admin'] }),
         qc.invalidateQueries({ queryKey: ['all-projects'] }),
+        qc.invalidateQueries({ queryKey: ['global-deadline'] }),
       ]);
-      toast.success('Global deadline applied to all open projects!');
-      setGlobalDeadline('');
+      toast.success(globalEnabled ? 'Global deadline updated' : 'Global deadline disabled');
+      setDeadlinePreview(null);
     },
     onError: () => toast.error('Failed'),
   });
+
+  const previewMutation = useMutation({
+    mutationFn: () => projectApi.previewGlobalDeadline({ enabled: true, deadline: globalDeadline }).then((response) => response.data),
+    onSuccess: setDeadlinePreview,
+    onError: () => toast.error('Could not preview affected projects'),
+  });
+
+  const reviewGlobalChange = () => {
+    if (globalEnabled) previewMutation.mutate();
+    else setDeadlinePreview({
+      affectedCounts: { PENDING_REVIEW: 0, OPEN: 0, ASSIGNED: 0 },
+      excludedFinishedCount: 0,
+    });
+  };
 
   const statusBadge = (status: string) => {
     const map: Record<string, string> = {
@@ -95,21 +127,95 @@ export default function ManageProjectsPage() {
         <p className='page-subtitle'>{data?.totalElements ?? 0} total projects</p>
       </div>
 
-      {/* Global deadline */}
-      <div className='card p-4 mb-6 flex flex-col gap-3 sm:flex-row sm:items-center'>
-        <Calendar size={18} className='text-ink-400 flex-shrink-0' />
-        <div className='flex-1'>
-          <p className='text-sm font-semibold text-white mb-0.5'>Set Global Application Deadline</p>
-          <p className='text-xs text-ink-400'>Applies the same deadline to all currently open projects.</p>
+      <section className='card mb-6 overflow-hidden'>
+        <div className='flex flex-col gap-4 border-b border-ink-800/60 p-5 sm:flex-row sm:items-start sm:justify-between'>
+          <div className='flex gap-3'>
+            <div className='flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-ember-500/15 text-ember-400'>
+              <Calendar size={19} />
+            </div>
+            <div>
+              <h2 className='font-display font-semibold text-white'>Global Application Deadline</h2>
+              <p className='mt-1 text-xs text-ink-400'>Updates unfinished pending, open, and assigned projects.</p>
+            </div>
+          </div>
+          <label className='relative flex cursor-pointer items-center gap-3 text-sm text-ink-200'>
+            <span>{globalEnabled ? 'Enabled' : 'Disabled'}</span>
+            <input
+              type='checkbox'
+              role='switch'
+              aria-label='Enable global deadline'
+              checked={globalEnabled}
+              onChange={(event) => setGlobalEnabled(event.target.checked)}
+              className='peer absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0'
+            />
+            <span className='relative h-6 w-11 rounded-full bg-ink-700 transition peer-checked:bg-ember-500 after:absolute after:left-1 after:top-1 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition peer-checked:after:translate-x-5' />
+          </label>
         </div>
-        <input type='datetime-local' className='input w-full text-xs py-2 sm:w-56'
-          value={globalDeadline} onChange={(e) => setGlobalDeadline(e.target.value)} />
-        <button onClick={() => globalDeadlineMutation.mutate()}
-          disabled={!globalDeadline || globalDeadlineMutation.isPending}
-          className='btn-primary text-xs px-4 py-2'>
-          Apply
-        </button>
-      </div>
+        <div className='grid gap-4 p-5 lg:grid-cols-[1fr_1fr_auto] lg:items-end'>
+          <div>
+            <p className='text-[10px] font-bold uppercase tracking-wider text-ink-500'>Current setting</p>
+            <p className='mt-2 text-sm font-semibold text-white'>
+              {globalDeadlineQuery.data?.enabled ? 'Global deadline is enabled' : 'Global deadline is disabled'}
+            </p>
+            <p className='mt-1 text-xs text-ink-400'>
+              {globalDeadlineQuery.data?.deadline
+                ? format(new Date(globalDeadlineQuery.data.deadline), 'dd MMM yyyy HH:mm')
+                : 'No deadline configured'}
+            </p>
+          </div>
+          <label className='block text-xs font-medium text-ink-300'>
+            Global deadline date and time
+            <input
+              type='datetime-local'
+              className='input mt-2 w-full text-xs'
+              value={globalDeadline}
+              disabled={!globalEnabled}
+              onChange={(event) => setGlobalDeadline(event.target.value)}
+            />
+          </label>
+          <button
+            onClick={reviewGlobalChange}
+            disabled={(globalEnabled && !globalDeadline) || previewMutation.isPending}
+            className='btn-primary justify-center text-xs lg:min-w-40'
+          >
+            {previewMutation.isPending ? 'Loading preview...' : 'Preview changes'}
+          </button>
+        </div>
+      </section>
+
+      {deadlinePreview && (
+        <div className='fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4' role='presentation'>
+          <section role='dialog' aria-modal='true' aria-labelledby='global-deadline-dialog-title' className='card w-full max-w-lg p-6 shadow-2xl'>
+            <div className='flex items-start gap-3'>
+              <div className='flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400'><AlertTriangle size={19} /></div>
+              <div>
+                <h2 id='global-deadline-dialog-title' className='font-display text-lg font-semibold text-white'>Confirm global deadline</h2>
+                <p className='mt-1 text-sm text-ink-400'>
+                  {globalEnabled
+                    ? 'This overwrites individual deadlines on every eligible project.'
+                    : 'Disabling global mode keeps every project deadline unchanged.'}
+                </p>
+              </div>
+            </div>
+            {globalEnabled && (
+              <div className='mt-5 grid grid-cols-3 gap-2'>
+                {Object.entries(deadlinePreview.affectedCounts).map(([status, count]) => (
+                  <div key={status} className='rounded-xl bg-ink-800/60 p-3 text-center'>
+                    <p className='font-display text-xl font-bold text-white'>{count} <span className='text-[10px] font-normal text-ink-400'>{status.replace('_', ' ').toLowerCase()}</span></p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className='mt-4 text-xs text-ink-400'>{deadlinePreview.excludedFinishedCount} finished projects excluded</p>
+            <div className='mt-6 flex justify-end gap-3'>
+              <button className='btn-secondary' onClick={() => setDeadlinePreview(null)}>Cancel</button>
+              <button className='btn-primary' disabled={globalDeadlineMutation.isPending} onClick={() => globalDeadlineMutation.mutate()}>
+                {globalDeadlineMutation.isPending ? 'Applying...' : 'Confirm and apply'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {/* Filter tabs */}
       <div className='flex gap-1 mb-4 bg-ink-900 p-1 rounded-xl w-fit'>

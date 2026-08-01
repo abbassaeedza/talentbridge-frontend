@@ -6,6 +6,7 @@ import { Building2, CheckCircle, ChevronDown, ChevronUp, ExternalLink, PauseCirc
 import clsx from 'clsx';
 import useUserStatusMutation from '../../hooks/useUserStatusMutation';
 import toast from 'react-hot-toast';
+import BulkActionToolbar from '../../components/coordinator/BulkActionToolbar';
 
 export default function CompaniesDirectoryPage() {
   const [query, setQuery] = useState('');
@@ -13,6 +14,7 @@ export default function CompaniesDirectoryPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [rejectReason, setRejectReason] = useState('');
+  const [bulkAction, setBulkAction] = useState<'approve' | 'reject' | 'suspend' | null>(null);
   const qc = useQueryClient();
 
   const { data: companies, isLoading } = useQuery({
@@ -30,19 +32,24 @@ export default function CompaniesDirectoryPage() {
     qc.invalidateQueries({ queryKey: ['pending-users'] });
   };
   const runBulk = async (action: 'approve' | 'reject' | 'suspend') => {
+    setBulkAction(action);
     const requests = (companies ?? []).filter((company) => selected.includes(company.id)).flatMap((company) => {
       if (action === 'approve' && (company.status === 'PENDING' || company.status === 'REJECTED')) return [userApi.approve(company.id)];
       if (action === 'reject' && company.status === 'PENDING') return [userApi.reject(company.id, rejectReason)];
       if (action === 'suspend' && company.status === 'APPROVED') return [userApi.suspend(company.id)];
       return [];
     });
-    const results = await Promise.allSettled(requests);
-    const failed = results.filter((result) => result.status === 'rejected').length;
-    failed
-      ? toast.error(`${results.length - failed} updated, ${failed} failed`)
-      : toast.success(`${requests.length} compan${requests.length === 1 ? 'y' : 'ies'} updated`);
-    setSelected([]);
-    invalidate();
+    try {
+      const results = await Promise.allSettled(requests);
+      const failed = results.filter((result) => result.status === 'rejected').length;
+      failed
+        ? toast.error(`${results.length - failed} updated, ${failed} failed`)
+        : toast.success(`${requests.length} compan${requests.length === 1 ? 'y' : 'ies'} updated`);
+      setSelected([]);
+      invalidate();
+    } finally {
+      setBulkAction(null);
+    }
   };
 
   const industries = useMemo(() => ['ALL', ...Array.from(new Set((companies ?? []).map((c) => c.companyProfile?.industry).filter(Boolean)))], [companies]);
@@ -63,6 +70,13 @@ export default function CompaniesDirectoryPage() {
       })
       .sort((a, b) => (a.companyProfile?.companyName ?? getUserName(a)).localeCompare(b.companyProfile?.companyName ?? getUserName(b)));
   }, [companies, query, industry]);
+  const selectedCompanies = (companies ?? []).filter((company) => selected.includes(company.id));
+  const eligible = {
+    approve: selectedCompanies.filter((company) => company.status === 'PENDING' || company.status === 'REJECTED').length,
+    reject: selectedCompanies.filter((company) => company.status === 'PENDING').length,
+    suspend: selectedCompanies.filter((company) => company.status === 'APPROVED').length,
+  };
+  const allFilteredSelected = filtered.length > 0 && filtered.every((company) => selected.includes(company.id));
   const companyGroups = useMemo(() => {
     const groups = new Map<string, typeof filtered>();
     filtered.forEach((company) => {
@@ -87,16 +101,13 @@ export default function CompaniesDirectoryPage() {
         <select className='input text-sm' value={industry} onChange={(e) => setIndustry(e.target.value)}>
           {industries.map((i) => <option key={i} value={i}>{i === 'ALL' ? 'All industries' : i}</option>)}
         </select>
-        {selected.length > 0 && (
-          <div className='md:col-span-2 flex flex-col gap-2 rounded-xl border border-ink-700/50 bg-ink-800/60 p-3 md:flex-row md:items-center'>
-            <p className='flex-1 text-xs text-ink-300'>{selected.length} selected</p>
-            <input className='input py-2 text-xs md:w-64' placeholder='Rejection reason…' value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} />
-            <button onClick={() => runBulk('approve')} className='btn-primary px-3 py-2 text-xs'><CheckCircle size={13} /> Approve</button>
-            <button onClick={() => runBulk('reject')} className='btn-secondary px-3 py-2 text-xs text-red-300'><XCircle size={13} /> Reject</button>
-            <button onClick={() => runBulk('suspend')} className='btn-secondary px-3 py-2 text-xs'><PauseCircle size={13} /> Suspend</button>
-          </div>
-        )}
+        <label className='md:col-span-2 flex w-fit items-center gap-2 text-xs text-ink-300'>
+          <input type='checkbox' aria-label='Select all filtered companies' checked={allFilteredSelected} onChange={() => setSelected(allFilteredSelected ? [] : filtered.map((company) => company.id))} className='h-4 w-4 accent-orange-500' />
+          Select all {filtered.length} filtered companies
+        </label>
       </div>
+
+      <BulkActionToolbar noun='company' selectedCount={selected.length} eligible={eligible} rejectionReason={rejectReason} onRejectionReasonChange={setRejectReason} loadingAction={bulkAction} onAction={runBulk} />
 
       <div className='space-y-3'>
         {isLoading ? (

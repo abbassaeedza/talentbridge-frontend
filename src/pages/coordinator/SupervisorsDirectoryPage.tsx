@@ -6,12 +6,14 @@ import { getUserName } from '../../types';
 import useUserStatusMutation from '../../hooks/useUserStatusMutation';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
+import BulkActionToolbar from '../../components/coordinator/BulkActionToolbar';
 
 export default function SupervisorsDirectoryPage() {
   const [query, setQuery] = useState('');
-  const [role, setRole] = useState('ALL');
+  const [section, setSection] = useState<'PENDING' | 'PARTY_SUPERVISOR' | 'PROJECT_SUPERVISOR'>('PENDING');
   const [selected, setSelected] = useState<string[]>([]);
   const [rejectReason, setRejectReason] = useState('');
+  const [bulkAction, setBulkAction] = useState<'approve' | 'reject' | 'suspend' | null>(null);
   const qc = useQueryClient();
 
   const { data: supervisors, isLoading } = useQuery({
@@ -24,25 +26,32 @@ export default function SupervisorsDirectoryPage() {
     qc.invalidateQueries({ queryKey: ['pending-users'] });
   };
   const runBulk = async (action: 'approve' | 'reject' | 'suspend') => {
+    setBulkAction(action);
     const requests = (supervisors ?? []).filter((supervisor) => selected.includes(supervisor.id)).flatMap((supervisor) => {
       if (action === 'approve' && (supervisor.status === 'PENDING' || supervisor.status === 'REJECTED')) return [userApi.approve(supervisor.id)];
       if (action === 'reject' && supervisor.status === 'PENDING') return [userApi.reject(supervisor.id, rejectReason)];
       if (action === 'suspend' && supervisor.status === 'APPROVED') return [userApi.suspend(supervisor.id)];
       return [];
     });
-    const results = await Promise.allSettled(requests);
-    const failed = results.filter((result) => result.status === 'rejected').length;
-    failed
-      ? toast.error(`${results.length - failed} updated, ${failed} failed`)
-      : toast.success(`${requests.length} supervisor${requests.length === 1 ? '' : 's'} updated`);
-    setSelected([]);
-    invalidate();
+    try {
+      const results = await Promise.allSettled(requests);
+      const failed = results.filter((result) => result.status === 'rejected').length;
+      failed
+        ? toast.error(`${results.length - failed} updated, ${failed} failed`)
+        : toast.success(`${requests.length} supervisor${requests.length === 1 ? '' : 's'} updated`);
+      setSelected([]);
+      invalidate();
+    } finally {
+      setBulkAction(null);
+    }
   };
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return (supervisors ?? [])
-      .filter((supervisor) => role === 'ALL' || supervisor.role === role)
+      .filter((supervisor) => section === 'PENDING'
+        ? supervisor.status === 'PENDING'
+        : supervisor.role === section)
       .filter((supervisor) => !needle || [
         getUserName(supervisor),
         supervisor.email,
@@ -50,7 +59,14 @@ export default function SupervisorsDirectoryPage() {
         supervisor.role,
       ].filter(Boolean).join(' ').toLowerCase().includes(needle))
       .sort((a, b) => getUserName(a).localeCompare(getUserName(b)));
-  }, [supervisors, query, role]);
+  }, [supervisors, query, section]);
+  const selectedSupervisors = (supervisors ?? []).filter((supervisor) => selected.includes(supervisor.id));
+  const eligible = {
+    approve: selectedSupervisors.filter((supervisor) => supervisor.status === 'PENDING' || supervisor.status === 'REJECTED').length,
+    reject: selectedSupervisors.filter((supervisor) => supervisor.status === 'PENDING').length,
+    suspend: selectedSupervisors.filter((supervisor) => supervisor.status === 'APPROVED').length,
+  };
+  const allFilteredSelected = filtered.length > 0 && filtered.every((supervisor) => selected.includes(supervisor.id));
 
   return (
     <div className='animate-fade-up'>
@@ -59,7 +75,26 @@ export default function SupervisorsDirectoryPage() {
         <p className='page-subtitle'>{filtered.length} supervisor{filtered.length === 1 ? '' : 's'} shown</p>
       </div>
 
-      <div className='card p-4 mb-5 grid md:grid-cols-[1fr_auto] gap-3'>
+      <div className='mb-4 flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl bg-ink-900 p-1' role='tablist' aria-label='Supervisor sections'>
+        {([
+          ['PENDING', 'Pending Requests'],
+          ['PARTY_SUPERVISOR', 'Party Supervisors'],
+          ['PROJECT_SUPERVISOR', 'Project Supervisors'],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            role='tab'
+            aria-selected={section === value}
+            onClick={() => { setSection(value); setSelected([]); }}
+            className={clsx('whitespace-nowrap rounded-lg px-4 py-2 text-xs font-semibold transition',
+              section === value ? 'bg-ink-700 text-white' : 'text-ink-400 hover:text-white')}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className='card p-4 mb-5'>
         <div className='relative'>
           <Search size={15} className='absolute left-3 top-1/2 -translate-y-1/2 text-ink-500' />
           <input
@@ -69,21 +104,13 @@ export default function SupervisorsDirectoryPage() {
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
-        <select className='input text-sm' value={role} onChange={(event) => setRole(event.target.value)}>
-          <option value='ALL'>All supervisor roles</option>
-          <option value='PARTY_SUPERVISOR'>Party supervisors</option>
-          <option value='PROJECT_SUPERVISOR'>Project supervisors</option>
-        </select>
-        {selected.length > 0 && (
-          <div className='md:col-span-2 flex flex-col gap-2 rounded-xl border border-ink-700/50 bg-ink-800/60 p-3 md:flex-row md:items-center'>
-            <p className='flex-1 text-xs text-ink-300'>{selected.length} selected</p>
-            <input className='input py-2 text-xs md:w-64' placeholder='Rejection reason…' value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} />
-            <button onClick={() => runBulk('approve')} className='btn-primary px-3 py-2 text-xs'><CheckCircle size={13} /> Approve</button>
-            <button onClick={() => runBulk('reject')} className='btn-secondary px-3 py-2 text-xs text-red-300'><XCircle size={13} /> Reject</button>
-            <button onClick={() => runBulk('suspend')} className='btn-secondary px-3 py-2 text-xs'><PauseCircle size={13} /> Suspend</button>
-          </div>
-        )}
+        <label className='mt-3 flex w-fit items-center gap-2 text-xs text-ink-300'>
+          <input type='checkbox' aria-label='Select all filtered supervisors' checked={allFilteredSelected} onChange={() => setSelected(allFilteredSelected ? [] : filtered.map((supervisor) => supervisor.id))} className='h-4 w-4 accent-orange-500' />
+          Select all {filtered.length} filtered supervisors
+        </label>
       </div>
+
+      <BulkActionToolbar noun='supervisor' selectedCount={selected.length} eligible={eligible} rejectionReason={rejectReason} onRejectionReasonChange={setRejectReason} loadingAction={bulkAction} onAction={runBulk} />
 
       <div className='card overflow-hidden'>
         {isLoading ? (

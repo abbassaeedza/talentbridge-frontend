@@ -80,7 +80,7 @@ export default function StudentDashboard() {
     queryFn: () =>
       projectApi
         .getGlobalDeadline()
-        .then((r) => r.data || null)
+        .then((r) => r.data.enabled ? r.data.deadline : null)
         .catch(() => null),
     retry: false,
   });

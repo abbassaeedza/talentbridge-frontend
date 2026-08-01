@@ -107,7 +107,28 @@ async function mockCoordinatorApi(page: Page, options: CoordinatorApiOptions = {
       }));
   await page.route('**/api/projects/global-deadline', route => options.onGlobalDeadline
     ? options.onGlobalDeadline(route)
-    : route.fulfill({ contentType: 'application/json', body: '{}' }));
+    : route.fulfill({ contentType: 'application/json', body: JSON.stringify({ enabled: false, deadline: null }) }));
+  await page.route('**/api/projects/global-deadline/preview', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      affectedCounts: { PENDING_REVIEW: 2, OPEN: 3, ASSIGNED: 1 },
+      excludedFinishedCount: 4,
+    }),
+  }));
+  await page.route('**/api/users/notification-preferences', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify([
+      { type: 'ACCOUNT_APPROVED', emailEnabled: true },
+      { type: 'DEADLINE_REMINDER', emailEnabled: true },
+    ]),
+  }));
+  await page.route('**/api/users/notification-preferences/*', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      type: route.request().url().split('/').pop(),
+      emailEnabled: route.request().postDataJSON().emailEnabled,
+    }),
+  }));
   await page.route('**/api/parties/rules', route => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify({ minSize: 2, maxSize: 3, supervisorMaxParties: 2 }),
@@ -153,8 +174,9 @@ test('navigates from Dashboard to Students without blanking', async ({ page }) =
   expect(errors).toEqual([]);
 });
 
-test('shows a new global deadline without reloading', async ({ page }) => {
+test('previews and shows a new global deadline without reloading', async ({ page }) => {
   let deadline = openProject.deadline;
+  let enabled = false;
   let projectFetches = 0;
   await mockCoordinatorApi(page, {
     onProjects: route => {
@@ -165,8 +187,16 @@ test('shows a new global deadline without reloading', async ({ page }) => {
       });
     },
     onGlobalDeadline: async route => {
-      deadline = (await route.request().postDataJSON()).deadline;
-      return route.fulfill({ contentType: 'application/json', body: '{}' });
+      if (route.request().method() === 'PUT') {
+        const payload = await route.request().postDataJSON();
+        deadline = payload.deadline;
+        enabled = payload.enabled;
+        return route.fulfill({ status: 204 });
+      }
+      return route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ enabled, deadline: enabled ? deadline : null }),
+      });
     },
   });
   await loginAsCoordinator(page);
@@ -174,11 +204,71 @@ test('shows a new global deadline without reloading', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Manage Projects' })).toBeVisible();
   const fetchesBeforeApply = projectFetches;
 
-  await page.locator('input[type="datetime-local"]').first().fill('2031-01-02T10:00');
-  await page.getByRole('button', { name: 'Apply' }).click();
+  await page.getByRole('switch', { name: 'Enable global deadline' }).check();
+  await page.getByLabel('Global deadline date and time').fill('2031-01-02T10:00');
+  await page.getByRole('button', { name: 'Preview changes' }).click();
+
+  await expect(page.getByRole('dialog', { name: 'Confirm global deadline' })).toContainText('3 open');
+  await expect(page.getByRole('dialog', { name: 'Confirm global deadline' })).toContainText('4 finished projects excluded');
+  await page.getByRole('button', { name: 'Confirm and apply' }).click();
 
   await expect.poll(() => projectFetches).toBeGreaterThan(fetchesBeforeApply);
-  await expect(page.getByText(/02 Jan 2031/)).toBeVisible();
+  await expect(page.getByText('Global deadline is enabled')).toBeVisible();
+  await expect(page.getByText(/02 Jan 2031/).first()).toBeVisible();
+});
+
+test('selects all filtered students and requires a bulk rejection reason', async ({ page }) => {
+  await mockCoordinatorApi(page);
+  await page.route('**/api/users/*/reject**', route => route.fulfill({ contentType: 'application/json', body: '{}' }));
+  await loginAsCoordinator(page);
+  await page.getByRole('link', { name: 'Students', exact: true }).click();
+
+  await page.getByRole('checkbox', { name: 'Select all filtered students' }).check();
+
+  await expect(page.getByText('25 selected')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Reject 25/ })).toBeDisabled();
+  await page.getByPlaceholder('Rejection reason').fill('Incomplete academic record');
+  await expect(page.getByRole('button', { name: /Reject 25/ })).toBeEnabled();
+});
+
+test('updates email notification preferences', async ({ page }) => {
+  let updated = false;
+  await mockCoordinatorApi(page);
+  await page.route('**/api/users/notification-preferences/DEADLINE_REMINDER', async route => {
+    updated = !(await route.request().postDataJSON()).emailEnabled;
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ type: 'DEADLINE_REMINDER', emailEnabled: false }),
+    });
+  });
+  await loginAsCoordinator(page);
+  await page.getByRole('link', { name: 'Notification Settings' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Notification Settings' })).toBeVisible();
+  await page.getByRole('switch', { name: 'Deadline Reminder email' }).uncheck();
+  await expect.poll(() => updated).toBe(true);
+});
+
+test('separates pending, party, and project supervisors', async ({ page }) => {
+  await mockCoordinatorApi(page);
+  await page.unroute('**/api/users/supervisors');
+  await page.route('**/api/users/supervisors', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify([
+      { ...pendingStudents[0], role: 'PARTY_SUPERVISOR', firstName: 'Pending', lastName: 'Mentor' },
+      { ...pendingStudents[1], role: 'PARTY_SUPERVISOR', status: 'APPROVED', firstName: 'Party', lastName: 'Mentor' },
+      { ...pendingStudents[2], role: 'PROJECT_SUPERVISOR', status: 'APPROVED', firstName: 'Project', lastName: 'Mentor' },
+    ]),
+  }));
+  await loginAsCoordinator(page);
+  await page.getByRole('link', { name: 'Supervisors', exact: true }).click();
+
+  await expect(page.getByRole('tab', { name: 'Pending Requests' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Party Supervisors' }).click();
+  await expect(page.getByText('Party Mentor')).toBeVisible();
+  await page.getByRole('tab', { name: 'Project Supervisors' }).click();
+  await expect(page.getByText('Project Mentor')).toBeVisible();
+  await expect(page.getByText('Party Mentor')).toBeHidden();
 });
 
 test('allows an assigned project deadline to be changed individually', async ({ page }) => {
