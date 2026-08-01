@@ -75,6 +75,7 @@ export default function SupervisorDashboard() {
               && candidate.academicYear === party.academicYear,
             ).length
             const atCapacity = termCount >= (rules?.supervisorMaxParties ?? 2)
+            const canClaim = party.status === 'ACTIVE' || party.status === 'ASSIGNED'
             return (
               <div key={party.id} className="card p-5">
                 <div className="flex items-start gap-3 mb-4">
@@ -90,7 +91,7 @@ export default function SupervisorDashboard() {
                       party.status === 'SUBMITTED' && 'badge-submitted',
                     )}>{party.status}</span>
                   </div>
-                  {canPickParty && !party.supervisorId && (
+                  {canPickParty && !party.supervisorId && canClaim && (
                     <button
                       onClick={() => claimMutation.mutate(party.id)}
                       disabled={atCapacity || claimMutation.isPending}

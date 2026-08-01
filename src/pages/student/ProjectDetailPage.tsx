@@ -29,6 +29,12 @@ export default function ProjectDetailPage() {
     enabled: isRole('STUDENT'),
   })
 
+  const { data: rules } = useQuery({
+    queryKey: ['party-rules'],
+    queryFn: () => partyApi.getRules().then(r => r.data),
+    enabled: isRole('STUDENT'),
+  })
+
   const applyMutation = useMutation({
     mutationFn: () => partyApi.applyToProject(party!.id, {
       projectId: id, rankPosition, proposalText
@@ -120,8 +126,8 @@ export default function ProjectDetailPage() {
               <h3 className="font-display font-semibold text-white mb-3">Apply for this project</h3>
               {!party ? (
                 <p className="text-xs text-ink-400 mb-3">You need to be in a party before applying.</p>
-              ) : party.status === 'FORMING' ? (
-                <p className="text-xs text-amber-400 mb-3">Your party needs at least 2 members before applying.</p>
+              ) : party.members.length < (rules?.minSize ?? 2) ? (
+                <p className="text-xs text-amber-400 mb-3">Your party needs at least {rules?.minSize ?? 2} members before applying.</p>
               ) : party.assignedProjectId ? (
                 <p className="text-xs text-jade-400">Your party is already assigned to a project.</p>
               ) : !applyOpen ? (
@@ -148,9 +154,10 @@ export default function ProjectDetailPage() {
                   </div>
                   <div>
                     <label className="input-label">Proposal (optional)</label>
-                    <textarea className="textarea" rows={3} value={proposalText}
+                    <textarea className="textarea" rows={3} maxLength={2000} value={proposalText}
                       onChange={e => setProposalText(e.target.value)}
                       placeholder="Why is your team a great fit for this project?" />
+                    <p className="mt-1 text-right text-[10px] text-ink-500">{proposalText.length}/2000</p>
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => setApplyOpen(false)} className="btn-secondary flex-1 text-xs">Cancel</button>

@@ -40,7 +40,8 @@ export default function ManagePartiesPage() {
 
   const { data: supervisors } = useQuery({
     queryKey: ['party-supervisors'],
-    queryFn: () => userApi.getSupervisors().then((r) => r.data.filter((u) => u.role === 'PARTY_SUPERVISOR')),
+    queryFn: () => userApi.getSupervisors().then((r) => r.data.filter((u) =>
+      u.role === 'PARTY_SUPERVISOR' && u.status === 'APPROVED')),
   });
 
   const { data: rules } = useQuery({

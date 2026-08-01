@@ -12,6 +12,11 @@ export default function JoinPartyPage() {
   const navigate = useNavigate();
   const [joined, setJoined] = useState(false);
 
+  const { data: rules } = useQuery({
+    queryKey: ['party-rules'],
+    queryFn: () => partyApi.getRules().then((r) => r.data),
+  });
+
   // Fetch party info to show name before joining
   const {
     data: party,
@@ -94,6 +99,11 @@ export default function JoinPartyPage() {
       </div>
     );
 
+  const memberCount = party.members?.length ?? 0;
+  const joinable =
+    (party.status === 'FORMING' || party.status === 'ACTIVE') &&
+    (!rules || memberCount < rules.maxSize);
+
   return (
     <div className='min-h-screen bg-ink-950 mesh-bg flex items-center justify-center p-8'>
       <div className='max-w-sm w-full'>
@@ -152,7 +162,7 @@ export default function JoinPartyPage() {
             </div>
           )}
 
-          {party.status !== 'FORMING' ? (
+          {!joinable ? (
             <div className='p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 mb-5'>
               <p className='text-xs text-amber-400'>
                 This party is no longer accepting new members.
@@ -162,7 +172,7 @@ export default function JoinPartyPage() {
 
           <button
             onClick={() => joinMutation.mutate()}
-            disabled={joinMutation.isPending || party.status !== 'FORMING'}
+            disabled={joinMutation.isPending || !joinable}
             className='btn-primary w-full justify-center'
           >
             {joinMutation.isPending ? (
