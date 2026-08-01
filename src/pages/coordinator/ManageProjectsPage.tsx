@@ -52,13 +52,13 @@ export default function ManageProjectsPage() {
 
   const deadlineMutation = useMutation({
     mutationFn: ({ id, deadline }: { id: string; deadline: string }) =>
-      projectApi.setDeadline(id, new Date(deadline).toISOString()),
+      projectApi.setDeadline(id, deadline),
     onSuccess: () => { toast.success('Deadline set!'); invalidate(); },
     onError: () => toast.error('Failed to set deadline'),
   });
 
   const globalDeadlineMutation = useMutation({
-    mutationFn: () => projectApi.setGlobalDeadline(new Date(globalDeadline).toISOString()),
+    mutationFn: () => projectApi.setGlobalDeadline(globalDeadline),
     onSuccess: async () => {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['all-projects-admin'] }),
@@ -96,13 +96,13 @@ export default function ManageProjectsPage() {
       </div>
 
       {/* Global deadline */}
-      <div className='card p-4 mb-6 flex items-center gap-3'>
+      <div className='card p-4 mb-6 flex flex-col gap-3 sm:flex-row sm:items-center'>
         <Calendar size={18} className='text-ink-400 flex-shrink-0' />
         <div className='flex-1'>
           <p className='text-sm font-semibold text-white mb-0.5'>Set Global Application Deadline</p>
           <p className='text-xs text-ink-400'>Applies the same deadline to all currently open projects.</p>
         </div>
-        <input type='datetime-local' className='input w-56 text-xs py-2'
+        <input type='datetime-local' className='input w-full text-xs py-2 sm:w-56'
           value={globalDeadline} onChange={(e) => setGlobalDeadline(e.target.value)} />
         <button onClick={() => globalDeadlineMutation.mutate()}
           disabled={!globalDeadline || globalDeadlineMutation.isPending}
@@ -186,29 +186,35 @@ export default function ManageProjectsPage() {
                         </button>
                       )}
 
-                      {/* Open → set deadline */}
-                      {p.status === 'OPEN' && (
+                      {/* Open and assigned projects keep independent deadlines */}
+                      {(p.status === 'OPEN' || p.status === 'ASSIGNED') && (
                         <div className='flex items-center gap-2'>
-                          <input type='datetime-local' className='input text-xs py-1.5 w-44'
+                          <input
+                            type='datetime-local'
+                            aria-label={`Deadline for ${p.title}`}
+                            className='input text-xs py-1.5 w-44'
                             value={deadlines[p.id] ?? ''}
                             onChange={(e) => setDeadlines((d) => ({ ...d, [p.id]: e.target.value }))} />
                           <button
+                            aria-label={`Set deadline for ${p.title}`}
                             onClick={() => deadlineMutation.mutate({ id: p.id, deadline: deadlines[p.id] })}
                             disabled={!deadlines[p.id] || deadlineMutation.isPending}
                             className='btn-secondary text-xs px-3 py-1.5'>
                             <Clock size={12} /> Set
                           </button>
-                          <button
-                            onClick={() => {
-                              if (confirm('Retract this open project? Pending applications will be reassigned.')) {
-                                retractMutation.mutate(p.id);
-                              }
-                            }}
-                            disabled={retractMutation.isPending}
-                            className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 text-xs font-medium transition-colors'
-                          >
-                            <XCircle size={13} /> Retract
-                          </button>
+                          {p.status === 'OPEN' && (
+                            <button
+                              onClick={() => {
+                                if (confirm('Retract this open project? Pending applications will be reassigned.')) {
+                                  retractMutation.mutate(p.id);
+                                }
+                              }}
+                              disabled={retractMutation.isPending}
+                              className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 text-xs font-medium transition-colors'
+                            >
+                              <XCircle size={13} /> Retract
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>

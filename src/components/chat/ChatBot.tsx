@@ -38,11 +38,16 @@ export default function ChatBot() {
     if (!text || loading) return;
     setInput('');
     const userMsg: ChatMessage = { role: 'user', content: text };
-    const history = messages.filter((m, i) => i > 0);
+    const history = messages.filter((_, index) => index > 0).slice(-10);
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
     try {
       const { data } = await chatApi.send(text, history, context);
+      if (data.projectDraft && Object.keys(data.projectDraft).length > 0) {
+        window.dispatchEvent(new CustomEvent('talentbridge:project-draft', {
+          detail: data.projectDraft,
+        }));
+      }
       setMessages((prev) => [
         ...prev,
         { role: 'assistant', content: data.message },
@@ -85,7 +90,7 @@ export default function ChatBot() {
 
       {/* Chat panel — z-30 so modals at z-50 always appear on top */}
       {open && (
-        <div className='fixed bottom-6 right-6 w-[360px] h-[500px] flex flex-col bg-ink-900 border border-ink-700/50 rounded-2xl shadow-2xl shadow-black/50 z-30 overflow-hidden'>
+        <div className='fixed bottom-3 left-3 right-3 h-[calc(100dvh-1.5rem)] max-h-[500px] flex flex-col bg-ink-900 border border-ink-700/50 rounded-2xl shadow-2xl shadow-black/50 z-30 overflow-hidden sm:bottom-6 sm:left-auto sm:right-6 sm:h-[500px] sm:w-[360px]'>
           {/* Header */}
           <div className='flex items-center gap-3 px-4 py-3 border-b border-ink-700/50 flex-shrink-0'>
             <div className='w-7 h-7 rounded-xl bg-ember-500/20 border border-ember-500/30 flex items-center justify-center'>
@@ -184,7 +189,8 @@ export default function ChatBot() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKey}
-                placeholder='Ask anything…'
+                placeholder='Ask about TalentBridge…'
+                maxLength={2000}
                 rows={1}
                 className='flex-1 bg-ink-800 border border-ink-600/50 rounded-xl px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none focus:ring-2 focus:ring-ember-500/40 resize-none'
                 style={{ maxHeight: 72, overflowY: 'auto' }}

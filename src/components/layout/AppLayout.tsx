@@ -118,9 +118,9 @@ const NAV_BY_ROLE: Record<
   ],
   COORDINATOR: [
     { to: '/coordinator/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/coordinator/users', icon: UserCheck, label: 'Users' },
     { to: '/coordinator/students', icon: GraduationCap, label: 'Students' },
     { to: '/coordinator/companies', icon: Building2, label: 'Companies' },
+    { to: '/coordinator/supervisors', icon: UserCheck, label: 'Supervisors' },
     { to: '/coordinator/projects', icon: FolderKanban, label: 'Projects' },
     { to: '/coordinator/parties', icon: ClipboardList, label: 'Parties' },
     { to: '/coordinator/evaluations', icon: Award, label: 'Evaluations' },
@@ -380,7 +380,7 @@ export default function AppLayout() {
           >
             <Menu size={19} />
           </button>
-          <div className='flex items-center gap-2'>
+          <div className='ml-auto flex items-center gap-2'>
             <button
               onClick={toggleTheme}
               className='w-9 h-9 rounded-xl flex items-center justify-center text-ink-400 hover:text-ink-100 hover:bg-ink-800 transition-all'
@@ -409,7 +409,7 @@ export default function AppLayout() {
               {notifOpen && (
                 <div
                   id='notification-panel'
-                  className='fixed right-4 top-16 w-[min(20rem,calc(100vw-2rem))] z-[60] rounded-2xl border border-ink-700/50 bg-ink-900 shadow-2xl shadow-black/60 overflow-hidden'
+                  className='absolute right-0 top-full mt-2 w-[min(20rem,calc(100vw-2rem))] z-[60] rounded-2xl border border-ink-700/50 bg-ink-900 shadow-2xl shadow-black/60 overflow-hidden'
                 >
                   <div className='px-4 py-3 border-b border-ink-700/50 flex items-center justify-between'>
                     <span className='text-sm font-semibold text-white'>

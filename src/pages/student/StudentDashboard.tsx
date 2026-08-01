@@ -69,9 +69,19 @@ export default function StudentDashboard() {
     retry: false,
   });
 
-  const { data: party } = useQuery({
+  const { data: party, isPending: partyPending } = useQuery({
     queryKey: ['my-party'],
     queryFn: () => partyApi.getMyParty().then((r) => r.data),
+    retry: false,
+  });
+
+  const { data: globalDeadline } = useQuery({
+    queryKey: ['global-deadline'],
+    queryFn: () =>
+      projectApi
+        .getGlobalDeadline()
+        .then((r) => r.data || null)
+        .catch(() => null),
     retry: false,
   });
 
@@ -88,6 +98,10 @@ export default function StudentDashboard() {
   const hasGithub = !!user?.githubUsername;
   const members = party?.members ?? [];
   const entries = scorecard?.entries ?? [];
+  const hasAssignedProject = !!party?.assignedProjectId;
+  const dashboardDeadline = hasAssignedProject
+    ? party?.assignedProjectDeadline
+    : globalDeadline;
 
   return (
     <div className='animate-fade-up'>
@@ -97,6 +111,19 @@ export default function StudentDashboard() {
         <p className='page-subtitle'>
           Here's what's happening on your TalentBridge account.
         </p>
+      </div>
+
+      <div className='mb-8'>
+        {partyPending ? (
+          <div className='h-52 animate-pulse rounded-3xl border border-ink-700/50 bg-ink-900' />
+        ) : (
+          <DeadlineCountdown
+            deadline={dashboardDeadline}
+            label={hasAssignedProject ? 'Assigned project deadline' : 'Global application deadline'}
+            title={hasAssignedProject ? party?.assignedProjectTitle : 'Application window'}
+            hero
+          />
+        )}
       </div>
 
       {/* GitHub link prompt */}

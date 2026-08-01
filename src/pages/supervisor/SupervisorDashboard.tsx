@@ -1,24 +1,42 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { partyApi, submissionApi } from '../../api/services'
 import { useAuth } from '../../contexts/AuthContext'
 import { Users, Briefcase, Send, Clock } from 'lucide-react'
 import { format } from 'date-fns'
 import clsx from 'clsx'
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown'
+import { Link } from 'react-router-dom'
+import toast from 'react-hot-toast'
 
 export default function SupervisorDashboard() {
   const { user } = useAuth()
+  const qc = useQueryClient()
+  const canPickParty = user?.role === 'PARTY_SUPERVISOR'
 
   const { data: parties, isLoading } = useQuery({
-    queryKey: ['supervised-parties'],
-    queryFn: () => partyApi.getSupervised().then(r => r.data)
+    queryKey: [canPickParty ? 'all-parties-supervisor' : 'supervised-parties'],
+    queryFn: () => (canPickParty ? partyApi.getAll() : partyApi.getSupervised()).then(r => r.data)
+  })
+
+  const { data: rules } = useQuery({
+    queryKey: ['party-rules'],
+    queryFn: () => partyApi.getRules().then(response => response.data),
+  })
+
+  const claimMutation = useMutation({
+    mutationFn: (partyId: string) => partyApi.claimSupervisor(partyId),
+    onSuccess: () => {
+      toast.success('Party selected');
+      qc.invalidateQueries({ queryKey: ['all-parties-supervisor'] });
+    },
+    onError: (error: any) => toast.error(error?.response?.data?.message || 'Could not select party'),
   })
 
   const submissionQueries = useQuery({
     queryKey: ['supervised-submissions', parties?.map(p => p.id)],
     queryFn: async () => {
       const results: Record<string, any> = {}
-      for (const p of parties ?? []) {
+      for (const p of (parties ?? []).filter(party => !canPickParty || party.supervisorId === user?.id)) {
         try {
           const { data } = await submissionApi.get(p.id)
           results[p.id] = data
@@ -35,7 +53,7 @@ export default function SupervisorDashboard() {
     <div className="animate-fade-up">
       <div className="page-header">
         <h1 className="page-title">Supervisor Dashboard</h1>
-        <p className="page-subtitle">Welcome back, {user?.firstName}. Monitoring {parties?.length ?? 0} parties.</p>
+        <p className="page-subtitle">Welcome back, {user?.firstName}. {canPickParty ? 'Browse parties and select teams after your in-person evaluation.' : `Monitoring ${parties?.length ?? 0} parties.`}</p>
       </div>
 
       {isLoading ? (
@@ -45,12 +63,18 @@ export default function SupervisorDashboard() {
       ) : !parties || parties.length === 0 ? (
         <div className="card p-16 text-center">
           <Users size={32} className="text-ink-600 mx-auto mb-3" />
-          <p className="text-ink-400 text-sm">No parties assigned to you yet.</p>
+          <p className="text-ink-400 text-sm">No parties are available yet.</p>
         </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-5">
           {parties.map(party => {
             const sub = submissions[party.id]
+            const termCount = (parties ?? []).filter(candidate =>
+              candidate.supervisorId === user?.id
+              && candidate.semester === party.semester
+              && candidate.academicYear === party.academicYear,
+            ).length
+            const atCapacity = termCount >= (rules?.supervisorMaxParties ?? 2)
             return (
               <div key={party.id} className="card p-5">
                 <div className="flex items-start gap-3 mb-4">
@@ -66,6 +90,16 @@ export default function SupervisorDashboard() {
                       party.status === 'SUBMITTED' && 'badge-submitted',
                     )}>{party.status}</span>
                   </div>
+                  {canPickParty && !party.supervisorId && (
+                    <button
+                      onClick={() => claimMutation.mutate(party.id)}
+                      disabled={atCapacity || claimMutation.isPending}
+                      className="btn-primary ml-auto px-3 py-2 text-xs"
+                    >
+                      {atCapacity ? 'Capacity reached' : 'Pick this party'}
+                    </button>
+                  )}
+                  {party.supervisorId === user?.id && <span className='badge badge-open ml-auto text-[10px]'>Your party</span>}
                 </div>
 
                 {/* Members */}
@@ -73,7 +107,7 @@ export default function SupervisorDashboard() {
                   <p className="text-xs font-semibold text-ink-500 uppercase tracking-wider mb-2">Members</p>
                   <div className="flex -space-x-1.5">
                     {party.members.map(m => (
-                      <div key={m.id} title={`${m.firstName} ${m.lastName}${party.leader?.id === m.id ? ' · Leader' : ''}`}
+                      <Link to={`/supervisor/students/${m.id}`} key={m.id} title={`${m.firstName} ${m.lastName}${party.leader?.id === m.id ? ' · Leader' : ''}`}
                         className={clsx("relative w-7 h-7 rounded-full bg-ink-700 border-2 border-ink-900 flex items-center justify-center text-[10px] font-bold text-ink-200",
                           party.leader?.id === m.id && "ring-2 ring-ember-400/50"
                         )}>
@@ -81,7 +115,7 @@ export default function SupervisorDashboard() {
                         {party.leader?.id === m.id && (
                           <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-ember-500 border border-ink-900" />
                         )}
-                      </div>
+                      </Link>
                     ))}
                     <span className="ml-3 text-xs text-ink-400 self-center">{party.members.length} members</span>
                   </div>

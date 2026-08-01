@@ -61,6 +61,7 @@ const pageResponse = <T>(content: T[]) => ({
 type CoordinatorApiOptions = {
   onProjects?: (route: Route) => void | Promise<void>;
   onGlobalDeadline?: (route: Route) => void | Promise<void>;
+  onParties?: (route: Route) => void | Promise<void>;
 };
 
 async function loginAsCoordinator(page: Page) {
@@ -95,7 +96,7 @@ async function mockCoordinatorApi(page: Page, options: CoordinatorApiOptions = {
   for (const path of ['students', 'companies', 'supervisors', 'coordinators']) {
     await page.route(`**/api/users/${path}`, route => route.fulfill({
       contentType: 'application/json',
-      body: '[]',
+      body: JSON.stringify(path === 'students' ? pendingStudents : []),
     }));
   }
   await page.route('**/api/projects/all**', route => options.onProjects
@@ -107,10 +108,16 @@ async function mockCoordinatorApi(page: Page, options: CoordinatorApiOptions = {
   await page.route('**/api/projects/global-deadline', route => options.onGlobalDeadline
     ? options.onGlobalDeadline(route)
     : route.fulfill({ contentType: 'application/json', body: '{}' }));
-  await page.route('**/api/parties/all', route => route.fulfill({
+  await page.route('**/api/parties/rules', route => route.fulfill({
     contentType: 'application/json',
-    body: '[]',
+    body: JSON.stringify({ minSize: 2, maxSize: 3, supervisorMaxParties: 2 }),
   }));
+  await page.route('**/api/parties/all', route => options.onParties
+    ? options.onParties(route)
+    : route.fulfill({
+        contentType: 'application/json',
+        body: '[]',
+      }));
   await page.route('**/api/coordinator/analytics', route => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify({
@@ -127,7 +134,7 @@ async function mockCoordinatorApi(page: Page, options: CoordinatorApiOptions = {
   }));
 }
 
-test('navigates from Dashboard to Users without blanking', async ({ page }) => {
+test('navigates from Dashboard to Students without blanking', async ({ page }) => {
   const errors: Error[] = [];
   page.on('pageerror', error => errors.push(error));
   await mockCoordinatorApi(page);
@@ -137,11 +144,12 @@ test('navigates from Dashboard to Users without blanking', async ({ page }) => {
   await loginAsCoordinator(page);
   expect(new URL((await pendingRequest).url()).searchParams.get('size')).toBe('100');
 
-  await page.getByRole('link', { name: 'Users', exact: true }).click();
+  await page.getByRole('link', { name: 'Students', exact: true }).click();
 
-  await expect(page.getByRole('heading', { name: 'Manage Users' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Students Directory' })).toBeVisible();
   await expect(page.getByText('pending.student@talentbridge.com').first()).toBeVisible();
-  await expect(page.getByText(/25 users.*25 pending approvals/)).toBeVisible();
+  await expect(page.getByText('25 students shown')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Users', exact: true })).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
@@ -173,6 +181,65 @@ test('shows a new global deadline without reloading', async ({ page }) => {
   await expect(page.getByText(/02 Jan 2031/)).toBeVisible();
 });
 
+test('allows an assigned project deadline to be changed individually', async ({ page }) => {
+  const assignedProject = {
+    ...openProject,
+    title: 'Assigned Deadline Project',
+    status: 'ASSIGNED',
+  };
+  let requestedDeadline = '';
+  await mockCoordinatorApi(page, {
+    onProjects: route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify(pageResponse([assignedProject])),
+    }),
+  });
+  await page.route('**/api/projects/*/deadline**', route => {
+    requestedDeadline = new URL(route.request().url()).searchParams.get('deadline') ?? '';
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify(assignedProject) });
+  });
+  await loginAsCoordinator(page);
+  await page.getByRole('link', { name: 'Projects', exact: true }).click();
+
+  await page.getByLabel('Deadline for Assigned Deadline Project', { exact: true }).fill('2031-02-03T10:00');
+  await page.getByRole('button', { name: 'Set deadline for Assigned Deadline Project' }).click();
+
+  await expect.poll(() => requestedDeadline).toContain('2031-02-03');
+});
+
+test('changes an assigned project deadline from the party view', async ({ page }) => {
+  const assignedParty = {
+    id: '00000000-0000-0000-0000-000000000201',
+    name: 'Deadline Party',
+    status: 'ASSIGNED',
+    semester: 'Fall',
+    academicYear: 2026,
+    leader: pendingStudents[0],
+    members: [pendingStudents[0], pendingStudents[1]],
+    assignedProjectId: openProject.id,
+    assignedProjectTitle: openProject.title,
+    assignedProjectDeadline: openProject.deadline,
+  };
+  let requestedProject = '';
+  await mockCoordinatorApi(page, {
+    onParties: route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify([assignedParty]),
+    }),
+  });
+  await page.route('**/api/projects/*/deadline**', route => {
+    requestedProject = route.request().url();
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify(openProject) });
+  });
+  await loginAsCoordinator(page);
+  await page.getByRole('link', { name: 'Parties', exact: true }).click();
+
+  await page.getByLabel('Deadline for party Deadline Party', { exact: true }).fill('2031-03-04T10:00');
+  await page.getByRole('button', { name: 'Update deadline for party Deadline Party' }).click();
+
+  await expect.poll(() => requestedProject).toContain(openProject.id);
+});
+
 test('keeps notifications visible and closes the mobile sidebar', async ({ page }) => {
   await page.setViewportSize({ width: 800, height: 400 });
   await mockCoordinatorApi(page);
@@ -191,6 +258,50 @@ test('keeps notifications visible and closes the mobile sidebar', async ({ page 
   expect(box!.y + box!.height).toBeLessThanOrEqual(400);
 });
 
+test('right-aligns header controls and anchors notifications below the bell', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await mockCoordinatorApi(page);
+  await loginAsCoordinator(page);
+
+  const header = await page.locator('header').boundingBox();
+  const profile = await page.getByRole('button', { name: 'DC Demo', exact: true }).boundingBox();
+  const bellButton = page.getByRole('button', { name: 'Notifications' });
+  const bell = await bellButton.boundingBox();
+  await bellButton.click();
+  const panel = await page.locator('#notification-panel').boundingBox();
+
+  expect(header).not.toBeNull();
+  expect(profile).not.toBeNull();
+  expect(bell).not.toBeNull();
+  expect(panel).not.toBeNull();
+  expect(header!.x + header!.width - (profile!.x + profile!.width)).toBeLessThanOrEqual(32);
+  expect(panel!.y).toBeGreaterThanOrEqual(bell!.y + bell!.height);
+  expect(Math.abs(panel!.x + panel!.width - (bell!.x + bell!.width))).toBeLessThanOrEqual(1);
+});
+
+test('shows the nearest deadline prominently with four upcoming deadlines', async ({ page }) => {
+  const projects = Array.from({ length: 5 }, (_, index) => ({
+    ...openProject,
+    id: `00000000-0000-0000-0002-${String(index + 1).padStart(12, '0')}`,
+    title: `Deadline project ${index + 1}`,
+    deadline: new Date(Date.now() + (index === 0 ? 3 : index + 10) * 86_400_000).toISOString(),
+  }));
+  await mockCoordinatorApi(page, {
+    onProjects: route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify(pageResponse(projects)),
+    }),
+  });
+
+  await loginAsCoordinator(page);
+
+  await expect(page.getByRole('heading', { name: 'Upcoming Deadlines' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Deadline project 1' })).toBeVisible();
+  await expect(page.getByText('Deadline project 5').first()).toBeVisible();
+  await expect(page.getByText('Due soon')).toBeVisible();
+  await expect(page.getByLabel(/On track:/).first()).toBeVisible();
+});
+
 test('shows a safe backend chatbot failure', async ({ page }) => {
   await mockCoordinatorApi(page);
   await page.route('**/api/chat', route => route.fulfill({
@@ -201,13 +312,14 @@ test('shows a safe backend chatbot failure', async ({ page }) => {
   await loginAsCoordinator(page);
 
   await page.getByRole('button', { name: 'Open AI assistant' }).click();
-  await page.getByPlaceholder('Ask anything…').fill('Explain this project');
+  await page.getByPlaceholder('Ask about TalentBridge…').fill('Explain this project');
   await page.getByRole('button', { name: 'Send message' }).click();
 
   await expect(page.getByText('AI service is temporarily unavailable')).toBeVisible();
 });
 
 test('uses a safe fallback for malformed chatbot errors', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
   await mockCoordinatorApi(page);
   await page.route('**/api/chat', route => route.fulfill({
     status: 503,
@@ -217,7 +329,12 @@ test('uses a safe fallback for malformed chatbot errors', async ({ page }) => {
   await loginAsCoordinator(page);
 
   await page.getByRole('button', { name: 'Open AI assistant' }).click();
-  await page.getByPlaceholder('Ask anything…').fill('Explain this project');
+  const panel = page.getByText('AI Assistant').locator('..').locator('..');
+  const bounds = await panel.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
+  await page.getByPlaceholder('Ask about TalentBridge…').fill('Explain this project');
   await page.getByRole('button', { name: 'Send message' }).click();
 
   await expect(page.getByText('Sorry, I ran into an error. Please try again.')).toBeVisible();

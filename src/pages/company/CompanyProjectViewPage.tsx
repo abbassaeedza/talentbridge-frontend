@@ -1,6 +1,7 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { projectApi } from '../../api/services'
+import { projectApi, partyApi } from '../../api/services'
+import { useState } from 'react'
 import {
   ArrowLeft, FileText, Target, Package, Star,
   Wrench, Users, Clock, Calendar, Pencil, Tag
@@ -35,11 +36,24 @@ function Section({ icon: Icon, label, children }: {
 export default function CompanyProjectViewPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [expandedParty, setExpandedParty] = useState<string | null>(null)
 
   const { data: project, isLoading } = useQuery({
     queryKey: ['project', id],
     queryFn: () => projectApi.getById(id!).then(r => r.data),
     enabled: !!id,
+  })
+
+  const { data: applications } = useQuery({
+    queryKey: ['company-project-applications', id],
+    queryFn: () => partyApi.getApplicationsByProject(id!).then((response) => response.data),
+    enabled: !!id,
+  })
+
+  const { data: selectedParty } = useQuery({
+    queryKey: ['company-application-party', expandedParty],
+    queryFn: () => partyApi.getById(expandedParty!).then((response) => response.data),
+    enabled: !!expandedParty,
   })
 
   if (isLoading) {
@@ -64,7 +78,7 @@ export default function CompanyProjectViewPage() {
   const canEdit = project.status === 'PENDING_REVIEW' || project.status === 'ARCHIVED'
 
   return (
-    <div className="animate-fade-up max-w-2xl">
+    <div className="animate-fade-up max-w-4xl">
       {/* Back + actions */}
       <div className="flex items-center justify-between mb-6">
         <button
@@ -173,6 +187,46 @@ export default function CompanyProjectViewPage() {
               ))}
             </div>
           </Section>
+        )}
+      </div>
+
+      <div className='card mt-5 overflow-hidden'>
+        <div className='border-b border-ink-800/50 px-6 py-4'>
+          <h2 className='font-display font-semibold text-white'>Party Applications</h2>
+          <p className='mt-1 text-xs text-ink-400'>Review applicants and open each student’s full profile.</p>
+        </div>
+        {!applications || applications.length === 0 ? (
+          <p className='p-6 text-sm text-ink-400'>No party applications yet.</p>
+        ) : (
+          <div className='divide-y divide-ink-800/50'>
+            {applications.map((application) => (
+              <div key={application.id} className='px-6 py-4'>
+                <div className='flex items-center gap-3'>
+                  <span className='flex h-8 w-8 items-center justify-center rounded-lg bg-ink-700 text-sm font-bold text-ember-400'>#{application.rankPosition}</span>
+                  <div className='flex-1'>
+                    <p className='text-sm font-semibold text-ink-100'>{application.partyName}</p>
+                    <p className='text-xs text-ink-500'>{application.status.replace('_', ' ')}</p>
+                  </div>
+                  <button onClick={() => setExpandedParty(expandedParty === application.partyId ? null : application.partyId)} className='btn-secondary px-3 py-2 text-xs'>
+                    {expandedParty === application.partyId ? 'Hide team' : 'View team'}
+                  </button>
+                </div>
+                {expandedParty === application.partyId && selectedParty?.id === application.partyId && (
+                  <div className='mt-4 grid gap-2 sm:grid-cols-2'>
+                    {selectedParty.members.map((member) => (
+                      <Link key={member.id} to={`/company/students/${member.id}`} className='rounded-xl border border-ink-700/40 bg-ink-800/50 p-3 hover:border-ember-500/30'>
+                        <p className='text-sm font-medium text-ink-100'>{member.firstName} {member.lastName}</p>
+                        <p className='mt-1 text-xs text-ink-500'>{member.email}</p>
+                        <div className='mt-2 flex flex-wrap gap-1'>
+                          {member.skills.slice(0, 3).map((skill) => <span key={skill} className='rounded bg-ink-700 px-1.5 py-0.5 text-[10px] text-ink-300'>{skill}</span>)}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

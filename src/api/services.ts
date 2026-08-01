@@ -3,11 +3,13 @@ import type {
   AuthResponse,
   Project,
   Party,
+  PartyRules,
   Submission,
   EvaluationReport,
   Scorecard,
   PageResponse,
   ChatMessage,
+  ProjectDraft,
   Application,
   User,
   StudentProfile,
@@ -31,6 +33,7 @@ export const authApi = {
 // ── Users ───────────────────────────────────────────────────────────
 export const userApi = {
   getMe: () => api.get<User>('/api/users/me'),
+  getById: (userId: string) => api.get<User>(`/api/users/${userId}`),
   completeOnboarding: (data: Record<string, unknown>) =>
     api.post<StudentProfile>('/api/users/onboarding', data),
   getScorecard: (userId: string) =>
@@ -51,6 +54,7 @@ export const userApi = {
     api.put<User>(`/api/users/${userId}/reject`, null, { params: { reason } }),
   suspend: (userId: string) => api.put<User>(`/api/users/${userId}/suspend`),
   unsuspend: (userId: string) => api.put<User>(`/api/users/${userId}/unsuspend`),
+  deleteRejected: (userId: string) => api.delete(`/api/users/${userId}`),
   broadcast: (data: { title: string; message: string; role?: string }) =>
     api.post('/api/users/broadcast', data),
   githubCallback: (code: string) =>
@@ -78,6 +82,13 @@ export const projectApi = {
     api.get<PageResponse<Project>>('/api/projects/all', {
       params: { page, size, ...(status ? { status } : {}) },
     }),
+  getAllUnpaged: async () => {
+    const first = await api.get<PageResponse<Project>>('/api/projects/all', { params: { page: 0, size: 200 } });
+    if (first.data.totalPages <= 1) return first.data.content;
+    const rest = await Promise.all(Array.from({ length: first.data.totalPages - 1 }, (_, index) =>
+      api.get<PageResponse<Project>>('/api/projects/all', { params: { page: index + 1, size: 200 } })));
+    return [first.data.content, ...rest.map((response) => response.data.content)].flat();
+  },
   getById: (id: string) => api.get<Project>(`/api/projects/${id}`),
   getMyProjects: () => api.get<Project[]>('/api/projects/my'),
   approve: (id: string) => api.put<Project>(`/api/projects/${id}/approve`),
@@ -89,6 +100,8 @@ export const projectApi = {
     }),
   setGlobalDeadline: (deadline: string) =>
     api.put('/api/projects/global-deadline', { deadline }),
+  getGlobalDeadline: () =>
+    api.get<string | null>('/api/projects/global-deadline'),
   assign: (projectId: string, partyId: string) =>
     api.put<Project>(`/api/projects/${projectId}/assign/${partyId}`),
   retract: (id: string) => api.put<Project>(`/api/projects/${id}/retract`),
@@ -101,6 +114,7 @@ export const projectApi = {
 
 // ── Parties ─────────────────────────────────────────────────────────
 export const partyApi = {
+  getRules: () => api.get<PartyRules>('/api/parties/rules'),
   create: (data: Record<string, unknown>) =>
     api.post<Party>('/api/parties', data),
   join: (partyId: string) => api.post<Party>(`/api/parties/${partyId}/join`),
@@ -114,6 +128,8 @@ export const partyApi = {
   getSupervised: () => api.get<Party[]>('/api/parties/supervised'),
   assignSupervisor: (partyId: string, supervisorId: string) =>
     api.put<Party>(`/api/parties/${partyId}/supervisor`, { supervisorId }),
+  claimSupervisor: (partyId: string) =>
+    api.put<Party>(`/api/parties/${partyId}/claim-supervisor`),
   rename: (partyId: string, name: string) =>
     api.put<Party>(`/api/parties/${partyId}/name`, { name }),
   removeMember: (partyId: string, userId: string) =>
@@ -161,7 +177,7 @@ export const chatApi = {
     context: string,
     projectId?: string,
   ) =>
-    api.post<{ message: string; model: string }>('/api/chat', {
+    api.post<{ message: string; model: string; projectDraft?: ProjectDraft }>('/api/chat', {
       message,
       history,
       context,

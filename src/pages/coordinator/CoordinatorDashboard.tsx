@@ -32,7 +32,7 @@ export default function CoordinatorDashboard() {
   })
   const { data: projects } = useQuery({
     queryKey: ['all-projects'],
-    queryFn: () => projectApi.getAll(0, 200).then(r => r.data)
+    queryFn: () => projectApi.getAllUnpaged()
   })
   const { data: parties } = useQuery({
     queryKey: ['all-parties'],
@@ -43,16 +43,20 @@ export default function CoordinatorDashboard() {
     queryFn: () => coordinatorApi.getAnalytics().then(r => r.data)
   })
 
-  const pendingProjects = projects?.content.filter(p => p.status === 'PENDING_REVIEW').length ?? 0
+  const pendingProjects = projects?.filter(p => p.status === 'PENDING_REVIEW').length ?? 0
   const assignedParties = parties?.filter(p => p.assignedProjectId).length ?? 0
   const totalParties = parties?.length ?? 0
   const assignmentPercent = totalParties > 0 ? Math.round((assignedParties / totalParties) * 100) : 0
-  const nextDeadline = projects?.content
-    .filter(p => p.deadline && (p.status === 'OPEN' || p.status === 'ASSIGNED'))
-    .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())[0]
+  const upcomingDeadlines = (projects ?? [])
+    .filter(p => p.deadline
+      && new Date(p.deadline).getTime() > Date.now()
+      && (p.status === 'OPEN' || p.status === 'ASSIGNED'))
+    .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())
+    .slice(0, 5)
+  const [nextDeadline, ...laterDeadlines] = upcomingDeadlines
 
   const stats = [
-    { label: 'Pending approvals', value: pending?.totalElements ?? 0, icon: UserCheck, color: 'bg-amber-500/15 text-amber-400', to: '/coordinator/users' },
+    { label: 'Pending approvals', value: pending?.totalElements ?? 0, icon: UserCheck, color: 'bg-amber-500/15 text-amber-400', to: '/coordinator/students' },
     { label: 'Projects to review', value: pendingProjects, icon: FolderKanban, color: 'bg-ember-500/15 text-ember-400', to: '/coordinator/projects' },
     { label: 'Total parties', value: parties?.length ?? 0, icon: Users, color: 'bg-violet-500/15 text-violet-400', to: '/coordinator/parties' },
     { label: 'Assigned parties', value: assignedParties, icon: Award, color: 'bg-jade-500/15 text-jade-400', to: '/coordinator/evaluations' },
@@ -82,7 +86,38 @@ export default function CoordinatorDashboard() {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6 mb-6">
+      <section className="mb-6">
+        <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-semibold text-white">
+          <Clock size={18} className="text-ember-400" /> Upcoming Deadlines
+        </h2>
+        {nextDeadline ? (
+          <>
+            <DeadlineCountdown
+              deadline={nextDeadline.deadline}
+              label="Nearest project deadline"
+              title={nextDeadline.title}
+              hero
+            />
+            {laterDeadlines.length > 0 && (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {laterDeadlines.map(project => (
+                  <div key={project.id} className="card min-w-0 p-4">
+                    <p className="truncate text-sm font-semibold text-ink-100">{project.title}</p>
+                    <p className="mb-3 mt-1 truncate text-xs text-ink-500">{project.companyName}</p>
+                    <DeadlineCountdown deadline={project.deadline} compact />
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="card p-5">
+            <p className="text-sm text-ink-400">No active project deadlines set.</p>
+          </div>
+        )}
+      </section>
+
+      <div className="mb-6">
         <div className="card p-5">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -94,20 +129,6 @@ export default function CoordinatorDashboard() {
           <div className="h-2 rounded-full bg-ink-800 overflow-hidden">
             <div className="h-full rounded-full bg-gradient-to-r from-jade-500 to-ember-400" style={{ width: `${assignmentPercent}%` }} />
           </div>
-        </div>
-
-        <div className="card p-5">
-          <p className="font-display font-semibold text-white mb-2 flex items-center gap-2">
-            <Clock size={16} className="text-ember-400" /> Next Deadline
-          </p>
-          {nextDeadline ? (
-            <div>
-              <p className="text-sm text-ink-200 mb-2">{nextDeadline.title}</p>
-              <DeadlineCountdown deadline={nextDeadline.deadline ?? null} />
-            </div>
-          ) : (
-            <p className="text-sm text-ink-400">No active project deadlines set.</p>
-          )}
         </div>
       </div>
 
@@ -170,7 +191,7 @@ export default function CoordinatorDashboard() {
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-ink-700/50 flex items-center justify-between">
             <h2 className="font-display font-semibold text-white">Pending Approvals</h2>
-            <Link to="/coordinator/users" className="text-xs text-ember-400 flex items-center gap-1">View all <ArrowRight size={12} /></Link>
+            <Link to="/coordinator/students" className="text-xs text-ember-400 flex items-center gap-1">View all <ArrowRight size={12} /></Link>
           </div>
           {!pending || pending.content.length === 0 ? (
             <p className="px-5 py-6 text-sm text-ink-400">No pending approvals.</p>
@@ -198,11 +219,11 @@ export default function CoordinatorDashboard() {
             <h2 className="font-display font-semibold text-white">Recent Projects</h2>
             <Link to="/coordinator/projects" className="text-xs text-ember-400 flex items-center gap-1">View all <ArrowRight size={12} /></Link>
           </div>
-          {!projects || projects.content.length === 0 ? (
+          {!projects || projects.length === 0 ? (
             <p className="px-5 py-6 text-sm text-ink-400">No projects yet.</p>
           ) : (
             <div className="divide-y divide-ink-800/50">
-              {projects.content.slice(0, 5).map(p => (
+              {projects.slice(0, 5).map(p => (
                 <div key={p.id} className="px-5 py-3 flex items-center gap-3">
                   <div className="flex-1">
                     <p className="text-sm font-medium text-ink-100 truncate">{p.title}</p>

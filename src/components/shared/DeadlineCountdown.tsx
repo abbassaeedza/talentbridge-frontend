@@ -6,7 +6,9 @@ interface Props {
   deadline: string | null | undefined;
   submitted?: boolean;
   label?: string;
+  title?: string;
   compact?: boolean;
+  hero?: boolean;
   className?: string;
 }
 
@@ -31,7 +33,9 @@ export default function DeadlineCountdown({
   deadline,
   submitted = false,
   label,
+  title,
   compact = false,
+  hero = false,
   className,
 }: Props) {
   const [, setTick] = useState(0);
@@ -40,7 +44,7 @@ export default function DeadlineCountdown({
     return () => clearInterval(id);
   }, []);
 
-  // Submitted — always green
+  // Submitted - always green
   if (submitted) {
     return (
       <div
@@ -59,6 +63,19 @@ export default function DeadlineCountdown({
 
   // No deadline
   if (!deadline) {
+    if (hero) {
+      return (
+        <div className={clsx('rounded-3xl border border-ink-700/50 bg-ink-900 p-5 sm:p-6', className)}>
+          {label && <p className='text-xs uppercase tracking-widest font-semibold text-ink-400'>{label}</p>}
+          {title && <h3 className='mt-2 font-display text-xl font-bold text-white'>{title}</h3>}
+          <div className='mt-6 flex items-center gap-3 text-ink-400'>
+            <Clock size={28} />
+            <span className='font-display text-xl font-semibold'>No deadline scheduled</span>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div
         className={clsx(
@@ -78,6 +95,22 @@ export default function DeadlineCountdown({
 
   // Expired
   if (!left) {
+    if (hero) {
+      return (
+        <div className={clsx('rounded-3xl border border-red-500/30 bg-red-500/10 p-5 sm:p-6 text-red-400', className)}>
+          <div className='flex items-start justify-between gap-4'>
+            <div>
+              {label && <p className='text-xs uppercase tracking-widest font-semibold opacity-75'>{label}</p>}
+              {title && <h3 className='mt-2 font-display text-xl font-bold text-white'>{title}</h3>}
+            </div>
+            <span className='rounded-full border border-red-500/30 bg-red-500/15 px-3 py-1 text-xs font-semibold'>Expired</span>
+          </div>
+          <p className='mt-6 font-display text-3xl font-bold'>Deadline expired</p>
+          <p className='mt-2 text-sm opacity-75'>{new Date(deadline).toLocaleString('en-GB')}</p>
+        </div>
+      );
+    }
+
     return (
       <div
         className={clsx(
@@ -87,33 +120,78 @@ export default function DeadlineCountdown({
           className,
         )}
       >
-        <span className='w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse flex-shrink-0' />
+        <span className='w-1.5 h-1.5 rounded-full bg-red-400 motion-safe:animate-pulse flex-shrink-0' />
         Expired
       </div>
     );
   }
 
-  // Colour logic: submitted=green (handled above), >48h=neutral, <48h=amber, <24h=red+pulse
-  const isRed = left.totalHours < 24;
-  const isAmber = !isRed && left.totalHours < 48;
+  const isRed = left.totalHours < 48;
+  const isAmber = !isRed && left.totalHours <= 24 * 7;
 
   const colourCls = isRed
     ? 'bg-red-500/15 border-red-500/30 text-red-400'
     : isAmber
       ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
-      : 'bg-ink-800 border-ink-700/50 text-ink-300';
+      : 'bg-jade-500/15 border-jade-500/30 text-jade-400';
 
   const dotCls = isRed
-    ? 'bg-red-400 animate-pulse'
+    ? 'bg-red-400 motion-safe:animate-pulse'
     : isAmber
       ? 'bg-amber-400'
-      : 'bg-ink-500';
+      : 'bg-jade-400';
 
   const timeStr = `${left.d}d ${pad(left.h)}:${pad(left.m)}:${pad(left.s)}`;
+  const status = isRed ? 'Urgent' : isAmber ? 'Due soon' : 'On track';
+
+  if (hero) {
+    const blocks = [
+      ['Days', String(left.d)],
+      ['Hours', pad(left.h)],
+      ['Minutes', pad(left.m)],
+      ['Seconds', pad(left.s)],
+    ];
+
+    return (
+      <div className={clsx('relative overflow-hidden rounded-3xl border p-5 sm:p-6', colourCls, className)}>
+        <div className='relative'>
+          <div className='flex items-start justify-between gap-4'>
+            <div className='min-w-0'>
+              {label && <p className='text-xs uppercase tracking-widest font-semibold opacity-75'>{label}</p>}
+              {title && <h3 className='mt-2 truncate font-display text-xl font-bold text-white sm:text-2xl'>{title}</h3>}
+            </div>
+            <span className='flex-shrink-0 rounded-full border border-current/25 bg-black/10 px-3 py-1 text-xs font-semibold'>
+              {status}
+            </span>
+          </div>
+
+          <div className='mt-6 grid grid-cols-4 gap-2 sm:gap-3' aria-label={`${timeStr} remaining`}>
+            {blocks.map(([unit, value]) => (
+              <div key={unit} className='rounded-2xl border border-current/15 bg-black/10 px-2 py-3 text-center sm:px-4 sm:py-4'>
+                <p className='font-mono text-2xl font-bold tracking-tight text-white sm:text-4xl'>{value}</p>
+                <p className='mt-1 text-[9px] font-semibold uppercase tracking-wider opacity-70 sm:text-xs'>{unit}</p>
+              </div>
+            ))}
+          </div>
+
+          <p className='mt-4 text-xs font-medium opacity-70 sm:text-sm'>
+            Due {new Date(deadline).toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (compact) {
     return (
       <div
+        aria-label={`${status}: ${timeStr} remaining`}
         className={clsx(
           'inline-flex items-center gap-1.5 rounded-xl border font-mono font-medium',
           'px-2.5 py-1 text-[11px]',

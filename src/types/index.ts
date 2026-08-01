@@ -18,6 +18,8 @@ export interface User {
   createdAt?: string
   studentProfile?: StudentProfile
   companyProfile?: CompanyProfile
+  suspensionCount?: number
+  rejectionCount?: number
 }
 
 export interface StudentProfile {
@@ -104,6 +106,12 @@ export interface Party {
   assignedProjectId?: string
   assignedProjectTitle?: string
   assignedProjectDeadline?: string
+}
+
+export interface PartyRules {
+  minSize: number
+  maxSize: number
+  supervisorMaxParties: number
 }
 
 export interface Application {
@@ -194,6 +202,16 @@ export interface Notification {
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
+}
+
+export interface ProjectDraft {
+  title?: string
+  description?: string
+  scope?: string
+  deliverables?: string
+  evaluationCriteria?: string
+  projectField?: string
+  tools?: string[]
 }
 
 export interface PageResponse<T> {

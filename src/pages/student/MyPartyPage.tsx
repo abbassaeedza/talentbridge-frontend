@@ -20,7 +20,8 @@ export default function MyPartyPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [joinId, setJoinId] = useState('');
   const [newPartyName, setNewPartyName] = useState('');
-  const [semester, setSemester] = useState('');
+  const [semester, setSemester] = useState(new Date().getMonth() < 6 ? 'Spring' : 'Fall');
+  const [academicYear, setAcademicYear] = useState(new Date().getFullYear());
   const [copied, setCopied] = useState(false);
   const [transferingTo, setTransferingTo] = useState<string | null>(null);
 
@@ -32,6 +33,11 @@ export default function MyPartyPage() {
         .then((r) => r.data)
         .catch(() => null),
     retry: false,
+  });
+
+  const { data: rules } = useQuery({
+    queryKey: ['party-rules'],
+    queryFn: () => partyApi.getRules().then((r) => r.data),
   });
 
   const { data: applications } = useQuery({
@@ -47,7 +53,7 @@ export default function MyPartyPage() {
   };
 
   const createMutation = useMutation({
-    mutationFn: () => partyApi.create({ name: newPartyName, semester }),
+    mutationFn: () => partyApi.create({ name: newPartyName, semester, academicYear }),
     onSuccess: () => {
       toast.success('Party created!');
       invalidate();
@@ -120,7 +126,8 @@ export default function MyPartyPage() {
               Create a Party
             </h2>
             <p className='text-xs text-ink-400 mb-4'>
-              Start your own team and invite classmates.
+              Start your own team and invite classmates
+              {rules ? ` (${rules.minSize}-${rules.maxSize} members).` : '.'}
             </p>
             {!createOpen ? (
               <button
@@ -132,22 +139,41 @@ export default function MyPartyPage() {
             ) : (
               <div className='space-y-3'>
                 <div>
-                  <label className='input-label'>Party name *</label>
+                  <label htmlFor='party-name' className='input-label'>Party name *</label>
                   <input
+                    id='party-name'
                     className='input'
                     value={newPartyName}
+                    maxLength={100}
                     onChange={(e) => setNewPartyName(e.target.value)}
                     placeholder='Team Phoenix'
                   />
                 </div>
-                <div>
-                  <label className='input-label'>Semester (optional)</label>
-                  <input
-                    className='input'
-                    value={semester}
-                    onChange={(e) => setSemester(e.target.value)}
-                    placeholder='Fall 2025'
-                  />
+                <div className='grid grid-cols-2 gap-3'>
+                  <div>
+                    <label htmlFor='party-semester' className='input-label'>Semester</label>
+                    <select
+                      id='party-semester'
+                      className='input'
+                      value={semester}
+                      onChange={(e) => setSemester(e.target.value)}
+                    >
+                      <option value='Spring'>Spring</option>
+                      <option value='Fall'>Fall</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor='party-year' className='input-label'>Academic year</label>
+                    <input
+                      id='party-year'
+                      type='number'
+                      min={2020}
+                      max={2100}
+                      className='input'
+                      value={academicYear}
+                      onChange={(e) => setAcademicYear(Number(e.target.value))}
+                    />
+                  </div>
                 </div>
                 <div className='flex gap-2'>
                   <button
@@ -158,7 +184,7 @@ export default function MyPartyPage() {
                   </button>
                   <button
                     onClick={() => createMutation.mutate()}
-                    disabled={!newPartyName || createMutation.isPending}
+                    disabled={!newPartyName.trim() || !semester || !academicYear || createMutation.isPending}
                     className='btn-primary'
                   >
                     {createMutation.isPending ? '...' : 'Create'}
@@ -219,7 +245,7 @@ export default function MyPartyPage() {
                     </span>
                     {party.semester && (
                       <span className='text-xs text-ink-500'>
-                        {party.semester}
+                        {party.semester} {party.academicYear}
                       </span>
                     )}
                   </div>

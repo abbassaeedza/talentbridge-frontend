@@ -41,18 +41,19 @@ import CreateProjectPage from './pages/company/CreateProjectPage';
 
 // Coordinator pages
 import CoordinatorDashboard from './pages/coordinator/CoordinatorDashboard';
-import ManageUsersPage from './pages/coordinator/ManageUsersPage';
 import ManageProjectsPage from './pages/coordinator/ManageProjectsPage';
 import ManagePartiesPage from './pages/coordinator/ManagePartiesPage';
 import EvaluationsPage from './pages/coordinator/EvaluationsPage';
 import StudentsDirectoryPage from './pages/coordinator/StudentsDirectoryPage';
 import CompaniesDirectoryPage from './pages/coordinator/CompaniesDirectoryPage';
+import SupervisorsDirectoryPage from './pages/coordinator/SupervisorsDirectoryPage';
 
 // Supervisor pages
 import SupervisorDashboard from './pages/supervisor/SupervisorDashboard';
 
 // Shared
 import ProfilePage from './pages/shared/ProfilePage';
+import StudentProfilePage from './pages/shared/StudentProfilePage';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -353,22 +354,26 @@ export default function App() {
                 <Route path='/company/projects/:id' element={<CompanyProjectViewPage />} />
                 <Route path='/company/projects/:id/edit' element={<CompanyProjectEditPage />} />
                 <Route path='/company/profile' element={<ProfilePage />} />
+                <Route path='/company/students/:id' element={<StudentProfilePage />} />
               </Route>
 
               <Route element={<RoleRoute roles={['COORDINATOR']} />}>
                 <Route path='/coordinator/dashboard' element={<CoordinatorDashboard />} />
-                <Route path='/coordinator/users' element={<ManageUsersPage />} />
+                <Route path='/coordinator/users' element={<Navigate to='/coordinator/students' replace />} />
                 <Route path='/coordinator/projects' element={<ManageProjectsPage />} />
                 <Route path='/coordinator/parties' element={<ManagePartiesPage />} />
                 <Route path='/coordinator/evaluations' element={<EvaluationsPage />} />
                 <Route path='/coordinator/profile' element={<ProfilePage />} />
                 <Route path='/coordinator/students' element={<StudentsDirectoryPage />} />
                 <Route path='/coordinator/companies' element={<CompaniesDirectoryPage />} />
+                <Route path='/coordinator/supervisors' element={<SupervisorsDirectoryPage />} />
+                <Route path='/coordinator/students/:id' element={<StudentProfilePage />} />
               </Route>
 
               <Route element={<RoleRoute roles={['PARTY_SUPERVISOR', 'PROJECT_SUPERVISOR']} />}>
                 <Route path='/supervisor/dashboard' element={<SupervisorDashboard />} />
                 <Route path='/supervisor/profile' element={<ProfilePage />} />
+                <Route path='/supervisor/students/:id' element={<StudentProfilePage />} />
               </Route>
 
               {/* 404 inside app */}

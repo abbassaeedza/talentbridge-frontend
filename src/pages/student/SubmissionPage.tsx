@@ -113,6 +113,7 @@ export default function SubmissionPage() {
           </label>
           <input
             className="input"
+            maxLength={500}
             value={repoUrl}
             onChange={e => setRepoUrl(e.target.value)}
             placeholder="https://github.com/your-org/your-project"
@@ -124,6 +125,7 @@ export default function SubmissionPage() {
           <label className="input-label">Branch</label>
           <input
             className="input"
+            maxLength={100}
             value={branch}
             onChange={e => setBranch(e.target.value)}
             placeholder="main"
@@ -177,12 +179,14 @@ export default function SubmissionPage() {
           <label className="input-label">Notes for evaluators (optional)</label>
           <textarea
             className="textarea"
+            maxLength={2000}
             rows={3}
             value={notes}
             onChange={e => setNotes(e.target.value)}
             placeholder="Any context or notes you want the evaluators to know…"
             disabled={isSubmitted}
           />
+          <p className="mt-1 text-right text-[10px] text-ink-500">{notes.length}/2000</p>
         </div>
 
         {!isSubmitted && (

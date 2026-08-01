@@ -7,6 +7,7 @@ import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
 import {
   ArrowRight,
   Briefcase,
+  Clock,
   Edit3,
   Search,
   Trash2,
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
+import { Link } from 'react-router-dom';
 
 export default function ManagePartiesPage() {
   const qc = useQueryClient();
@@ -23,6 +25,7 @@ export default function ManagePartiesPage() {
   const [assignProject, setAssignProject] = useState<Record<string, string>>({});
   const [assignSup, setAssignSup] = useState<Record<string, string>>({});
   const [renameDraft, setRenameDraft] = useState<Record<string, string>>({});
+  const [deadlineDraft, setDeadlineDraft] = useState<Record<string, string>>({});
   const [expandedParty, setExpandedParty] = useState<string | null>(null);
 
   const { data: parties, isLoading } = useQuery({
@@ -38,6 +41,11 @@ export default function ManagePartiesPage() {
   const { data: supervisors } = useQuery({
     queryKey: ['party-supervisors'],
     queryFn: () => userApi.getSupervisors().then((r) => r.data.filter((u) => u.role === 'PARTY_SUPERVISOR')),
+  });
+
+  const { data: rules } = useQuery({
+    queryKey: ['party-rules'],
+    queryFn: () => partyApi.getRules().then((r) => r.data),
   });
 
   const invalidate = () => {
@@ -77,6 +85,17 @@ export default function ManagePartiesPage() {
     onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to unassign project'),
   });
 
+  const deadlineMutation = useMutation({
+    mutationFn: ({ projectId, deadline }: { projectId: string; deadline: string }) =>
+      projectApi.setDeadline(projectId, deadline),
+    onSuccess: () => {
+      toast.success('Project deadline updated');
+      invalidate();
+      qc.invalidateQueries({ queryKey: ['all-projects-admin'] });
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to update deadline'),
+  });
+
   const { data: appsByParty } = useQuery({
     queryKey: ['apps-expanded', expandedParty],
     queryFn: () => expandedParty ? partyApi.getApplicationsByParty(expandedParty).then((r) => r.data) : Promise.resolve([]),
@@ -106,6 +125,17 @@ export default function ManagePartiesPage() {
     party.status === 'SUBMITTED' && 'badge-submitted',
     party.status === 'COMPLETED' && 'badge-open',
   );
+
+  const supervisorsFor = (party: Party) => (supervisors ?? []).filter((supervisor) => {
+    if (supervisor.id === party.supervisorId) return true;
+    const count = (parties ?? []).filter((candidate) =>
+      candidate.id !== party.id
+      && candidate.supervisorId === supervisor.id
+      && candidate.semester === party.semester
+      && candidate.academicYear === party.academicYear,
+    ).length;
+    return count < (rules?.supervisorMaxParties ?? 2);
+  });
 
   return (
     <div className='animate-fade-up'>
@@ -183,11 +213,12 @@ export default function ManagePartiesPage() {
               </div>
             </div>
 
-            <div className='px-5 pb-4 grid lg:grid-cols-3 gap-3 border-t border-ink-800/50 pt-3'>
+            <div className='px-5 pb-4 grid lg:grid-cols-2 xl:grid-cols-4 gap-3 border-t border-ink-800/50 pt-3'>
               <div className='flex gap-2'>
                 <input
                   className='input text-xs py-1.5 flex-1'
                   placeholder='Rename party…'
+                  maxLength={100}
                   value={renameDraft[party.id] ?? ''}
                   onChange={(e) => setRenameDraft((d) => ({ ...d, [party.id]: e.target.value }))}
                 />
@@ -229,7 +260,7 @@ export default function ManagePartiesPage() {
                   onChange={(e) => setAssignSup((d) => ({ ...d, [party.id]: e.target.value }))}
                 >
                   <option value=''>Assign party supervisor…</option>
-                  {supervisors?.map((s) => (
+                  {supervisorsFor(party).map((s) => (
                     <option key={s.id} value={s.id}>{getUserName(s)}</option>
                   ))}
                 </select>
@@ -241,6 +272,29 @@ export default function ManagePartiesPage() {
                   <UserCog size={13} /> Assign
                 </button>
               </div>
+
+              {party.assignedProjectId && (
+                <div className='flex gap-2'>
+                  <input
+                    type='datetime-local'
+                    aria-label={`Deadline for party ${party.name}`}
+                    className='input flex-1 text-xs py-1.5'
+                    value={deadlineDraft[party.id] ?? ''}
+                    onChange={(e) => setDeadlineDraft((draft) => ({ ...draft, [party.id]: e.target.value }))}
+                  />
+                  <button
+                    aria-label={`Update deadline for party ${party.name}`}
+                    onClick={() => deadlineMutation.mutate({
+                      projectId: party.assignedProjectId!,
+                      deadline: deadlineDraft[party.id],
+                    })}
+                    disabled={!deadlineDraft[party.id] || deadlineMutation.isPending}
+                    className='btn-secondary text-xs px-3 py-1.5'
+                  >
+                    <Clock size={13} /> Set
+                  </button>
+                </div>
+              )}
             </div>
 
             {expandedParty === party.id && (
@@ -256,9 +310,9 @@ export default function ManagePartiesPage() {
                             {m.firstName[0]}{m.lastName[0]}
                           </div>
                           <div className='flex-1 min-w-0'>
-                            <p className='text-xs font-medium text-ink-100'>
+                            <Link to={`/coordinator/students/${m.id}`} className='text-xs font-medium text-ink-100 hover:text-ember-400'>
                               {m.firstName} {m.lastName} {isLeader && <span className='text-ember-400'>(leader)</span>}
-                            </p>
+                            </Link>
                             <p className='text-[10px] text-ink-500 truncate'>{m.email}</p>
                           </div>
                           <button
