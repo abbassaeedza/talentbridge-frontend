@@ -15,6 +15,10 @@ import type {
   StudentProfile,
   Notification,
   CoordinatorAnalytics,
+  ProjectSupervisorInvitation,
+  ProjectSupervisorInvitationAcceptRequest,
+  SupervisorProfessionalFields,
+  SupervisorProfile,
 } from '../types';
 
 // ── Auth ────────────────────────────────────────────────────────────
@@ -30,12 +34,37 @@ export const authApi = {
     api.put('/api/auth/password', { currentPassword, newPassword }),
 };
 
+export const projectSupervisorInvitationApi = {
+  validate: (token: string) =>
+    api.get<ProjectSupervisorInvitation>(`/api/project-supervisor-invitations/${token}`),
+  accept: (token: string, data: ProjectSupervisorInvitationAcceptRequest) =>
+    api.post<AuthResponse>(`/api/project-supervisor-invitations/${token}/accept`, data),
+  list: () =>
+    api.get<ProjectSupervisorInvitation[]>('/api/company/project-supervisor-invitations'),
+  create: (email: string) =>
+    api.post<ProjectSupervisorInvitation>('/api/company/project-supervisor-invitations', { email }),
+  resend: (id: string) =>
+    api.post<ProjectSupervisorInvitation>(`/api/company/project-supervisor-invitations/${id}/resend`),
+  revoke: (id: string) =>
+    api.delete(`/api/company/project-supervisor-invitations/${id}`),
+  listAccepted: () => api.get<User[]>('/api/company/project-supervisors'),
+};
+
 // ── Users ───────────────────────────────────────────────────────────
 export const userApi = {
   getMe: () => api.get<User>('/api/users/me'),
   getById: (userId: string) => api.get<User>(`/api/users/${userId}`),
   completeOnboarding: (data: Record<string, unknown>) =>
     api.post<StudentProfile>('/api/users/onboarding', data),
+  completeSupervisorOnboarding: (data: SupervisorProfessionalFields) =>
+    api.post<SupervisorProfile>('/api/users/supervisor-onboarding', data),
+  uploadSupervisorProfilePhoto: (file: File) => {
+    const data = new FormData();
+    data.append('file', file);
+    return api.post<SupervisorProfile>('/api/users/supervisor-profile-photo', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
   getScorecard: (userId: string) =>
     api.get<Scorecard>(`/api/users/${userId}/scorecard`),
   getMyScorecard: () => api.get<Scorecard>('/api/users/my/scorecard'),
@@ -91,6 +120,7 @@ export const projectApi = {
   },
   getById: (id: string) => api.get<Project>(`/api/projects/${id}`),
   getMyProjects: () => api.get<Project[]>('/api/projects/my'),
+  getSupervised: () => api.get<Project[]>('/api/projects/supervised'),
   approve: (id: string) => api.put<Project>(`/api/projects/${id}/approve`),
   disapprove: (id: string) =>
     api.put<Project>(`/api/projects/${id}/disapprove`),
@@ -125,6 +155,7 @@ export const partyApi = {
   getMyParty: () => api.get<Party>('/api/parties/my'),
   getById: (id: string) => api.get<Party>(`/api/parties/${id}`),
   getAll: () => api.get<Party[]>('/api/parties/all'),
+  browse: () => api.get<Party[]>('/api/parties/browse'),
   getSupervised: () => api.get<Party[]>('/api/parties/supervised'),
   assignSupervisor: (partyId: string, supervisorId: string) =>
     api.put<Party>(`/api/parties/${partyId}/supervisor`, { supervisorId }),

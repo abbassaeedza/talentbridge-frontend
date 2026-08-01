@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Plus, Tag, X } from 'lucide-react';
 import clsx from 'clsx';
 import { PROJECT_FIELDS, type Project, type ProjectDraft } from '../../types';
+import { useQuery } from '@tanstack/react-query';
+import { projectSupervisorInvitationApi } from '../../api/services';
 
 const TOOL_SUGGESTIONS = [
   'React', 'TypeScript', 'Python', 'Node.js', 'Java', 'Spring Boot',
@@ -58,6 +60,7 @@ export default function ProjectForm({
     evaluationCriteria: initial?.evaluationCriteria ?? '',
     deadline: initial?.deadline?.slice(0, 16) ?? '',
     internalName: initial?.internalName ?? '',
+    projectSupervisorId: initial?.projectSupervisorId ?? '',
   });
 
   useEffect(() => {
@@ -110,6 +113,7 @@ export default function ProjectForm({
       tools,
       projectField,
       deadline: form.deadline || undefined,
+      projectSupervisorId: form.projectSupervisorId || undefined,
     });
   };
 
@@ -126,15 +130,15 @@ export default function ProjectForm({
       </div>
 
       <div>
-        <label className='input-label'>Project Title *</label>
-        <input className='input' maxLength={LIMITS.title} value={form.title} onChange={(e) => set('title', e.target.value)}
+        <label className='input-label' htmlFor='projectTitle'>Project Title *</label>
+        <input id='projectTitle' className='input' maxLength={LIMITS.title} value={form.title} onChange={(e) => set('title', e.target.value)}
           placeholder='e.g. AI-Powered Customer Support Chatbot' required />
         <Count value={form.title} max={LIMITS.title} />
       </div>
 
       <div>
-        <label className='input-label'>Project Description *</label>
-        <textarea className='textarea' maxLength={LIMITS.text} rows={4} value={form.description} onChange={(e) => set('description', e.target.value)}
+        <label className='input-label' htmlFor='projectDescription'>Project Description *</label>
+        <textarea id='projectDescription' className='textarea' maxLength={LIMITS.text} rows={4} value={form.description} onChange={(e) => set('description', e.target.value)}
           placeholder='What is the project about? What problem does it solve?' required />
         <Count value={form.description} max={LIMITS.text} />
       </div>
@@ -219,6 +223,8 @@ export default function ProjectForm({
         <input type='datetime-local' className='input' value={form.deadline} onChange={(e) => set('deadline', e.target.value)} />
       </div>
 
+      <SupervisorSelect value={form.projectSupervisorId} onChange={(value) => set('projectSupervisorId', value)} />
+
       <div className='flex gap-3 pt-2'>
         <button type='button' onClick={onCancel} className='btn-secondary'>Cancel</button>
         <button type='submit' disabled={pending || !form.title || !form.description} className='btn-primary flex-1'>
@@ -228,5 +234,24 @@ export default function ProjectForm({
         </button>
       </div>
     </form>
+  );
+}
+
+function SupervisorSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const { data: supervisors = [] } = useQuery({
+    queryKey: ['accepted-project-supervisors'],
+    queryFn: () => projectSupervisorInvitationApi.listAccepted().then((response) => response.data),
+  });
+
+  return (
+    <div>
+      <label className='input-label' htmlFor='projectSupervisorId'>Project supervisor (optional)</label>
+      <select id='projectSupervisorId' className='input' value={value} onChange={(event) => onChange(event.target.value)}>
+        <option value=''>No project supervisor</option>
+        {supervisors.filter((supervisor) => supervisor.status === 'APPROVED').map((supervisor) => (
+          <option key={supervisor.id} value={supervisor.id}>{supervisor.firstName} {supervisor.lastName} - {supervisor.supervisorProfile?.jobTitle ?? supervisor.email}</option>
+        ))}
+      </select>
+    </div>
   );
 }

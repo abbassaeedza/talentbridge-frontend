@@ -4,13 +4,15 @@ import { userApi } from '../../api/services'
 import { useAuth } from '../../contexts/AuthContext'
 import { Layers, Plus, X } from 'lucide-react'
 import toast from 'react-hot-toast'
+import SupervisorProfileFields from '../../components/supervisor/SupervisorProfileFields'
+import type { SupervisorProfessionalFields } from '../../types'
 
 const SKILL_SUGGESTIONS = ['React', 'TypeScript', 'Python', 'Node.js', 'Java', 'Spring Boot',
   'PostgreSQL', 'MongoDB', 'Docker', 'AWS', 'Machine Learning', 'TensorFlow', 'Vue.js', 'Angular',
   'Figma', 'DevOps', 'Kotlin', 'Swift', 'Flutter', 'GraphQL']
 
 export default function OnboardingPage() {
-  const { refreshUser } = useAuth()
+  const { user, refreshUser } = useAuth()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [skills, setSkills] = useState<string[]>([])
@@ -18,6 +20,8 @@ export default function OnboardingPage() {
   const [form, setForm] = useState({
     university: '', yearOfStudy: '', major: '', bio: '', linkedinUrl: '', gpa: ''
   })
+
+  if (user?.role === 'PARTY_SUPERVISOR') return <SupervisorOnboarding />
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
 
@@ -133,6 +137,62 @@ export default function OnboardingPage() {
           <button type="submit" disabled={loading} className="btn-primary w-full !mt-6">
             {loading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Complete profile & get started'}
           </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function SupervisorOnboarding() {
+  const { refreshUser } = useAuth()
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(false)
+  const [photo, setPhoto] = useState<File>()
+  const [professional, setProfessional] = useState<SupervisorProfessionalFields>({
+    jobTitle: '', department: '', bio: '', linkedinUrl: '',
+  })
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setLoading(true)
+    try {
+      await userApi.completeSupervisorOnboarding({
+        ...professional,
+        linkedinUrl: professional.linkedinUrl || undefined,
+      })
+      if (photo) {
+        try {
+          await userApi.uploadSupervisorProfilePhoto(photo)
+        } catch {
+          toast.error('Profile saved, but the photo could not be uploaded')
+        }
+      }
+      await refreshUser()
+      toast.success('Profile complete! Welcome to TalentBridge.')
+      navigate('/party-supervisor/overview', { replace: true })
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to save profile')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className='min-h-screen bg-ink-950 mesh-bg flex items-center justify-center p-4 sm:p-8'>
+      <div className='w-full max-w-2xl'>
+        <div className='flex items-center gap-3 mb-8'>
+          <div className='w-9 h-9 rounded-xl bg-ember-500 flex items-center justify-center'><Layers size={18} className='text-white' /></div>
+          <span className='font-display font-bold text-white text-xl'>TalentBridge</span>
+        </div>
+        <h1 className='font-display text-3xl font-bold text-white mb-1'>Complete your supervisor profile</h1>
+        <p className='text-ink-400 text-sm mb-8'>Tell students about your professional background before selecting parties.</p>
+        <form onSubmit={submit} className='card p-5 sm:p-7 space-y-5'>
+          <SupervisorProfileFields value={professional} onChange={setProfessional} />
+          <div>
+            <label className='input-label' htmlFor='onboardingPhoto'>Profile photo</label>
+            <input id='onboardingPhoto' type='file' accept='image/*' className='input file:mr-3 file:rounded-lg file:border-0 file:bg-ink-700 file:px-3 file:py-1 file:text-xs file:text-ink-200' onChange={(event) => setPhoto(event.target.files?.[0])} />
+          </div>
+          <button type='submit' disabled={loading} className='btn-primary w-full'>{loading ? 'Saving...' : 'Complete profile & get started'}</button>
         </form>
       </div>
     </div>

@@ -38,6 +38,7 @@ import CompanyProjectsPage from './pages/company/CompanyProjectsPage';
 import CompanyProjectViewPage from './pages/company/CompanyProjectViewPage';
 import CompanyProjectEditPage from './pages/company/CompanyProjectEditPage';
 import CreateProjectPage from './pages/company/CreateProjectPage';
+import ProjectSupervisorsPage from './pages/company/ProjectSupervisorsPage';
 
 // Coordinator pages
 import CoordinatorDashboard from './pages/coordinator/CoordinatorDashboard';
@@ -49,7 +50,16 @@ import CompaniesDirectoryPage from './pages/coordinator/CompaniesDirectoryPage';
 import SupervisorsDirectoryPage from './pages/coordinator/SupervisorsDirectoryPage';
 
 // Supervisor pages
-import SupervisorDashboard from './pages/supervisor/SupervisorDashboard';
+import {
+  BrowsePartiesPage,
+  MyPartiesPage as SupervisorPartiesPage,
+  NotificationSettingsPlaceholderPage,
+  PartySupervisorDetailPage,
+  ProjectSupervisorDetailPage,
+  SupervisedProjectsPage,
+  SupervisorOverviewPage,
+} from './pages/supervisor/SupervisorWorkspacePages';
+import ProjectSupervisorInvitationPage from './pages/auth/ProjectSupervisorInvitationPage';
 
 // Shared
 import ProfilePage from './pages/shared/ProfilePage';
@@ -239,8 +249,9 @@ function DashboardRouter() {
     case 'COORDINATOR':
       return <Navigate to='/coordinator/dashboard' replace />;
     case 'PARTY_SUPERVISOR':
+      return <Navigate to='/party-supervisor/overview' replace />;
     case 'PROJECT_SUPERVISOR':
-      return <Navigate to='/supervisor/dashboard' replace />;
+      return <Navigate to='/project-supervisor/overview' replace />;
     default:
       return <Navigate to='/login' replace />;
   }
@@ -270,6 +281,7 @@ export default function App() {
                 </PublicRoute>
               }
             />
+            <Route path='/project-supervisor-invitations/:token' element={<ProjectSupervisorInvitationPage />} />
 
             {/* Semi-public — need auth but not full approval */}
             <Route
@@ -353,6 +365,7 @@ export default function App() {
                 <Route path='/company/projects/new' element={<CreateProjectPage />} />
                 <Route path='/company/projects/:id' element={<CompanyProjectViewPage />} />
                 <Route path='/company/projects/:id/edit' element={<CompanyProjectEditPage />} />
+                <Route path='/company/project-supervisors' element={<ProjectSupervisorsPage />} />
                 <Route path='/company/profile' element={<ProfilePage />} />
                 <Route path='/company/students/:id' element={<StudentProfilePage />} />
               </Route>
@@ -370,8 +383,26 @@ export default function App() {
                 <Route path='/coordinator/students/:id' element={<StudentProfilePage />} />
               </Route>
 
+              <Route element={<RoleRoute roles={['PROJECT_SUPERVISOR']} />}>
+                <Route path='/project-supervisor/overview' element={<SupervisorOverviewPage kind='project' />} />
+                <Route path='/project-supervisor/projects' element={<SupervisedProjectsPage />} />
+                <Route path='/project-supervisor/projects/:id' element={<ProjectSupervisorDetailPage />} />
+                <Route path='/project-supervisor/profile' element={<ProfilePage />} />
+                <Route path='/project-supervisor/notification-settings' element={<NotificationSettingsPlaceholderPage />} />
+              </Route>
+
+              <Route element={<RoleRoute roles={['PARTY_SUPERVISOR']} />}>
+                <Route path='/party-supervisor/overview' element={<SupervisorOverviewPage kind='party' />} />
+                <Route path='/party-supervisor/parties' element={<SupervisorPartiesPage />} />
+                <Route path='/party-supervisor/parties/:id' element={<PartySupervisorDetailPage />} />
+                <Route path='/party-supervisor/browse' element={<BrowsePartiesPage />} />
+                <Route path='/party-supervisor/browse/:id' element={<PartySupervisorDetailPage browse />} />
+                <Route path='/party-supervisor/profile' element={<ProfilePage />} />
+                <Route path='/party-supervisor/notification-settings' element={<NotificationSettingsPlaceholderPage />} />
+              </Route>
+
               <Route element={<RoleRoute roles={['PARTY_SUPERVISOR', 'PROJECT_SUPERVISOR']} />}>
-                <Route path='/supervisor/dashboard' element={<SupervisorDashboard />} />
+                <Route path='/supervisor/dashboard' element={<DashboardRouter />} />
                 <Route path='/supervisor/profile' element={<ProfilePage />} />
                 <Route path='/supervisor/students/:id' element={<StudentProfilePage />} />
               </Route>

@@ -4,6 +4,7 @@ export type PartyStatus = 'FORMING' | 'ACTIVE' | 'ASSIGNED' | 'SUBMITTED' | 'COM
 export type ProjectStatus = 'DRAFT' | 'PENDING_REVIEW' | 'OPEN' | 'ASSIGNED' | 'CLOSED' | 'ARCHIVED'
 export type ApplicationStatus = 'PENDING' | 'ASSIGNED' | 'REJECTED' | 'REASSIGNED' | 'WITHDRAWN'
 export type SubmissionStatus = 'DRAFT' | 'SUBMITTED' | 'UNDER_EVALUATION' | 'EVALUATED'
+export type ProjectSupervisorInvitationStatus = 'PENDING' | 'ACCEPTED' | 'REVOKED' | 'EXPIRED'
 
 export interface User {
   id: string
@@ -18,6 +19,7 @@ export interface User {
   createdAt?: string
   studentProfile?: StudentProfile
   companyProfile?: CompanyProfile
+  supervisorProfile?: SupervisorProfile
   suspensionCount?: number
   rejectionCount?: number
 }
@@ -47,6 +49,37 @@ export interface CompanyProfile {
   city?: string
 }
 
+export interface SupervisorProfile {
+  id: string
+  jobTitle: string
+  department: string
+  bio: string
+  linkedinUrl?: string
+  profilePhotoUrl?: string
+}
+
+export interface ProjectSupervisorInvitation {
+  id: string
+  email: string
+  companyName: string
+  status: ProjectSupervisorInvitationStatus
+  expiresAt: string
+}
+
+export interface SupervisorProfessionalFields {
+  jobTitle: string
+  department: string
+  bio: string
+  linkedinUrl?: string
+}
+
+export interface ProjectSupervisorInvitationAcceptRequest extends SupervisorProfessionalFields {
+  password: string
+  firstName: string
+  lastName: string
+  phoneNumber?: string
+}
+
 export interface AuthResponse {
   accessToken: string
   refreshToken: string
@@ -60,6 +93,7 @@ export interface AuthResponse {
     status: UserStatus
     onboardingComplete: boolean
     githubUsername?: string
+    supervisorProfile?: SupervisorProfile
   }
 }
 
@@ -78,6 +112,8 @@ export interface Project {
   companyId?: string
   projectSupervisorName?: string
   projectSupervisorId?: string
+  assignedPartyId?: string
+  assignedPartyName?: string
   createdByName: string
   partyApplicationCount: number
   projectField?: string

@@ -26,6 +26,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   demoLogin: () => Promise<void>;
+  completeExternalLogin: (data: AuthResponse) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   isRole: (...roles: UserRole[]) => boolean;
@@ -184,6 +185,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await completeLogin(data);
   };
 
+  const completeExternalLogin = async (data: AuthResponse) => completeLogin(data);
+
   const stayLoggedIn = async () => {
     const refreshToken = getRefreshToken();
     if (!refreshToken) {
@@ -207,7 +210,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isRole = (...roles: UserRole[]) => !!user && roles.includes(user.role);
   const isApproved = user?.status === 'APPROVED';
-  const onboardingComplete = user?.role !== 'STUDENT' || !!user?.studentProfile;
+  const onboardingComplete = user?.role === 'STUDENT'
+    ? !!user.studentProfile
+    : user?.role === 'PARTY_SUPERVISOR'
+      ? !!user.supervisorProfile
+      : true;
 
   return (
     <AuthContext.Provider
@@ -216,6 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         login,
         demoLogin,
+        completeExternalLogin,
         logout,
         refreshUser,
         isRole,

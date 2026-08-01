@@ -130,6 +130,7 @@ export default function ProfilePage() {
 
   const sp = (user as any)?.studentProfile;
   const cp = (user as any)?.companyProfile;
+  const supervisor = user?.supervisorProfile;
 
   const [form, setForm] = useState<Record<string, any>>({});
 
@@ -181,6 +182,10 @@ export default function ProfilePage() {
   const initials = `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`;
   const isStudent = user.role === 'STUDENT';
   const isCompany = user.role === 'COMPANY';
+  const isSupervisor = user.role === 'PARTY_SUPERVISOR' || user.role === 'PROJECT_SUPERVISOR';
+  const supervisorPhotoUrl = supervisor?.profilePhotoUrl
+    ? new URL(supervisor.profilePhotoUrl, import.meta.env.VITE_API_URL || 'http://localhost:8080').toString()
+    : undefined;
 
   return (
     <div className='animate-fade-up max-w-2xl'>
@@ -191,7 +196,7 @@ export default function ProfilePage() {
             Your personal information and account details.
           </p>
         </div>
-        {!editing && (
+        {!editing && !isSupervisor && (
           <button
             onClick={startEdit}
             className='btn-secondary flex items-center gap-2'
@@ -205,9 +210,9 @@ export default function ProfilePage() {
       <div className='card p-6 mb-5'>
         <div className='flex items-center gap-5'>
           <div className='w-16 h-16 rounded-2xl bg-gradient-to-br from-ember-500/30 to-ink-700 border border-ink-600/50 flex items-center justify-center flex-shrink-0'>
-            <span className='font-display font-bold text-2xl text-white'>
-              {initials}
-            </span>
+            {supervisorPhotoUrl
+              ? <img src={supervisorPhotoUrl} alt='' className='h-full w-full rounded-2xl object-cover' />
+              : <span className='font-display font-bold text-2xl text-white'>{initials}</span>}
           </div>
           <div className='flex-1 min-w-0'>
             {editing ? (
@@ -241,7 +246,8 @@ export default function ProfilePage() {
                       : sp?.university
                     : ''}
                   {isCompany ? cp?.companyName : ''}
-                  {!isStudent && !isCompany ? user.role.replace('_', ' ') : ''}
+                  {isSupervisor ? `${supervisor?.jobTitle ?? user.role.replace('_', ' ')}${supervisor?.department ? ` · ${supervisor.department}` : ''}` : ''}
+                  {!isStudent && !isCompany && !isSupervisor ? user.role.replace('_', ' ') : ''}
                 </p>
               </>
             )}
@@ -298,6 +304,12 @@ export default function ProfilePage() {
                 {cp.description}
               </p>
             ) : null}
+          </div>
+        )}
+
+        {isSupervisor && supervisor?.bio && (
+          <div className='mt-4 pt-4 border-t border-ink-800/50'>
+            <p className='text-sm text-ink-300 leading-relaxed'>{supervisor.bio}</p>
           </div>
         )}
       </div>
@@ -442,6 +454,13 @@ export default function ProfilePage() {
                     />
                   </div>
                 </div>
+              </>
+            )}
+            {isSupervisor && (
+              <>
+                <InfoRow icon={Briefcase} label='Job title' value={supervisor?.jobTitle} />
+                <InfoRow icon={Building2} label='Department' value={supervisor?.department} />
+                <InfoRow icon={Linkedin} label='LinkedIn' value={supervisor?.linkedinUrl} href={supervisor?.linkedinUrl} />
               </>
             )}
           </div>

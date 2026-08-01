@@ -115,6 +115,12 @@ const NAV_BY_ROLE: Record<
       label: 'Post Project',
       end: true,
     },
+    {
+      to: '/company/project-supervisors',
+      icon: UserCheck,
+      label: 'Project Supervisors',
+      end: true,
+    },
   ],
   COORDINATOR: [
     { to: '/coordinator/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -126,10 +132,17 @@ const NAV_BY_ROLE: Record<
     { to: '/coordinator/evaluations', icon: Award, label: 'Evaluations' },
   ],
   PARTY_SUPERVISOR: [
-    { to: '/supervisor/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/party-supervisor/overview', icon: LayoutDashboard, label: 'Overview' },
+    { to: '/party-supervisor/parties', icon: Users, label: 'My Parties' },
+    { to: '/party-supervisor/browse', icon: UserCheck, label: 'Browse Parties' },
+    { to: '/party-supervisor/profile', icon: UserCircle, label: 'Profile' },
+    { to: '/party-supervisor/notification-settings', icon: Bell, label: 'Notification Settings' },
   ],
   PROJECT_SUPERVISOR: [
-    { to: '/supervisor/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/project-supervisor/overview', icon: LayoutDashboard, label: 'Overview' },
+    { to: '/project-supervisor/projects', icon: FolderKanban, label: 'Projects' },
+    { to: '/project-supervisor/profile', icon: UserCircle, label: 'Profile' },
+    { to: '/project-supervisor/notification-settings', icon: Bell, label: 'Notification Settings' },
   ],
 };
 
@@ -138,8 +151,8 @@ const PROFILE_ROUTE: Record<string, string> = {
   STUDENT: '/student/profile',
   COMPANY: '/company/profile',
   COORDINATOR: '/coordinator/profile',
-  PARTY_SUPERVISOR: '/supervisor/profile',
-  PROJECT_SUPERVISOR: '/supervisor/profile',
+  PARTY_SUPERVISOR: '/party-supervisor/profile',
+  PROJECT_SUPERVISOR: '/project-supervisor/profile',
 };
 
 export default function AppLayout() {
