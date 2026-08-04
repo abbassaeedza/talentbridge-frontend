@@ -143,7 +143,7 @@ const NAV_BY_ROLE: Record<
   ],
   PROJECT_SUPERVISOR: [
     { to: '/project-supervisor/overview', icon: LayoutDashboard, label: 'Overview' },
-    { to: '/project-supervisor/projects', icon: FolderKanban, label: 'Projects' },
+    { to: '/project-supervisor/projects', icon: FolderKanban, label: 'My Projects' },
     { to: '/project-supervisor/profile', icon: UserCircle, label: 'Profile' },
     { to: '/project-supervisor/notification-settings', icon: Bell, label: 'Notification Settings' },
   ],

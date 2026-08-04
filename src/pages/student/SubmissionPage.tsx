@@ -13,7 +13,7 @@ export default function SubmissionPage() {
   const [notes, setNotes] = useState('')
   const [files, setFiles] = useState<File[]>([])
 
-  const { data: party } = useQuery({
+  const { data: party, isLoading: partyLoading } = useQuery({
     queryKey: ['my-party'],
     queryFn: () => partyApi.getMyParty().then(r => r.data),
     retry: false,
@@ -51,6 +51,8 @@ export default function SubmissionPage() {
     onSuccess: () => { toast.success('Submission complete!'); qc.invalidateQueries({ queryKey: ['submission'] }) },
     onError: (e: any) => toast.error(e?.response?.data?.message || 'Submission failed'),
   })
+
+  if (partyLoading) return <div className="py-24 text-center text-sm text-ink-400">Loading submission...</div>
 
   if (!party) return (
     <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -108,10 +110,11 @@ export default function SubmissionPage() {
       <div className="card p-6 space-y-5">
         {/* GitHub repo */}
         <div>
-          <label className="input-label flex items-center gap-2">
+          <label htmlFor="submissionRepoUrl" className="input-label flex items-center gap-2">
             <Github size={14} /> GitHub Repository URL *
           </label>
           <input
+            id="submissionRepoUrl"
             className="input"
             maxLength={500}
             value={repoUrl}
@@ -122,8 +125,9 @@ export default function SubmissionPage() {
         </div>
 
         <div>
-          <label className="input-label">Branch</label>
+          <label htmlFor="submissionBranch" className="input-label">Branch</label>
           <input
+            id="submissionBranch"
             className="input"
             maxLength={100}
             value={branch}
@@ -176,8 +180,9 @@ export default function SubmissionPage() {
         </div>
 
         <div>
-          <label className="input-label">Notes for evaluators (optional)</label>
+          <label htmlFor="submissionNotes" className="input-label">Notes for evaluators (optional)</label>
           <textarea
+            id="submissionNotes"
             className="textarea"
             maxLength={2000}
             rows={3}

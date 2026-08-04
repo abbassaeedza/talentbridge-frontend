@@ -12,6 +12,7 @@ import clsx from 'clsx';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
 
 const STATUS_INFO: Record<string, { cls: string; label: string }> = {
+  DRAFT:          { cls: 'bg-ink-700/50 text-ink-300 border border-ink-600/30', label: 'Draft' },
   OPEN:           { cls: 'bg-blue-500/15 text-blue-400 border border-blue-500/20', label: 'Pending Assignment' },
   PENDING_REVIEW: { cls: 'badge-pending',                                           label: 'Pending Review' },
   ASSIGNED:       { cls: 'bg-jade-500/20 text-jade-400 border border-jade-500/30',  label: 'Live' },
@@ -21,6 +22,7 @@ const STATUS_INFO: Record<string, { cls: string; label: string }> = {
 
 const TABS = [
   { key: 'ALL',           label: 'All' },
+  { key: 'DRAFT',         label: 'Drafts' },
   { key: 'ASSIGNED',      label: 'Live' },
   { key: 'OPEN',          label: 'Pending Assignment' },
   { key: 'PENDING_REVIEW',label: 'Pending Review' },
@@ -194,7 +196,7 @@ export default function CompanyProjectsPage() {
     });
   }, [projects, tab, search, sort]);
 
-  const canEdit   = (s: string) => s === 'PENDING_REVIEW' || s === 'ARCHIVED';
+  const canEdit   = (s: string) => s === 'DRAFT' || s === 'PENDING_REVIEW' || s === 'ARCHIVED';
   const canDelete = (s: string) => s === 'PENDING_REVIEW' || s === 'ARCHIVED';
   const currentSortLabel = SORT_OPTIONS.find((o) => o.key === sort)?.label ?? 'Sort';
 

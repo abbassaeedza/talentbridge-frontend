@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { partyApi, projectApi, userApi } from '../../api/services';
 import type { Party } from '../../types';
@@ -17,16 +17,22 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 export default function ManagePartiesPage() {
   const qc = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const linkedPartyId = searchParams.get('party');
   const [query, setQuery] = useState('');
   const [assignProject, setAssignProject] = useState<Record<string, string>>({});
   const [assignSup, setAssignSup] = useState<Record<string, string>>({});
   const [renameDraft, setRenameDraft] = useState<Record<string, string>>({});
   const [deadlineDraft, setDeadlineDraft] = useState<Record<string, string>>({});
-  const [expandedParty, setExpandedParty] = useState<string | null>(null);
+  const [expandedParty, setExpandedParty] = useState<string | null>(linkedPartyId);
+
+  useEffect(() => {
+    if (linkedPartyId) setExpandedParty(linkedPartyId);
+  }, [linkedPartyId]);
 
   const { data: parties, isLoading } = useQuery({
     queryKey: ['all-parties'],
@@ -168,7 +174,7 @@ export default function ManagePartiesPage() {
             <p className='text-ink-400 text-sm'>No parties match your search.</p>
           </div>
         ) : filteredParties.map((party) => (
-          <div key={party.id} className='card overflow-hidden'>
+          <div key={party.id} id={`party-${party.id}`} className={clsx('card overflow-hidden', linkedPartyId === party.id && 'ring-1 ring-ember-500/60')}>
             <div className='px-5 py-4 flex items-start gap-4'>
               <div className='w-10 h-10 rounded-xl bg-ink-700 flex items-center justify-center font-display font-bold text-ink-200 flex-shrink-0'>
                 {party.name[0]}

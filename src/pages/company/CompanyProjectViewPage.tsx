@@ -10,6 +10,7 @@ import { format, formatDistanceToNow } from 'date-fns'
 import clsx from 'clsx'
 
 const STATUS_INFO: Record<string, { cls: string; label: string }> = {
+  DRAFT:          { cls: 'bg-ink-700/50 text-ink-300 border border-ink-600/30', label: 'Draft' },
   OPEN:           { cls: 'bg-blue-500/15 text-blue-400 border border-blue-500/20',  label: 'Pending Assignment' },
   PENDING_REVIEW: { cls: 'badge-pending',                                            label: 'Pending Review' },
   ASSIGNED:       { cls: 'bg-jade-500/20 text-jade-400 border border-jade-500/30',  label: 'Live' },
@@ -75,7 +76,7 @@ export default function CompanyProjectViewPage() {
 
   const p = project as any
   const { cls, label } = STATUS_INFO[project.status as string] ?? { cls: 'badge-pending', label: project.status }
-  const canEdit = project.status === 'PENDING_REVIEW' || project.status === 'ARCHIVED'
+  const canEdit = project.status === 'DRAFT' || project.status === 'PENDING_REVIEW' || project.status === 'ARCHIVED'
 
   return (
     <div className="animate-fade-up max-w-4xl">

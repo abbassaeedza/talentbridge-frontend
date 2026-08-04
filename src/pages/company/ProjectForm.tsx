@@ -25,6 +25,7 @@ function Count({ value, max }: { value: string; max: number }) {
 export type ProjectFormData = Record<string, unknown> & {
   title: string;
   description: string;
+  saveAsDraft?: boolean;
 };
 
 type Props = {
@@ -34,6 +35,7 @@ type Props = {
   pendingLabel?: string;
   internalNameHelp: string;
   onSubmit: (data: ProjectFormData) => void;
+  onSaveDraft?: (data: ProjectFormData) => void;
   onCancel: () => void;
 };
 
@@ -44,6 +46,7 @@ export default function ProjectForm({
   pendingLabel,
   internalNameHelp,
   onSubmit,
+  onSaveDraft,
   onCancel,
 }: Props) {
   const initialField = initial?.projectField ?? '';
@@ -105,16 +108,20 @@ export default function ProjectForm({
     setToolInput('');
   };
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
+  const data = (): ProjectFormData => {
     const projectField = selectedField === 'Other' ? customField.trim() || undefined : selectedField || undefined;
-    onSubmit({
+    return {
       ...form,
       tools,
       projectField,
       deadline: form.deadline || undefined,
       projectSupervisorId: form.projectSupervisorId || undefined,
-    });
+    };
+  };
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    onSubmit(data());
   };
 
   return (
@@ -225,8 +232,13 @@ export default function ProjectForm({
 
       <SupervisorSelect value={form.projectSupervisorId} onChange={(value) => set('projectSupervisorId', value)} />
 
-      <div className='flex gap-3 pt-2'>
+      <div className='flex flex-col gap-3 pt-2 sm:flex-row'>
         <button type='button' onClick={onCancel} className='btn-secondary'>Cancel</button>
+        {onSaveDraft && (
+          <button type='button' onClick={() => onSaveDraft({ ...data(), saveAsDraft: true })} disabled={pending || !form.title || !form.description} className='btn-secondary flex-1'>
+            Save as Draft
+          </button>
+        )}
         <button type='submit' disabled={pending || !form.title || !form.description} className='btn-primary flex-1'>
           {pending
             ? <><span className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' /> {pendingLabel}</>

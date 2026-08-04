@@ -183,6 +183,12 @@ export default function StudentsDirectoryPage() {
                         <Mail size={11} /> {student.email}
                       </a>
                       <p className='text-xs text-ink-500 mt-1'>{profile?.university ?? 'No university'}{profile?.major ? ` · ${profile.major}` : ''}</p>
+                      <p className='mt-1 text-xs text-ink-500'>
+                        Party:{' '}
+                        {student.partyId ? (
+                          <Link to={`/coordinator/parties?party=${student.partyId}`} className='text-ember-400 hover:text-ember-300'>{student.partyName}</Link>
+                        ) : 'Not in a party'}
+                      </p>
                     </div>
                     <div className='flex flex-wrap gap-2'>
                       {(student.status === 'PENDING' || student.status === 'REJECTED') && (

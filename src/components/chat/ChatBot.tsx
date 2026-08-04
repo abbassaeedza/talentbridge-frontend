@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot, Minimize2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { chatApi } from '../../api/services';
+import { chatApi, projectApi } from '../../api/services';
 import { useAuth } from '../../contexts/AuthContext';
 import type { ChatMessage } from '../../types';
 import clsx from 'clsx';
@@ -12,6 +12,7 @@ export default function ChatBot() {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [draftProjectId, setDraftProjectId] = useState<string>();
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -43,14 +44,23 @@ export default function ChatBot() {
     setLoading(true);
     try {
       const { data } = await chatApi.send(text, history, context);
+      let assistantMessage = data.message;
       if (data.projectDraft && Object.keys(data.projectDraft).length > 0) {
         window.dispatchEvent(new CustomEvent('talentbridge:project-draft', {
           detail: data.projectDraft,
         }));
+        const { title, description } = data.projectDraft;
+        if (user?.role === 'COMPANY' && title?.trim() && description?.trim()) {
+          const response = draftProjectId
+            ? await projectApi.update(draftProjectId, { ...data.projectDraft, saveAsDraft: true })
+            : await projectApi.create({ ...data.projectDraft, saveAsDraft: true });
+          setDraftProjectId(response.data.id);
+          assistantMessage += `\n\n[Open saved draft](/company/projects/${response.data.id})`;
+        }
       }
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: data.message },
+        { role: 'assistant', content: assistantMessage },
       ]);
     } catch (error: any) {
       const backendMessage = error?.response?.data?.message;

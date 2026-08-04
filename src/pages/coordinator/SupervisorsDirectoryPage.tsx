@@ -7,10 +7,18 @@ import useUserStatusMutation from '../../hooks/useUserStatusMutation';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
 import BulkActionToolbar from '../../components/coordinator/BulkActionToolbar';
+import { useSearchParams } from 'react-router-dom';
+
+type SupervisorSection = 'PENDING' | 'PARTY_SUPERVISOR' | 'PROJECT_SUPERVISOR';
 
 export default function SupervisorsDirectoryPage() {
+  const [searchParams] = useSearchParams();
+  const linkedSupervisorId = searchParams.get('supervisor');
+  const requestedSection = searchParams.get('section') as SupervisorSection | null;
   const [query, setQuery] = useState('');
-  const [section, setSection] = useState<'PENDING' | 'PARTY_SUPERVISOR' | 'PROJECT_SUPERVISOR'>('PENDING');
+  const [section, setSection] = useState<SupervisorSection>(
+    requestedSection === 'PARTY_SUPERVISOR' || requestedSection === 'PROJECT_SUPERVISOR' ? requestedSection : 'PENDING',
+  );
   const [selected, setSelected] = useState<string[]>([]);
   const [rejectReason, setRejectReason] = useState('');
   const [bulkAction, setBulkAction] = useState<'approve' | 'reject' | 'suspend' | null>(null);
@@ -125,7 +133,7 @@ export default function SupervisorsDirectoryPage() {
         ) : (
           <div className='divide-y divide-ink-800/50'>
             {filtered.map((supervisor) => (
-              <div key={supervisor.id} className='flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center'>
+              <div key={supervisor.id} className={clsx('flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center', linkedSupervisorId === supervisor.id && 'bg-ember-500/10 ring-1 ring-inset ring-ember-500/40')}>
                 <input
                   type='checkbox'
                   aria-label={`Select ${getUserName(supervisor)}`}

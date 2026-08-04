@@ -23,6 +23,8 @@ export interface User {
   supervisorProfile?: SupervisorProfile
   suspensionCount?: number
   rejectionCount?: number
+  partyId?: string
+  partyName?: string
 }
 
 export interface StudentProfile {
@@ -169,8 +171,10 @@ export interface Application {
 export interface Submission {
   id: string
   partyId?: string
+  partyName?: string
   party?: { id: string; name: string }
   projectId?: string
+  projectTitle?: string
   project?: { id: string; title: string }
   repoUrl?: string
   repoBranch?: string

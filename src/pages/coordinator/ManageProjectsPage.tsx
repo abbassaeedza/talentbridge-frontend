@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
 import clsx from 'clsx';
 import type { GlobalDeadlinePreview } from '../../types';
+import { Link } from 'react-router-dom';
 
 type TabStatus = 'ALL' | 'PENDING_REVIEW' | 'OPEN' | 'ARCHIVED' | 'ASSIGNED';
 
@@ -246,7 +247,7 @@ export default function ManageProjectsPage() {
                   <div className='flex items-start gap-4'>
                     <div className='flex-1 min-w-0'>
                       <div className='flex items-center gap-2 mb-1 flex-wrap'>
-                        <h3 className='font-medium text-white text-sm truncate'>{p.title}</h3>
+                        <Link to={`/coordinator/projects/${p.id}`} className='font-medium text-white text-sm truncate hover:text-ember-400'>{p.title}</Link>
                         <span className={clsx('badge text-[10px]', cls)}>{label}</span>
                         {p.projectField && (
                           <span className='px-2 py-0.5 rounded-md bg-ink-700 border border-ink-600/40 text-[10px] text-ink-400'>
@@ -255,6 +256,16 @@ export default function ManageProjectsPage() {
                         )}
                       </div>
                       <p className='text-xs text-ink-400'>{p.companyName}</p>
+                      <div className='mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-400'>
+                        <span>
+                          Party:{' '}
+                          {p.assignedPartyId ? <Link to={`/coordinator/parties?party=${p.assignedPartyId}`} className='text-ember-400 hover:text-ember-300'>{p.assignedPartyName}</Link> : 'Unassigned'}
+                        </span>
+                        <span>
+                          Project supervisor:{' '}
+                          {p.projectSupervisorId ? <Link to={`/coordinator/supervisors?section=PROJECT_SUPERVISOR&supervisor=${p.projectSupervisorId}`} className='text-ember-400 hover:text-ember-300'>{p.projectSupervisorName}</Link> : 'Unassigned'}
+                        </span>
+                      </div>
                       <p className='text-xs text-ink-500 mt-0.5 flex items-center gap-1'>
                         <Users size={10} />
                         {p.partyApplicationCount} party application{p.partyApplicationCount !== 1 ? 's' : ''}

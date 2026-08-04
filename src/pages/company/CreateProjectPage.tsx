@@ -9,9 +9,14 @@ export default function CreateProjectPage() {
   const navigate = useNavigate();
   const mutation = useMutation({
     mutationFn: (data: ProjectFormData) => projectApi.create(data),
-    onSuccess: () => {
-      toast.success('Project submitted for review!');
-      navigate('/company/dashboard');
+    onSuccess: ({ data }, variables) => {
+      if (variables.saveAsDraft) {
+        toast.success('Project draft saved');
+        navigate(`/company/projects/${data.id}`);
+      } else {
+        toast.success('Project submitted for review!');
+        navigate('/company/dashboard');
+      }
     },
     onError: (error: any) => toast.error(error?.response?.data?.message || 'Failed to create project'),
   });
@@ -33,6 +38,7 @@ export default function CreateProjectPage() {
         submitLabel='Submit for Review'
         internalNameHelp='Only visible to you — students and coordinators never see this.'
         onSubmit={mutation.mutate}
+        onSaveDraft={mutation.mutate}
         onCancel={() => navigate(-1)}
       />
     </div>

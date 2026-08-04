@@ -376,6 +376,7 @@ export default function App() {
                 <Route path='/coordinator/dashboard' element={<CoordinatorDashboard />} />
                 <Route path='/coordinator/users' element={<Navigate to='/coordinator/students' replace />} />
                 <Route path='/coordinator/projects' element={<ManageProjectsPage />} />
+                <Route path='/coordinator/projects/:id' element={<ProjectDetailPage />} />
                 <Route path='/coordinator/parties' element={<ManagePartiesPage />} />
                 <Route path='/coordinator/evaluations' element={<EvaluationsPage />} />
                 <Route path='/coordinator/profile' element={<ProfilePage />} />

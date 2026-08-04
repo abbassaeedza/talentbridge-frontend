@@ -106,7 +106,7 @@ export function SupervisedProjectsPage() {
 
   return (
     <div className='animate-fade-up'>
-      <div className='page-header'><h1 className='page-title'>Projects</h1><p className='page-subtitle'>Search, filter, and review the projects assigned to you.</p></div>
+      <div className='page-header'><h1 className='page-title'>My Projects</h1><p className='page-subtitle'>Search, filter, and review the projects assigned to you.</p></div>
       <Filters search={search} setSearch={setSearch} status={status} setStatus={setStatus} assignment={assignment} setAssignment={setAssignment} submission={submission} setSubmission={setSubmission} sort={sort} setSort={setSort} searchPlaceholder='Search projects' />
       {query.isLoading ? <LoadingCards /> : rows.length === 0 ? <EmptyState icon={Briefcase}>No projects match these filters.</EmptyState> : (
         <div className='grid gap-4 md:grid-cols-2'>
@@ -186,11 +186,12 @@ export function MyPartiesPage() {
   );
 }
 
-function PartyCard({ party, submissionStatus, browse = false }: { party: Party; submissionStatus?: string; browse?: boolean }) {
+function PartyCard({ party, submissionStatus, browse = false, isMine = false }: { party: Party; submissionStatus?: string; browse?: boolean; isMine?: boolean }) {
   return (
     <Link to={browse ? `/party-supervisor/browse/${party.id}` : `/party-supervisor/parties/${party.id}`} className='card block p-5 hover:border-ember-500/30'>
-      <div className='flex items-start justify-between gap-3'><h2 className='font-display font-semibold text-white'>{party.name}</h2><span className='badge badge-active text-[10px]'>{party.status}</span></div>
-      <p className='mt-2 text-xs text-ink-400'>{party.members.length} members · {party.assignedProjectTitle || 'No project assigned'}</p>
+      <div className='flex items-start justify-between gap-3'><div className='flex flex-wrap items-center gap-2'><h2 className='font-display font-semibold text-white'>{party.name}</h2>{isMine && <span className='badge badge-ember text-[9px]'>My party</span>}</div><span className='badge badge-active text-[10px]'>{party.status}</span></div>
+      <p className='mt-2 text-xs text-ink-400'>{(party.members ?? []).length} members · {party.assignedProjectTitle || 'No project assigned'}</p>
+      <p className='mt-1 text-xs text-ink-500'>Party supervisor: {party.supervisorName || 'Unassigned'}</p>
       {submissionStatus && <span className='mt-3 inline-flex badge badge-open text-[9px]'>{submissionStatus.replace('_', ' ')}</span>}
       {party.assignedProjectDeadline && <div className='mt-4'><DeadlineCountdown deadline={party.assignedProjectDeadline} submitted={submitted(party.status)} compact /></div>}
     </Link>
@@ -198,6 +199,7 @@ function PartyCard({ party, submissionStatus, browse = false }: { party: Party; 
 }
 
 export function BrowsePartiesPage() {
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const query = useQuery({ queryKey: ['browse-parties'], queryFn: () => partyApi.browse().then((response) => response.data) });
   const parties = (query.data ?? []).filter((party) => party.name.toLowerCase().includes(search.toLowerCase()));
@@ -205,7 +207,7 @@ export function BrowsePartiesPage() {
     <div className='animate-fade-up'>
       <div className='page-header'><h1 className='page-title'>Browse Parties</h1><p className='page-subtitle'>Review available teams before choosing who to supervise.</p></div>
       <label className='relative mb-5 block max-w-md'><Search size={14} className='absolute left-3 top-3 text-ink-500' /><input className='input pl-9' placeholder='Search parties' value={search} onChange={(event) => setSearch(event.target.value)} /></label>
-      {query.isLoading ? <LoadingCards /> : parties.length === 0 ? <EmptyState icon={Users}>No parties are available.</EmptyState> : <div className='grid gap-4 md:grid-cols-2'>{parties.map((party) => <PartyCard key={party.id} party={party} browse />)}</div>}
+      {query.isLoading ? <LoadingCards /> : parties.length === 0 ? <EmptyState icon={Users}>No parties are available.</EmptyState> : <div className='grid gap-4 md:grid-cols-2'>{parties.map((party) => <PartyCard key={party.id} party={party} browse isMine={party.supervisorId === user?.id} />)}</div>}
     </div>
   );
 }
@@ -293,6 +295,8 @@ function ProjectBrief({ project }: { project: Project }) {
       <div className='grid gap-5 md:grid-cols-2'>{[
         ['Description', project.description], ['Scope', project.scope], ['Deliverables', project.deliverables], ['Evaluation criteria', project.evaluationCriteria],
       ].filter(([, value]) => value).map(([label, value]) => <div key={label}><p className='mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-500'>{label}</p><p className='text-sm leading-relaxed text-ink-200'>{value}</p></div>)}</div>
+      {(project.tools ?? []).length > 0 && <div className='mt-5 flex flex-wrap gap-2 border-t border-ink-800 pt-4'>{project.tools.map((tool) => <span key={tool} className='rounded-lg border border-ink-700 bg-ink-800 px-2.5 py-1 text-xs text-ink-300'>{tool}</span>)}</div>}
+      {project.projectSupervisorName && <p className='mt-4 text-sm text-ink-300'>Project supervisor: <span className='text-white'>{project.projectSupervisorName}</span></p>}
       {project.assignedPartyName && <p className='mt-5 flex items-center gap-2 border-t border-ink-800 pt-4 text-sm text-ink-300'><Users size={14} className='text-ember-400' /> Assigned party: {project.assignedPartyName}</p>}
     </div>
   );
@@ -301,7 +305,7 @@ function ProjectBrief({ project }: { project: Project }) {
 function PartyMembers({ party, showScorecards }: { party: Party; showScorecards: boolean }) {
   const scorecards = useQuery({
     queryKey: ['supervisor-member-scorecards', party.id],
-    queryFn: async () => Object.fromEntries(await Promise.all(party.members.map(async (member) => {
+    queryFn: async () => Object.fromEntries(await Promise.all((party.members ?? []).map(async (member) => {
       try { return [member.id, (await userApi.getScorecard(member.id)).data] as const; }
       catch { return [member.id, null] as const; }
     }))),
@@ -311,9 +315,9 @@ function PartyMembers({ party, showScorecards }: { party: Party; showScorecards:
     <div className='card mb-5 p-6'>
       <div className='mb-4 flex flex-wrap items-center justify-between gap-2'><h2 className='font-display font-semibold text-white'>Party members</h2>{party.assignedProjectTitle && <span className='text-xs text-ink-400'>{party.assignedProjectTitle}</span>}</div>
       <div className='grid gap-3 sm:grid-cols-2'>
-        {party.members.map((member) => {
+        {(party.members ?? []).map((member) => {
           const scorecard = scorecards.data?.[member.id] as Scorecard | null | undefined;
-          return <Link key={member.id} to={`/supervisor/students/${member.id}`} className='rounded-xl border border-ink-700/50 bg-ink-800/50 p-4 hover:border-ember-500/30'><div className='flex items-center justify-between'><p className='text-sm font-semibold text-white'>{member.firstName} {member.lastName}</p>{party.leader.id === member.id && <span className='badge badge-ember text-[9px]'>Leader</span>}</div><p className='mt-1 text-xs text-ink-500'>{member.email}</p>{showScorecards && <p className='mt-3 text-xs text-ink-400'>Scorecard: <span className='font-semibold text-white'>{scorecard ? `${scorecard.averageScore.toFixed(0)} avg · ${scorecard.totalProjects} projects` : 'No scores yet'}</span></p>}</Link>;
+          return <Link key={member.id} to={`/supervisor/students/${member.id}`} className='rounded-xl border border-ink-700/50 bg-ink-800/50 p-4 hover:border-ember-500/30'><div className='flex items-center justify-between'><p className='text-sm font-semibold text-white'>{member.firstName} {member.lastName}</p>{party.leader?.id === member.id && <span className='badge badge-ember text-[9px]'>Leader</span>}</div><p className='mt-1 text-xs text-ink-500'>{member.email}</p>{showScorecards && <p className='mt-3 text-xs text-ink-400'>Scorecard: <span className='font-semibold text-white'>{scorecard ? `${scorecard.averageScore.toFixed(0)} avg · ${scorecard.totalProjects} projects` : 'No scores yet'}</span></p>}</Link>;
         })}
       </div>
     </div>
@@ -332,10 +336,10 @@ function Applications({ applications, kind }: { applications: Application[]; kin
 function SubmissionPanel({ submission }: { submission: Submission }) {
   return (
     <div className='card mb-5 p-6'>
-      <div className='mb-4 flex items-center justify-between'><h2 className='flex items-center gap-2 font-display font-semibold text-white'><Send size={15} className='text-ember-400' /> Submission</h2><span className='badge badge-open text-[10px]'>{submission.status.replace('_', ' ')}</span></div>
+      <div className='mb-4 flex items-center justify-between'><h2 className='flex items-center gap-2 font-display font-semibold text-white'><Send size={15} className='text-ember-400' /> Submission</h2><span className='badge badge-open text-[10px]'>{submission.status?.replace('_', ' ') || 'UNKNOWN'}</span></div>
       {submission.repoUrl && <a href={submission.repoUrl} target='_blank' rel='noreferrer' className='flex items-center gap-2 text-sm text-ember-400 hover:text-ember-300'><ExternalLink size={13} /> {submission.repoUrl}</a>}
       {submission.notes && <p className='mt-3 text-sm text-ink-300'>{submission.notes}</p>}
-      {submission.documentUrls.length > 0 && <div className='mt-4 flex flex-wrap gap-2'>{submission.documentUrls.map((url, index) => <a key={url} href={url} target='_blank' rel='noreferrer' className='btn-secondary px-3 py-2 text-xs'><FileText size={12} /> Document {index + 1}</a>)}</div>}
+      {(submission.documentUrls ?? []).length > 0 && <div className='mt-4 flex flex-wrap gap-2'>{(submission.documentUrls ?? []).map((url, index) => <a key={url} href={url} target='_blank' rel='noreferrer' className='btn-secondary px-3 py-2 text-xs'><FileText size={12} /> Document {index + 1}</a>)}</div>}
     </div>
   );
 }

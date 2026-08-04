@@ -104,8 +104,10 @@ const party = {
 
 const submission = {
   id: ids.submission,
-  party: { id: ids.party, name: party.name },
-  project: { id: ids.project, title: project.title },
+  partyId: ids.party,
+  partyName: party.name,
+  projectId: ids.project,
+  projectTitle: project.title,
   repoUrl: 'https://github.com/example/orbit',
   repoBranch: 'main',
   documentUrls: ['https://files.example/report.pdf'],
@@ -265,6 +267,8 @@ test('company manages supervisor invitations and assigns an accepted supervisor 
 });
 
 test('project supervisor navigates projects and reads assigned party evaluation', async ({ page }) => {
+  const pageErrors: Error[] = [];
+  page.on('pageerror', error => pageErrors.push(error));
   await mockAuthenticated(page, users.projectSupervisor);
   const unsubmittedProject = { ...project, id: 'unsubmitted-project', title: 'Unsubmitted Portal', assignedPartyId: undefined, assignedPartyName: undefined };
   await page.route('**/api/projects/supervised', route => fulfillJson(route, [project, unsubmittedProject]));
@@ -277,7 +281,7 @@ test('project supervisor navigates projects and reads assigned party evaluation'
   await page.goto('/project-supervisor/overview');
   await expect(page.getByRole('heading', { name: 'Project Supervisor Overview' })).toBeVisible();
   await expect(page.getByText('AI Support Copilot')).toBeVisible();
-  await page.getByRole('link', { name: 'Projects', exact: true }).click();
+  await page.getByRole('link', { name: 'My Projects', exact: true }).click();
   await page.getByLabel('Filter by submission').selectOption('EVALUATED');
   await expect(page.getByText('Unsubmitted Portal')).toHaveCount(0);
   await page.getByLabel('Filter by submission').selectOption('ALL');
@@ -290,14 +294,17 @@ test('project supervisor navigates projects and reads assigned party evaluation'
   await expect(page.getByText('A strong submission.')).toBeVisible();
   await expect(page.getByText('91')).toBeVisible();
   await expect(page.getByRole('button', { name: /finalize|trigger/i })).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
 });
 
 test('party supervisor uses supervised and browse endpoints without coordinator access', async ({ page }) => {
+  const pageErrors: Error[] = [];
+  page.on('pageerror', error => pageErrors.push(error));
   await mockAuthenticated(page, users.partySupervisor);
   const requested: string[] = [];
   page.on('request', request => requested.push(new URL(request.url()).pathname));
   await page.route('**/api/parties/supervised', route => fulfillJson(route, [party]));
-  await page.route('**/api/parties/browse', route => fulfillJson(route, [{ ...party, id: 'browse-party', name: 'Team Nova', supervisorId: undefined }]));
+  await page.route('**/api/parties/browse', route => fulfillJson(route, [party, { ...party, id: 'browse-party', name: 'Team Nova', supervisorId: undefined, supervisorName: undefined }]));
   await page.route(`**/api/parties/${ids.party}`, route => fulfillJson(route, party));
   await page.route(`**/api/parties/${ids.party}/applications`, route => fulfillJson(route, []));
   await page.route(`**/api/submissions/${ids.party}`, route => fulfillJson(route, submission));
@@ -310,7 +317,10 @@ test('party supervisor uses supervised and browse endpoints without coordinator 
   await expect(page.getByText('A strong submission.')).toBeVisible();
   await page.getByRole('link', { name: 'Browse Parties' }).click();
   await expect(page.getByText('Team Nova')).toBeVisible();
+  await expect(page.getByText('My party')).toBeVisible();
+  await expect(page.getByText('Party supervisor: Ayesha Ali')).toBeVisible();
 
   expect(requested).toContain('/api/parties/browse');
   expect(requested).not.toContain('/api/parties/all');
+  expect(pageErrors).toEqual([]);
 });

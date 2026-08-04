@@ -10,7 +10,7 @@ const company = {
   onboardingComplete: true,
 };
 
-test('fills empty project fields from the company chatbot draft', async ({ page }) => {
+test('fills and saves a project draft from the company chatbot', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('accessToken', 'company-test-token'));
   await page.route('**/api/users/me', route => route.fulfill({
     contentType: 'application/json',
@@ -40,6 +40,15 @@ test('fills empty project fields from the company chatbot draft', async ({ page 
       }),
     });
   });
+  await page.route('**/api/projects', async route => {
+    const body = route.request().postDataJSON();
+    expect(body.saveAsDraft).toBe(true);
+    expect(body.title).toBe('AI Customer Support Portal');
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ id: 'draft-project-id', ...body, status: 'DRAFT' }),
+    });
+  });
 
   await page.goto('/company/projects/new');
   await expect(page.getByRole('heading', { name: 'Post a New Project' })).toBeVisible();
@@ -51,4 +60,5 @@ test('fills empty project fields from the company chatbot draft', async ({ page 
   await expect(page.getByPlaceholder('What is the project about? What problem does it solve?')).toHaveValue(/support agents/);
   await expect(page.getByRole('button', { name: 'Software' })).toHaveClass(/border-ember-500/);
   await expect(page.getByText('Spring Boot', { exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open saved draft' })).toHaveAttribute('href', '/company/projects/draft-project-id');
 });

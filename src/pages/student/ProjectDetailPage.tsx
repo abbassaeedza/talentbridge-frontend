@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { projectApi, partyApi } from '../../api/services'
 import { useAuth } from '../../contexts/AuthContext'
@@ -11,7 +11,7 @@ import clsx from 'clsx'
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { isRole } = useAuth()
+  const { isRole, user } = useAuth()
   const [rankPosition, setRankPosition] = useState(1)
   const [proposalText, setProposalText] = useState('')
   const [applyOpen, setApplyOpen] = useState(false)
@@ -93,9 +93,9 @@ export default function ProjectDetailPage() {
         </div>
 
         {/* Tools */}
-        {project.tools.length > 0 && (
+        {(project.tools ?? []).length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {project.tools.map(t => (
+            {(project.tools ?? []).map(t => (
               <span key={t} className="px-2.5 py-1 rounded-lg bg-ink-700/60 text-ink-300 text-xs font-mono border border-ink-600/30">{t}</span>
             ))}
           </div>
@@ -126,7 +126,7 @@ export default function ProjectDetailPage() {
               <h3 className="font-display font-semibold text-white mb-3">Apply for this project</h3>
               {!party ? (
                 <p className="text-xs text-ink-400 mb-3">You need to be in a party before applying.</p>
-              ) : party.members.length < (rules?.minSize ?? 2) ? (
+              ) : (party.members?.length ?? 0) < (rules?.minSize ?? 2) ? (
                 <p className="text-xs text-amber-400 mb-3">Your party needs at least {rules?.minSize ?? 2} members before applying.</p>
               ) : party.assignedProjectId ? (
                 <p className="text-xs text-jade-400">Your party is already assigned to a project.</p>
@@ -179,8 +179,23 @@ export default function ProjectDetailPage() {
                 <div className="w-9 h-9 rounded-xl bg-ink-700 flex items-center justify-center text-xs font-bold text-ink-200">
                   {project.projectSupervisorName[0]}
                 </div>
-                <p className="text-sm text-ink-200">{project.projectSupervisorName}</p>
+                {user?.role === 'COORDINATOR' && project.projectSupervisorId ? (
+                  <Link to={`/coordinator/supervisors?section=PROJECT_SUPERVISOR&supervisor=${project.projectSupervisorId}`} className="text-sm text-ember-400 hover:text-ember-300">
+                    {project.projectSupervisorName}
+                  </Link>
+                ) : <p className="text-sm text-ink-200">{project.projectSupervisorName}</p>}
               </div>
+            </div>
+          )}
+
+          {project.assignedPartyName && (
+            <div className="card p-5">
+              <h3 className="font-display font-semibold text-white mb-3">Assigned Party</h3>
+              {user?.role === 'COORDINATOR' && project.assignedPartyId ? (
+                <Link to={`/coordinator/parties?party=${project.assignedPartyId}`} className="inline-flex items-center gap-2 text-sm text-ember-400 hover:text-ember-300">
+                  <Users size={15} /> {project.assignedPartyName}
+                </Link>
+              ) : <p className="text-sm text-ink-200">{project.assignedPartyName}</p>}
             </div>
           )}
         </div>
