@@ -97,19 +97,33 @@ export default function StudentsDirectoryPage() {
         <p className='page-subtitle'>{filtered.length} student{filtered.length === 1 ? '' : 's'} shown</p>
       </div>
 
-      <div className='card p-4 mb-5 grid md:grid-cols-[1fr_auto] gap-3'>
+      <div className='mb-4 flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl bg-ink-900 p-1' role='tablist' aria-label='Student approval status'>
+        {([
+          ['ALL', 'All Students'],
+          ['PENDING', 'Pending Requests'],
+          ['APPROVED', 'Approved'],
+          ['SUSPENDED', 'Suspended'],
+          ['REJECTED', 'Rejected'],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            role='tab'
+            aria-selected={status === value}
+            onClick={() => { setStatus(value); setSelected([]); }}
+            className={clsx('whitespace-nowrap rounded-lg px-4 py-2 text-xs font-semibold transition',
+              status === value ? 'bg-ink-700 text-white' : 'text-ink-400 hover:text-white')}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className='card p-4 mb-5 grid gap-3'>
         <div className='relative'>
           <Search size={15} className='absolute left-3 top-1/2 -translate-y-1/2 text-ink-500' />
           <input className='input pl-9' placeholder='Search by name, university, major, skill…' value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
-        <select className='input text-sm' value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value='ALL'>All statuses</option>
-          <option value='APPROVED'>Approved</option>
-          <option value='PENDING'>Pending</option>
-          <option value='SUSPENDED'>Suspended</option>
-          <option value='REJECTED'>Rejected</option>
-        </select>
-        <label className='md:col-span-2 flex w-fit items-center gap-2 text-xs text-ink-300'>
+        <label className='flex w-fit items-center gap-2 text-xs text-ink-300'>
           <input
             type='checkbox'
             aria-label='Select all filtered students'

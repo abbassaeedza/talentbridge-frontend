@@ -217,6 +217,78 @@ test('previews and shows a new global deadline without reloading', async ({ page
   await expect(page.getByText(/02 Jan 2031/).first()).toBeVisible();
 });
 
+test('keeps project deadlines when global mode is disabled', async ({ page }) => {
+  let deadline = openProject.deadline;
+  let enabled = false;
+  await mockCoordinatorApi(page, {
+    onProjects: route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify(pageResponse([{ ...openProject, deadline }])),
+    }),
+    onGlobalDeadline: async route => {
+      if (route.request().method() === 'PUT') {
+        const payload = await route.request().postDataJSON();
+        enabled = payload.enabled;
+        if (enabled) deadline = payload.deadline;
+        return route.fulfill({ status: 204 });
+      }
+      return route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ enabled, deadline }),
+      });
+    },
+  });
+  await loginAsCoordinator(page);
+  await page.getByRole('link', { name: 'Projects', exact: true }).click();
+
+  await page.getByRole('switch', { name: 'Enable global deadline' }).check();
+  await page.getByLabel('Global deadline date and time').fill('2031-01-02T10:00');
+  await page.getByRole('button', { name: 'Preview changes' }).click();
+  await page.getByRole('button', { name: 'Confirm and apply' }).click();
+  await expect(page.getByText(/02 Jan 2031/).first()).toBeVisible();
+
+  await page.getByRole('switch', { name: 'Enable global deadline' }).uncheck();
+  await page.getByRole('button', { name: 'Preview changes' }).click();
+  await page.getByRole('button', { name: 'Confirm and apply' }).click();
+
+  await expect(page.getByText('Global deadline is disabled')).toBeVisible();
+  await expect(page.getByText(/02 Jan 2031/).first()).toBeVisible();
+});
+
+test('filters student and company approval states with tabs', async ({ page }) => {
+  const students = [
+    { ...pendingStudents[0], status: 'PENDING' },
+    { ...pendingStudents[1], status: 'APPROVED' },
+    { ...pendingStudents[2], status: 'SUSPENDED' },
+    { ...pendingStudents[3], status: 'REJECTED' },
+  ];
+  const companies = students.map((student, index) => ({
+    ...student,
+    id: `10000000-0000-0000-0000-${String(index + 1).padStart(12, '0')}`,
+    role: 'COMPANY',
+    firstName: `${student.status} Company`,
+    companyProfile: { id: `profile-${index}`, companyName: `${student.status} Company`, industry: 'Software' },
+  }));
+  await mockCoordinatorApi(page);
+  await page.unroute('**/api/users/students');
+  await page.route('**/api/users/students', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(students) }));
+  await page.unroute('**/api/users/companies');
+  await page.route('**/api/users/companies', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(companies) }));
+  await loginAsCoordinator(page);
+
+  await page.getByRole('link', { name: 'Students', exact: true }).click();
+  await expect(page.getByRole('tab', { name: 'All Students' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Pending Requests' }).click();
+  await expect(page.getByText('pending.student@talentbridge.com')).toBeVisible();
+  await expect(page.getByText('pending2.student@talentbridge.com')).toBeHidden();
+
+  await page.getByRole('link', { name: 'Companies', exact: true }).click();
+  await expect(page.getByRole('tab', { name: 'All Companies' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Rejected' }).click();
+  await expect(page.getByText('REJECTED Company', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('APPROVED Company', { exact: true })).toBeHidden();
+});
+
 test('selects all filtered students and requires a bulk rejection reason', async ({ page }) => {
   await mockCoordinatorApi(page);
   await page.route('**/api/users/*/reject**', route => route.fulfill({ contentType: 'application/json', body: '{}' }));

@@ -10,6 +10,7 @@ import BulkActionToolbar from '../../components/coordinator/BulkActionToolbar';
 
 export default function CompaniesDirectoryPage() {
   const [query, setQuery] = useState('');
+  const [status, setStatus] = useState('ALL');
   const [industry, setIndustry] = useState('ALL');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
@@ -56,6 +57,7 @@ export default function CompaniesDirectoryPage() {
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return (companies ?? [])
+      .filter((c) => status === 'ALL' || c.status === status)
       .filter((c) => industry === 'ALL' || c.companyProfile?.industry === industry)
       .filter((c) => {
         if (!needle) return true;
@@ -69,7 +71,7 @@ export default function CompaniesDirectoryPage() {
         ].filter(Boolean).join(' ').toLowerCase().includes(needle);
       })
       .sort((a, b) => (a.companyProfile?.companyName ?? getUserName(a)).localeCompare(b.companyProfile?.companyName ?? getUserName(b)));
-  }, [companies, query, industry]);
+  }, [companies, query, status, industry]);
   const selectedCompanies = (companies ?? []).filter((company) => selected.includes(company.id));
   const eligible = {
     approve: selectedCompanies.filter((company) => company.status === 'PENDING' || company.status === 'REJECTED').length,
@@ -91,6 +93,27 @@ export default function CompaniesDirectoryPage() {
       <div className='page-header'>
         <h1 className='page-title'>Companies Directory</h1>
         <p className='page-subtitle'>{companyGroups.length} compan{companyGroups.length === 1 ? 'y' : 'ies'} · {filtered.length} profile{filtered.length === 1 ? '' : 's'}</p>
+      </div>
+
+      <div className='mb-4 flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl bg-ink-900 p-1' role='tablist' aria-label='Company approval status'>
+        {([
+          ['ALL', 'All Companies'],
+          ['PENDING', 'Pending Requests'],
+          ['APPROVED', 'Approved'],
+          ['SUSPENDED', 'Suspended'],
+          ['REJECTED', 'Rejected'],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            role='tab'
+            aria-selected={status === value}
+            onClick={() => { setStatus(value); setSelected([]); }}
+            className={clsx('whitespace-nowrap rounded-lg px-4 py-2 text-xs font-semibold transition',
+              status === value ? 'bg-ink-700 text-white' : 'text-ink-400 hover:text-white')}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       <div className='card p-4 mb-5 grid md:grid-cols-[1fr_auto] gap-3'>
