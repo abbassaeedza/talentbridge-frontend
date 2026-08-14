@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { partyApi, submissionApi } from '../../api/services'
+import { evaluationApi, partyApi, submissionApi } from '../../api/services'
+import EvaluationReportPanel from '../../components/evaluation/EvaluationReportPanel'
 import { Github, Upload, Send, Save, CheckCircle2, AlertCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
@@ -23,6 +24,13 @@ export default function SubmissionPage() {
     queryKey: ['submission', party?.id],
     queryFn: () => submissionApi.get(party!.id).then(r => r.data),
     enabled: !!party?.id,
+    retry: false,
+  })
+
+  const { data: evaluationReport } = useQuery({
+    queryKey: ['eval-report', submission?.id],
+    queryFn: () => evaluationApi.getBySubmission(submission!.id).then(response => response.data),
+    enabled: submission?.status === 'EVALUATED',
     retry: false,
   })
 
@@ -218,6 +226,11 @@ export default function SubmissionPage() {
           </div>
         )}
       </div>
+      {evaluationReport && (
+        <div className='card mt-5 overflow-hidden'>
+          <EvaluationReportPanel report={evaluationReport} />
+        </div>
+      )}
     </div>
   )
 }

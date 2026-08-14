@@ -186,7 +186,7 @@ export interface Submission {
 
 export interface StudentEvaluationScore {
   id: string
-  student: { id: string; firstName: string; lastName: string; email: string }
+  student: { id: string; firstName: string; lastName: string; email: string; githubUsername?: string }
   totalCommits: number
   contributionPercentage: number
   individualScore: number
@@ -195,6 +195,7 @@ export interface StudentEvaluationScore {
 
 export interface EvaluationReport {
   id: string
+  submissionId?: string
   submission?: { id: string }
   aiDetectionScore: number
   aiDetectionNotes: string
@@ -228,6 +229,7 @@ export interface ScorecardEntry {
   semester?: string
   academicYear?: number
   createdAt: string
+  evaluationReport?: EvaluationReport
 }
 
 export interface Notification {

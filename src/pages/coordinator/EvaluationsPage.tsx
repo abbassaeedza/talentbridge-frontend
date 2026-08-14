@@ -1,25 +1,57 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { partyApi, submissionApi, evaluationApi } from '../../api/services'
-import { Award, Play, CheckSquare, ChevronDown, ChevronUp, BarChart3 } from 'lucide-react'
+import { Award, Play, CheckSquare, BarChart3, Check, LoaderCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
+import EvaluationReportPanel from '../../components/evaluation/EvaluationReportPanel'
 
-function ScoreDimension({ label, score, notes }: { label: string; score: number; notes: string }) {
-  const [open, setOpen] = useState(false)
-  const color = score >= 80 ? 'bg-jade-500' : score >= 60 ? 'bg-ember-500' : 'bg-red-500'
+const evaluationSteps = [
+  { label: 'AI Detection', weight: 20 },
+  { label: 'Code Quality', weight: 25 },
+  { label: 'Functionality', weight: 25 },
+  { label: 'Scope Alignment', weight: 20 },
+  { label: 'Team Collaboration', weight: 10 },
+]
+
+function EvaluationProgress({ currentStep }: { currentStep: number }) {
   return (
-    <div>
-      <div className="flex items-center justify-between mb-1">
-        <button onClick={() => setOpen(v => !v)} className="flex items-center gap-1 text-xs text-ink-300 hover:text-ink-100">
-          {label} {open ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-        </button>
-        <span className="text-xs font-bold text-white">{score.toFixed(0)}</span>
+    <div role='status' aria-label='Evaluation progress' className='border-t border-ink-800/50 bg-ink-950/40 px-5 py-4'>
+      <div className='mb-3 flex items-center justify-between'>
+        <p className='text-xs font-semibold uppercase tracking-wider text-ink-300'>Evaluation progress</p>
+        <p className='text-[10px] text-ink-500'>Weights total 100%</p>
       </div>
-      <div className="score-bar-track mb-1">
-        <div className={clsx('score-bar-fill', color)} style={{ width: `${score}%` }} />
+      <div className='grid gap-2 sm:grid-cols-5'>
+        {evaluationSteps.map((step, index) => {
+          const complete = index < currentStep
+          const active = index === currentStep && currentStep < evaluationSteps.length
+          const state = complete ? 'complete' : active ? 'in progress' : 'pending'
+          return (
+            <div
+              key={step.label}
+              aria-label={`${step.label} ${state}`}
+              className={clsx(
+                'rounded-xl border p-3 transition-colors',
+                complete && 'border-jade-500/30 bg-jade-500/10',
+                active && 'border-ember-500/40 bg-ember-500/10',
+                !complete && !active && 'border-ink-800 bg-ink-900/60',
+              )}
+            >
+              <div className='mb-2 flex items-center justify-between'>
+                {complete ? (
+                  <Check size={15} className='text-jade-400' />
+                ) : active ? (
+                  <LoaderCircle size={15} className='animate-spin text-ember-400' />
+                ) : (
+                  <span className='h-3.5 w-3.5 rounded-full border border-ink-600' />
+                )}
+                <span className='text-[10px] font-semibold text-ink-400'>{step.weight}%</span>
+              </div>
+              <p className='text-[11px] font-medium text-ink-200'>{step.label}</p>
+            </div>
+          )
+        })}
       </div>
-      {open && <p className="text-[11px] text-ink-400 leading-relaxed mt-1">{notes}</p>}
     </div>
   )
 }
@@ -27,6 +59,7 @@ function ScoreDimension({ label, score, notes }: { label: string; score: number;
 export default function EvaluationsPage() {
   const qc = useQueryClient()
   const [expandedSubmission, setExpandedSubmission] = useState<string | null>(null)
+  const [evaluationProgress, setEvaluationProgress] = useState<{ submissionId: string; currentStep: number } | null>(null)
 
   const { data: parties } = useQuery({
     queryKey: ['submitted-parties'],
@@ -49,10 +82,32 @@ export default function EvaluationsPage() {
   })
 
   const evaluationMutation = useMutation({
-    mutationFn: (submissionId: string) => evaluationApi.trigger(submissionId),
-    onSuccess: () => { toast.success('Evaluation triggered! This may take 30–60 seconds.'); qc.invalidateQueries() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || 'Evaluation failed'),
+    mutationFn: ({ submissionId, reportId }: { submissionId: string; reportId?: string }) =>
+      reportId ? evaluationApi.reevaluate(reportId) : evaluationApi.trigger(submissionId),
+    onMutate: ({ submissionId }) => setEvaluationProgress({ submissionId, currentStep: 0 }),
+    onSuccess: (response, { submissionId, reportId }) => {
+      qc.setQueryData(['eval-report', submissionId], response.data)
+      setEvaluationProgress({ submissionId, currentStep: evaluationSteps.length })
+      setExpandedSubmission(submissionId)
+      qc.invalidateQueries({ queryKey: ['all-submissions'] })
+      toast.success(reportId ? 'Contribution scores updated' : 'Evaluation complete')
+    },
+    onError: (e: any) => {
+      setEvaluationProgress(null)
+      toast.error(e?.response?.data?.message || 'Evaluation failed')
+    },
   })
+
+  useEffect(() => {
+    if (!evaluationMutation.isPending || !evaluationProgress) return
+    const submissionId = evaluationProgress.submissionId
+    const interval = window.setInterval(() => {
+      setEvaluationProgress((progress) => progress && progress.submissionId === submissionId
+        ? { ...progress, currentStep: Math.min(progress.currentStep + 1, evaluationSteps.length - 1) }
+        : progress)
+    }, 4000)
+    return () => window.clearInterval(interval)
+  }, [evaluationMutation.isPending, evaluationProgress?.submissionId])
 
   const finalizeMutation = useMutation({
     mutationFn: (reportId: string) => evaluationApi.finalize(reportId),
@@ -63,66 +118,41 @@ export default function EvaluationsPage() {
   const submissions = submissionsQuery.data ?? []
 
   const EvaluationReportView = ({ submissionId }: { submissionId: string }) => {
-    const { data: report, isLoading } = useQuery({
+    const { data: report, isLoading, isError } = useQuery({
       queryKey: ['eval-report', submissionId],
       queryFn: () => evaluationApi.getBySubmission(submissionId).then(r => r.data),
       retry: false,
     })
 
     if (isLoading) return <p className="text-xs text-ink-400 p-4">Loading report…</p>
+    if (isError) return <p className="p-4 text-xs text-red-400">Could not load the evaluation report.</p>
     if (!report) return <p className="text-xs text-ink-400 p-4">No evaluation report yet.</p>
 
     return (
-      <div className="p-5 bg-ink-950/50 border-t border-ink-800/50">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <p className="text-sm font-semibold text-white">AI Evaluation Report</p>
-            <p className="text-xs text-ink-400 mt-0.5">{report.overallSummary}</p>
-          </div>
-          <div className="text-right">
-            <p className="font-display text-2xl font-bold text-white">{report.totalScore.toFixed(0)}</p>
-            <p className="text-xs text-ink-400">/100</p>
-          </div>
-        </div>
-
-        <div className="space-y-3 mb-4">
-          <ScoreDimension label="AI Detection (authenticity)" score={report.aiDetectionScore} notes={report.aiDetectionNotes} />
-          <ScoreDimension label="Code Quality" score={report.codeQualityScore} notes={report.codeQualityNotes} />
-          <ScoreDimension label="Functionality" score={report.functionalityScore} notes={report.functionalityNotes} />
-          <ScoreDimension label="Scope Alignment" score={report.scopeAlignmentScore} notes={report.scopeAlignmentNotes} />
-          <ScoreDimension label="Team Collaboration" score={report.teamCollaborationScore} notes={report.teamCollaborationNotes} />
-        </div>
-
-        {/* Per-student scores */}
-        {report.studentScores?.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-ink-400 uppercase tracking-wider mb-2">Individual Scores</p>
-            <div className="space-y-1.5">
-              {report.studentScores.map(ss => (
-                <div key={ss.id} className="flex items-center gap-3 p-2 rounded-lg bg-ink-800/50 text-xs">
-                  <span className="text-ink-200 font-medium flex-1">
-                    {ss.student.firstName} {ss.student.lastName}
-                  </span>
-                  <span className="text-ink-400">{ss.totalCommits} commits ({ss.contributionPercentage}%)</span>
-                  <span className="font-bold text-white">{ss.individualScore.toFixed(0)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
+      <EvaluationReportPanel report={report} className='border-t border-ink-800/50'>
         {!report.finalized && (
-          <button onClick={() => finalizeMutation.mutate(report.id)}
-            disabled={finalizeMutation.isPending}
-            className="btn-primary text-xs mt-4">
-            <CheckSquare size={13} />
-            {finalizeMutation.isPending ? 'Finalizing…' : 'Finalize Report'}
-          </button>
+          <div className='mt-4 flex flex-wrap gap-2'>
+            <button
+              onClick={() => evaluationMutation.mutate({ submissionId, reportId: report.id })}
+              disabled={evaluationMutation.isPending || finalizeMutation.isPending}
+              title='Refresh GitHub contribution scores without changing the AI analysis'
+              className='btn-secondary text-xs'
+            >
+              <Play size={13} />
+              {evaluationMutation.isPending ? 'Reevaluating…' : 'Reevaluate'}
+            </button>
+            <button onClick={() => finalizeMutation.mutate(report.id)}
+              disabled={finalizeMutation.isPending || evaluationMutation.isPending}
+              className="btn-primary text-xs">
+              <CheckSquare size={13} />
+              {finalizeMutation.isPending ? 'Finalizing…' : 'Finalize Report'}
+            </button>
+          </div>
         )}
         {report.finalized && (
           <span className="badge badge-open text-[10px] mt-3">Report Finalized</span>
         )}
-      </div>
+      </EvaluationReportPanel>
     )
   }
 
@@ -166,11 +196,11 @@ export default function EvaluationsPage() {
 
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {sub.status === 'SUBMITTED' && (
-                    <button onClick={() => evaluationMutation.mutate(sub.id)}
+                    <button onClick={() => evaluationMutation.mutate({ submissionId: sub.id })}
                       disabled={evaluationMutation.isPending}
                       className="btn-primary text-xs px-3 py-2">
                       <Play size={13} />
-                      {evaluationMutation.isPending ? 'Running…' : 'Evaluate'}
+                      {evaluationMutation.isPending && evaluationProgress?.submissionId === sub.id ? 'Running…' : 'Evaluate'}
                     </button>
                   )}
                   {(sub.status === 'EVALUATED' || sub.status === 'UNDER_EVALUATION') && (
@@ -183,6 +213,9 @@ export default function EvaluationsPage() {
                 </div>
               </div>
 
+              {evaluationProgress && evaluationProgress.submissionId === sub.id && (
+                <EvaluationProgress currentStep={evaluationProgress.currentStep} />
+              )}
               {expandedSubmission === sub.id && <EvaluationReportView submissionId={sub.id} />}
             </div>
           ))

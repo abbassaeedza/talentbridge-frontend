@@ -191,7 +191,9 @@ function GitHubCallbackPage() {
       .githubCallback(code)
       .then(refreshUser)
       .then(() => toast.success('GitHub account connected'))
-      .catch(() => toast.error('Could not connect GitHub account'))
+      .catch((error) => toast.error(
+        error?.response?.data?.message || 'Could not connect GitHub account',
+      ))
       .finally(() => navigate('/student/dashboard', { replace: true }));
   }, [navigate, refreshUser]);
 

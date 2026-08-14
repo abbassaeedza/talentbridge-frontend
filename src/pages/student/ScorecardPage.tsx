@@ -3,6 +3,7 @@ import { userApi } from '../../api/services';
 import { Award, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
 import clsx from 'clsx';
+import EvaluationReportPanel from '../../components/evaluation/EvaluationReportPanel';
 
 function ScoreRing({ score }: { score: number }) {
   const r = 28;
@@ -122,6 +123,14 @@ export default function ScorecardPage() {
                     {entry.project?.title ?? 'Project'}
                   </h3>
                   <div className='flex items-center gap-3 text-xs text-ink-400'>
+                    <span className='font-semibold text-ink-200'>
+                      Your score: {(entry.score ?? 0).toFixed(0)}/100
+                    </span>
+                    {entry.evaluationReport && (
+                      <span>
+                        Team project score: {entry.evaluationReport.totalScore.toFixed(0)}/100
+                      </span>
+                    )}
                     {entry.semester && <span>{entry.semester}</span>}
                     {entry.academicYear && <span>{entry.academicYear}</span>}
                     {entry.createdAt && (
@@ -145,6 +154,12 @@ export default function ScorecardPage() {
                   </div>
                 </div>
               </div>
+              {entry.evaluationReport && (
+                <EvaluationReportPanel
+                  report={entry.evaluationReport}
+                  className='mt-5 rounded-2xl border border-ink-800/60'
+                />
+              )}
             </div>
           ))}
         </div>

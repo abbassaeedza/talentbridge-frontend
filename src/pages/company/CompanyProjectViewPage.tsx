@@ -1,6 +1,7 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { projectApi, partyApi } from '../../api/services'
+import { evaluationApi, projectApi, partyApi, submissionApi } from '../../api/services'
+import EvaluationReportPanel from '../../components/evaluation/EvaluationReportPanel'
 import { useState } from 'react'
 import {
   ArrowLeft, FileText, Target, Package, Star,
@@ -55,6 +56,20 @@ export default function CompanyProjectViewPage() {
     queryKey: ['company-application-party', expandedParty],
     queryFn: () => partyApi.getById(expandedParty!).then((response) => response.data),
     enabled: !!expandedParty,
+  })
+
+  const { data: submissions } = useQuery({
+    queryKey: ['company-project-submissions', id],
+    queryFn: () => submissionApi.getByProject(id!).then(response => response.data),
+    enabled: !!id,
+    retry: false,
+  })
+  const submission = submissions?.[0]
+  const { data: evaluationReport } = useQuery({
+    queryKey: ['eval-report', submission?.id],
+    queryFn: () => evaluationApi.getBySubmission(submission!.id).then(response => response.data),
+    enabled: submission?.status === 'EVALUATED',
+    retry: false,
   })
 
   if (isLoading) {
@@ -230,6 +245,11 @@ export default function CompanyProjectViewPage() {
           </div>
         )}
       </div>
+      {evaluationReport && (
+        <div className='card mt-5 overflow-hidden'>
+          <EvaluationReportPanel report={evaluationReport} />
+        </div>
+      )}
     </div>
   )
 }

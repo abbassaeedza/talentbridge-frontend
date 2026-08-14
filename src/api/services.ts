@@ -91,7 +91,7 @@ export const userApi = {
   broadcast: (data: { title: string; message: string; role?: string }) =>
     api.post('/api/users/broadcast', data),
   githubCallback: (code: string) =>
-    api.post('/api/users/github/callback', null, { params: { code } }),
+    api.post<User>('/api/users/github/callback', null, { params: { code } }),
   getNotifications: (page = 0) =>
     api.get<{ notifications: Notification[]; unreadCount: number }>(
       '/api/users/notifications',
@@ -204,6 +204,8 @@ export const submissionApi = {
 export const evaluationApi = {
   trigger: (submissionId: string) =>
     api.post<EvaluationReport>(`/api/evaluations/trigger/${submissionId}`),
+  reevaluate: (reportId: string) =>
+    api.post<EvaluationReport>(`/api/evaluations/${reportId}/reevaluate`),
   finalize: (reportId: string) =>
     api.put<EvaluationReport>(`/api/evaluations/${reportId}/finalize`),
   getBySubmission: (submissionId: string) =>

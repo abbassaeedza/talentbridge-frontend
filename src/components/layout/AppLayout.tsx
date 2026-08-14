@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userApi } from '../../api/services';
+import { partyApi, userApi } from '../../api/services';
 import { formatDistanceToNow } from 'date-fns';
 import ChatBot from '../chat/ChatBot';
 import clsx from 'clsx';
@@ -90,7 +90,7 @@ const NAV_BY_ROLE: Record<
 > = {
   STUDENT: [
     { to: '/student/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/student/projects', icon: FolderKanban, label: 'Browse Projects' },
+    { to: '/student/projects', icon: FolderKanban, label: 'Browse Projects', end: true },
     { to: '/student/party', icon: Users, label: 'My Party' },
     { to: '/student/supervisors', icon: UserCheck, label: 'Supervisors' },
     { to: '/student/submission', icon: Send, label: 'Submission' },
@@ -177,6 +177,13 @@ export default function AppLayout() {
     refetchInterval: 60_000,
   });
 
+  const { data: studentParty } = useQuery({
+    queryKey: ['my-party'],
+    queryFn: () => partyApi.getMyParty().then((r) => r.data),
+    enabled: user?.role === 'STUDENT',
+    retry: false,
+  });
+
   const markOneMutation = useMutation({
     mutationFn: (id: string) => userApi.markNotificationRead(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
@@ -257,7 +264,19 @@ export default function AppLayout() {
 
   if (!user) return null;
 
-  const navItems = NAV_BY_ROLE[user.role] || [];
+  const baseNavItems = NAV_BY_ROLE[user.role] || [];
+  const navItems = user.role === 'STUDENT' && studentParty?.assignedProjectId
+    ? [
+        ...baseNavItems.slice(0, 2),
+        {
+          to: `/student/projects/${studentParty.assignedProjectId}`,
+          icon: Briefcase,
+          label: 'My Project',
+          end: true,
+        },
+        ...baseNavItems.slice(2),
+      ]
+    : baseNavItems;
   const initials = `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`;
   const notifications = notifData?.notifications ?? [];
   const unread = notifData?.unreadCount ?? 0;

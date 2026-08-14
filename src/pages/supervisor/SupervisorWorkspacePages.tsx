@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Award, Briefcase, ExternalLink, FileText, Search, Send, Users } from 'lucide-react';
+import { ArrowLeft, Briefcase, ExternalLink, FileText, Search, Send, Users } from 'lucide-react';
 import { evaluationApi, partyApi, projectApi, submissionApi, userApi } from '../../api/services';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
+import EvaluationReportPanel from '../../components/evaluation/EvaluationReportPanel';
 import { useAuth } from '../../contexts/AuthContext';
-import type { Application, EvaluationReport, Party, Project, Scorecard, Submission } from '../../types';
+import type { Application, Party, Project, Scorecard, Submission } from '../../types';
 import toast from 'react-hot-toast';
 
 type ItemKind = 'project' | 'party';
@@ -347,20 +348,11 @@ function SubmissionPanel({ submission }: { submission: Submission }) {
 function EvaluationPanel({ submissionId }: { submissionId: string }) {
   const query = useQuery({ queryKey: ['supervisor-evaluation', submissionId], queryFn: () => evaluationApi.getBySubmission(submissionId).then((response) => response.data), retry: false });
   if (query.isLoading || !query.data) return null;
-  const report = query.data as EvaluationReport;
-  const dimensions = [
-    ['AI detection', report.aiDetectionScore, report.aiDetectionNotes],
-    ['Code quality', report.codeQualityScore, report.codeQualityNotes],
-    ['Functionality', report.functionalityScore, report.functionalityNotes],
-    ['Scope alignment', report.scopeAlignmentScore, report.scopeAlignmentNotes],
-    ['Team collaboration', report.teamCollaborationScore, report.teamCollaborationNotes],
-  ] as const;
   return (
-    <div className='card p-6'>
-      <div className='mb-5 flex items-start justify-between gap-4'><div><h2 className='flex items-center gap-2 font-display font-semibold text-white'><Award size={16} className='text-ember-400' /> Evaluation</h2><p className='mt-1 text-sm text-ink-400'>{report.overallSummary}</p></div><div className='text-right'><p className='font-display text-3xl font-bold text-white'>{report.totalScore.toFixed(0)}</p><p className='text-[10px] text-ink-500'>out of 100</p></div></div>
-      <div className='grid gap-3 sm:grid-cols-2'>{dimensions.map(([label, score, notes]) => <div key={label} className='rounded-xl bg-ink-800/50 p-3'><div className='flex justify-between text-xs'><span className='text-ink-300'>{label}</span><strong className='text-white'>{score.toFixed(0)}</strong></div><div className='my-2 h-1.5 overflow-hidden rounded-full bg-ink-700'><div className='h-full rounded-full bg-ember-500' style={{ width: `${Math.max(0, Math.min(100, score))}%` }} /></div><p className='text-[11px] text-ink-500'>{notes}</p></div>)}</div>
-      {report.studentScores.length > 0 && <div className='mt-5'><p className='mb-2 text-xs font-semibold uppercase tracking-wider text-ink-500'>Member scorecards</p><div className='grid gap-2 sm:grid-cols-2'>{report.studentScores.map((score) => <div key={score.id} className='flex items-center gap-3 rounded-xl border border-ink-700/50 p-3'><div className='flex-1'><p className='text-sm font-medium text-white'>{score.student.firstName} {score.student.lastName}</p><p className='text-[10px] text-ink-500'>{score.totalCommits} commits · {score.contributionPercentage}% contribution</p><p className='mt-1 text-[11px] text-ink-400'>{score.performanceNotes}</p></div><strong className='text-lg text-white'>{score.individualScore.toFixed(0)}</strong></div>)}</div></div>}
-      {report.finalized && <span className='mt-4 inline-flex badge badge-open text-[9px]'>Finalized</span>}
+    <div className='card overflow-hidden'>
+      <EvaluationReportPanel report={query.data}>
+        {query.data.finalized && <span className='mt-4 inline-flex badge badge-open text-[9px]'>Finalized</span>}
+      </EvaluationReportPanel>
     </div>
   );
 }

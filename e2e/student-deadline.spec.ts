@@ -90,6 +90,83 @@ test('prioritises the assigned project deadline in the large countdown', async (
   await expect(page.getByText('Global application deadline')).toBeHidden();
 });
 
+test('shows the connected GitHub username and profile link', async ({ page }) => {
+  await mockStudentApi(page, null);
+
+  await login(page);
+
+  await expect(page.getByText('GitHub connected')).toBeVisible();
+  await expect(page.getByRole('link', { name: '@demo-student' })).toHaveAttribute(
+    'href',
+    'https://github.com/demo-student',
+  );
+  await expect(page.getByRole('button', { name: 'Connect GitHub' })).toBeHidden();
+});
+
+test('refreshes a stale authenticated user after GitHub OAuth', async ({ page }) => {
+  const staleStudent = { ...student, githubUsername: undefined };
+  let profileRequests = 0;
+  await mockStudentApi(page, null);
+  await page.unroute('**/api/users/me');
+  await page.route('**/api/users/me', route => {
+    profileRequests += 1;
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify(profileRequests === 1 ? staleStudent : student),
+    });
+  });
+
+  await login(page);
+
+  await expect.poll(() => profileRequests).toBeGreaterThan(1);
+  await expect(page.getByText('GitHub connected')).toBeVisible();
+  await expect(page.getByRole('link', { name: '@demo-student' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Connect GitHub' })).toBeHidden();
+});
+
+test('opens the assigned project from the conditional student sidebar link', async ({ page }) => {
+  const projectId = '00000000-0000-0000-0000-000000000103';
+  await mockStudentApi(page, {
+    id: '00000000-0000-0000-0000-000000000102',
+    name: 'Demo Party',
+    status: 'ASSIGNED',
+    leader: student,
+    members: [student],
+    assignedProjectId: projectId,
+    assignedProjectTitle: 'Assigned Project',
+    assignedProjectDeadline: new Date(Date.now() + 36 * 3_600_000).toISOString(),
+  });
+  await page.route(`**/api/projects/${projectId}`, route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      id: projectId,
+      title: 'Assigned Project',
+      companyName: 'Demo Company',
+      status: 'ASSIGNED',
+      tools: [],
+      partyApplicationCount: 1,
+    }),
+  }));
+
+  await login(page);
+
+  const myProjectLink = page.getByRole('link', { name: 'My Project', exact: true });
+  const browseProjectsLink = page.getByRole('link', { name: 'Browse Projects', exact: true });
+  await myProjectLink.click();
+  await expect(page).toHaveURL(`/student/projects/${projectId}`);
+  await expect(page.getByRole('heading', { name: 'Assigned Project' })).toBeVisible();
+  await expect(myProjectLink).toHaveClass(/nav-link-active/);
+  await expect(browseProjectsLink).not.toHaveClass(/nav-link-active/);
+});
+
+test('hides the student My Project link without an assignment', async ({ page }) => {
+  await mockStudentApi(page, null);
+
+  await login(page);
+
+  await expect(page.getByRole('link', { name: 'My Project', exact: true })).toBeHidden();
+});
+
 test('shows the saved global deadline when the student has no assigned project', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await mockStudentApi(page, null);

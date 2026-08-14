@@ -7,6 +7,7 @@ import {
   Users,
   Star,
   Github,
+  ExternalLink,
   ArrowRight,
   Briefcase,
 } from 'lucide-react';
@@ -44,6 +45,15 @@ function StatCard({
 
 export default function StudentDashboard() {
   const { user } = useAuth();
+
+  const { data: currentUser = user } = useQuery({
+    queryKey: ['current-user', 'student-dashboard'],
+    queryFn: () => userApi.getMe().then((response) => response.data),
+    initialData: user ?? undefined,
+    enabled: !!user,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
 
   const connectGitHub = () => {
     const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
@@ -95,7 +105,7 @@ export default function StudentDashboard() {
     retry: false,
   });
 
-  const hasGithub = !!user?.githubUsername;
+  const hasGithub = !!currentUser?.githubUsername;
   const members = party?.members ?? [];
   const entries = scorecard?.entries ?? [];
   const hasAssignedProject = !!party?.assignedProjectId;
@@ -107,7 +117,7 @@ export default function StudentDashboard() {
     <div className='animate-fade-up'>
       {/* Header */}
       <div className='page-header'>
-        <h1 className='page-title'>Good morning, {user?.firstName} 👋</h1>
+        <h1 className='page-title'>Good morning, {currentUser?.firstName} 👋</h1>
         <p className='page-subtitle'>
           Here's what's happening on your TalentBridge account.
         </p>
@@ -126,19 +136,33 @@ export default function StudentDashboard() {
         )}
       </div>
 
-      {/* GitHub link prompt */}
-      {!hasGithub && (
-        <div className='mb-6 p-4 rounded-2xl bg-ink-900 border border-amber-500/30 flex items-center gap-4'>
-          <div className='w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0'>
+      {/* GitHub connection */}
+      {hasGithub ? (
+        <div className='mb-6 flex flex-wrap items-center gap-4 rounded-2xl border border-jade-500/30 bg-ink-900 p-4'>
+          <div className='flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-jade-500/10'>
+            <Github size={20} className='text-jade-400' />
+          </div>
+          <div className='flex-1'>
+            <p className='text-sm font-semibold text-white'>GitHub connected</p>
+            <a
+              href={`https://github.com/${encodeURIComponent(currentUser!.githubUsername!)}`}
+              target='_blank'
+              rel='noreferrer'
+              aria-label={`@${currentUser!.githubUsername}`}
+              className='mt-0.5 inline-flex items-center gap-1 text-xs text-jade-400 hover:text-jade-300'
+            >
+              @{currentUser!.githubUsername} <ExternalLink size={11} />
+            </a>
+          </div>
+        </div>
+      ) : (
+        <div className='mb-6 flex items-center gap-4 rounded-2xl border border-amber-500/30 bg-ink-900 p-4'>
+          <div className='flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/10'>
             <Github size={20} className='text-amber-400' />
           </div>
           <div className='flex-1'>
-            <p className='text-sm font-semibold text-white'>
-              Connect your GitHub account
-            </p>
-            <p className='text-xs text-ink-400 mt-0.5'>
-              Required for project submission and AI evaluation scoring.
-            </p>
+            <p className='text-sm font-semibold text-white'>Connect your GitHub account</p>
+            <p className='mt-0.5 text-xs text-ink-400'>Required for project submission and AI evaluation scoring.</p>
           </div>
           <button
             type='button'
