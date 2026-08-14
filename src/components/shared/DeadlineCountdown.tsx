@@ -46,6 +46,26 @@ export default function DeadlineCountdown({
 
   // Submitted - always green
   if (submitted) {
+    if (hero) {
+      return (
+        <div className={clsx('rounded-3xl border border-jade-500/30 bg-jade-500/10 p-5 text-jade-400 sm:p-6', className)}>
+          <div className='flex items-start justify-between gap-4'>
+            <div>
+              {label && <p className='text-xs font-semibold uppercase tracking-widest opacity-75'>{label}</p>}
+              {title && <h3 className='mt-2 font-display text-xl font-bold text-white sm:text-2xl'>{title}</h3>}
+            </div>
+            <span className='rounded-full border border-jade-500/30 bg-jade-500/15 px-3 py-1 text-xs font-semibold'>Submitted</span>
+          </div>
+          <div className='mt-6 flex items-center gap-3'>
+            <CheckCircle size={32} />
+            <div>
+              <p className='font-display text-2xl font-bold text-white'>Project submitted</p>
+              <p className='mt-1 text-sm opacity-75'>The deadline countdown has stopped.</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div
         className={clsx(

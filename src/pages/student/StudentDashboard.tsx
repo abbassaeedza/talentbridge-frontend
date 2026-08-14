@@ -109,6 +109,7 @@ export default function StudentDashboard() {
   const members = party?.members ?? [];
   const entries = scorecard?.entries ?? [];
   const hasAssignedProject = !!party?.assignedProjectId;
+  const projectSubmitted = party?.status === 'SUBMITTED' || party?.status === 'COMPLETED';
   const dashboardDeadline = hasAssignedProject
     ? party?.assignedProjectDeadline
     : globalDeadline;
@@ -131,6 +132,7 @@ export default function StudentDashboard() {
             deadline={dashboardDeadline}
             label={hasAssignedProject ? 'Assigned project deadline' : 'Global application deadline'}
             title={hasAssignedProject ? party?.assignedProjectTitle : 'Application window'}
+            submitted={hasAssignedProject && projectSubmitted}
             hero
           />
         )}
@@ -262,7 +264,11 @@ export default function StudentDashboard() {
                   <p className='text-xs text-jade-400 flex items-center gap-1.5'>
                     <Briefcase size={11} /> Assigned: {party.assignedProjectTitle}
                   </p>
-                  <DeadlineCountdown deadline={party.assignedProjectDeadline ?? null} compact />
+                  <DeadlineCountdown
+                    deadline={party.assignedProjectDeadline ?? null}
+                    submitted={projectSubmitted}
+                    compact
+                  />
                 </div>
               )}
             </div>

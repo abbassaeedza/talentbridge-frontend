@@ -16,14 +16,32 @@ export default function ChatBot() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const context =
-    user?.role === 'COMPANY'
-      ? 'COMPANY_PROJECT_CREATION'
-      : 'STUDENT_PROJECT_INQUIRY';
-  const greeting =
-    user?.role === 'COMPANY'
-      ? "Hi! I'm here to help you create a compelling project listing. What kind of project are you looking for student teams to work on?"
-      : "Hey! I can help you understand projects, break down technical requirements, or answer any questions. What's on your mind?";
+  const context = user?.role ?? 'STUDENT';
+  const copy = user?.role === 'COMPANY'
+    ? {
+        greeting: "Hi! I can help with your projects, supervisors, applications, submissions, or create a project draft. What's on your mind?",
+        subtitle: 'Company workspace',
+      }
+    : user?.role === 'COORDINATOR'
+      ? {
+          greeting: "Hi! I can answer questions about TalentBridge users, approvals, projects, parties, deadlines, and evaluations. What's on your mind?",
+          subtitle: 'Coordinator workspace',
+        }
+      : user?.role === 'PARTY_SUPERVISOR'
+        ? {
+            greeting: "Hi! I can help with your parties, projects, applications, submissions, and evaluations. What's on your mind?",
+            subtitle: 'Party supervisor workspace',
+          }
+        : user?.role === 'PROJECT_SUPERVISOR'
+          ? {
+              greeting: "Hi! I can help with your supervised projects, assigned parties, submissions, and evaluations. What's on your mind?",
+              subtitle: 'Project supervisor workspace',
+            }
+          : {
+              greeting: "Hey! I can help with open projects, your party, applications, assigned project, submission, and scorecard. What's on your mind?",
+              subtitle: 'Student workspace',
+            };
+  const greeting = copy.greeting;
 
   useEffect(() => {
     if (open && messages.length === 0)
@@ -109,9 +127,7 @@ export default function ChatBot() {
             <div className='flex-1'>
               <p className='text-sm font-semibold text-white'>AI Assistant</p>
               <p className='text-[10px] text-ink-500'>
-                {user?.role === 'COMPANY'
-                  ? 'Project creation helper'
-                  : 'Project Q&A'}
+                {copy.subtitle}
               </p>
             </div>
             <div className='flex gap-1'>
