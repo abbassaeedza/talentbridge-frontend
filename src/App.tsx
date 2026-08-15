@@ -426,16 +426,16 @@ export default function App() {
           position='top-right'
           toastOptions={{
             style: {
-              background: '#1b2452',
-              color: '#dde2f0',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '12px',
+              background: 'var(--overlay)',
+              color: 'var(--overlay-foreground)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
               fontSize: '13px',
             },
             success: {
-              iconTheme: { primary: '#10b981', secondary: '#1b2452' },
+              iconTheme: { primary: 'var(--success)', secondary: 'var(--overlay)' },
             },
-            error: { iconTheme: { primary: '#f97316', secondary: '#1b2452' } },
+            error: { iconTheme: { primary: 'var(--danger)', secondary: 'var(--overlay)' } },
           }}
         />
       </AuthProvider>
