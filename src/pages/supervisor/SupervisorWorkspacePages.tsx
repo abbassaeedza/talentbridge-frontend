@@ -2,12 +2,20 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Briefcase, ExternalLink, FileText, Search, Send, Users } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { evaluationApi, partyApi, projectApi, submissionApi, userApi } from '../../api/services';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
 import EvaluationReportPanel from '../../components/evaluation/EvaluationReportPanel';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Application, Party, Project, Scorecard, Submission } from '../../types';
 import toast from 'react-hot-toast';
+import { Button, buttonVariants } from '@heroui/react/button';
+import { Input } from '@heroui/react/input';
+import { Label } from '@heroui/react/label';
+import { ListBox } from '@heroui/react/list-box';
+import { Select } from '@heroui/react/select';
+import { Skeleton } from '@heroui/react/skeleton';
+import { EmptyState as SharedEmptyState, PageHeader, StatCard, StatusBadge } from '../../components/ui/TalentBridgeUI';
 
 type ItemKind = 'project' | 'party';
 type SortValue = 'deadline' | 'name' | 'status';
@@ -21,12 +29,12 @@ const matchesSubmission = (filter: string, hasSubmission: boolean, status?: stri
   return status === filter;
 };
 
-function EmptyState({ icon: Icon, children }: { icon: React.ElementType; children: React.ReactNode }) {
-  return <div className='card p-14 text-center'><Icon size={32} className='mx-auto mb-3 text-ink-600' /><p className='text-sm text-ink-400'>{children}</p></div>;
+function EmptyState({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
+  return <SharedEmptyState icon={Icon} title={String(children)} />;
 }
 
 function LoadingCards() {
-  return <div className='grid gap-4 md:grid-cols-2'><div className='card h-40 animate-pulse' /><div className='card h-40 animate-pulse' /></div>;
+  return <div className='grid gap-4 md:grid-cols-2'><Skeleton className='h-40 rounded-lg' /><Skeleton className='h-40 rounded-lg' /></div>;
 }
 
 export function SupervisorOverviewPage({ kind }: { kind: ItemKind }) {
@@ -54,21 +62,21 @@ export function SupervisorOverviewPage({ kind }: { kind: ItemKind }) {
   const title = kind === 'project' ? 'Project Supervisor Overview' : 'Party Supervisor Overview';
 
   return (
-    <div className='animate-fade-up'>
-      <div className='page-header'><h1 className='page-title'>{title}</h1><p className='page-subtitle'>Welcome back, {user?.firstName}. Here is the work that needs attention next.</p></div>
+    <div className=''>
+      <PageHeader title={title} description={`Welcome back, ${user?.firstName}. Review the work that needs attention next.`} />
       {loading ? <LoadingCards /> : !items?.length ? <EmptyState icon={kind === 'project' ? Briefcase : Users}>No supervised {kind === 'project' ? 'projects' : 'parties'} yet.</EmptyState> : (
         <div className='grid gap-5 lg:grid-cols-[1.3fr_.7fr]'>
-          <div className='card p-6'>
-            <p className='mb-3 text-xs font-semibold uppercase tracking-wider text-ink-500'>Nearest deadline</p>
+          <div className='rounded-lg border border-border bg-surface p-6'>
+            <p className='mb-3 text-xs font-semibold uppercase tracking-wider text-muted'>Nearest deadline</p>
             {nearest ? (
               <>
-                <Link to={kind === 'project' ? `/project-supervisor/projects/${project!.id}` : `/party-supervisor/parties/${party!.id}`} className='font-display text-xl font-bold text-white hover:text-ember-400'>{kind === 'project' ? project!.title : party!.name}</Link>
-                <p className='mt-1 text-sm text-ink-400'>{kind === 'project' ? project!.assignedPartyName || 'Awaiting party assignment' : party!.assignedProjectTitle}</p>
+                <Link to={kind === 'project' ? `/project-supervisor/projects/${project!.id}` : `/party-supervisor/parties/${party!.id}`} className=' text-xl font-bold text-foreground hover:text-accent'>{kind === 'project' ? project!.title : party!.name}</Link>
+                <p className='mt-1 text-sm text-muted'>{kind === 'project' ? project!.assignedPartyName || 'Awaiting party assignment' : party!.assignedProjectTitle}</p>
                 <div className='mt-5'><DeadlineCountdown deadline={(kind === 'project' ? project!.deadline : party!.assignedProjectDeadline) ?? null} submitted={kind === 'party' && submitted(party!.status)} /></div>
               </>
-            ) : <p className='text-sm text-ink-400'>No upcoming deadlines.</p>}
+            ) : <p className='text-sm text-muted'>No upcoming deadlines.</p>}
           </div>
-          <div className='card p-6'><p className='text-xs font-semibold uppercase tracking-wider text-ink-500'>Current workload</p><p className='mt-3 font-display text-4xl font-bold text-white'>{items.length}</p><p className='mt-1 text-sm text-ink-400'>supervised {kind === 'project' ? 'projects' : 'parties'}</p></div>
+          <StatCard icon={kind === 'project' ? Briefcase : Users} label={`Supervised ${kind === 'project' ? 'projects' : 'parties'}`} value={items.length} />
         </div>
       )}
     </div>
@@ -106,8 +114,8 @@ export function SupervisedProjectsPage() {
       : a.project.status.localeCompare(b.project.status)), [query.data, search, status, assignment, submission, sort]);
 
   return (
-    <div className='animate-fade-up'>
-      <div className='page-header'><h1 className='page-title'>My Projects</h1><p className='page-subtitle'>Search, filter, and review the projects assigned to you.</p></div>
+    <div className=''>
+      <PageHeader title='My projects' description='Search, filter, and review the projects assigned to you.' />
       <Filters search={search} setSearch={setSearch} status={status} setStatus={setStatus} assignment={assignment} setAssignment={setAssignment} submission={submission} setSubmission={setSubmission} sort={sort} setSort={setSort} searchPlaceholder='Search projects' />
       {query.isLoading ? <LoadingCards /> : rows.length === 0 ? <EmptyState icon={Briefcase}>No projects match these filters.</EmptyState> : (
         <div className='grid gap-4 md:grid-cols-2'>
@@ -120,10 +128,10 @@ export function SupervisedProjectsPage() {
 
 function ProjectCard({ project, submissionStatus }: { project: Project; submissionStatus?: string }) {
   return (
-    <Link to={`/project-supervisor/projects/${project.id}`} className='card block p-5 hover:border-ember-500/30'>
-      <div className='flex items-start justify-between gap-3'><h2 className='font-display font-semibold text-white'>{project.title}</h2><span className='badge badge-open text-[10px]'>{project.status}</span></div>
-      <p className='mt-2 line-clamp-2 text-xs leading-relaxed text-ink-400'>{project.description}</p>
-      <div className='mt-4 flex flex-wrap gap-2 text-xs text-ink-500'><span>{project.assignedPartyName || 'Unassigned'}</span>{submissionStatus && <span className='badge badge-active text-[9px]'>{submissionStatus.replace('_', ' ')}</span>}</div>
+    <Link to={`/project-supervisor/projects/${project.id}`} className='rounded-lg border border-border bg-surface block p-5 hover:border-accent'>
+      <div className='flex items-start justify-between gap-3'><h2 className='font-semibold'>{project.title}</h2><StatusBadge status={project.status} /></div>
+      <p className='mt-2 line-clamp-2 text-xs leading-relaxed text-muted'>{project.description}</p>
+      <div className='mt-4 flex flex-wrap gap-2 text-xs text-muted'><span>{project.assignedPartyName || 'Unassigned'}</span>{submissionStatus && <StatusBadge status={submissionStatus} />}</div>
       <div className='mt-4'><DeadlineCountdown deadline={project.deadline ?? null} submitted={submissionStatus === 'SUBMITTED' || submissionStatus === 'EVALUATED'} compact /></div>
     </Link>
   );
@@ -138,12 +146,12 @@ function Filters(props: {
   searchPlaceholder: string;
 }) {
   return (
-    <div className='card mb-5 grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-5'>
-      <label className='relative sm:col-span-2 xl:col-span-1'><Search size={14} className='absolute left-3 top-3 text-ink-500' /><input aria-label={props.searchPlaceholder} className='input pl-9' placeholder={props.searchPlaceholder} value={props.search} onChange={(event) => props.setSearch(event.target.value)} /></label>
-      <select aria-label='Filter by status' className='input' value={props.status} onChange={(event) => props.setStatus(event.target.value)}><option value='ALL'>All statuses</option>{['DRAFT', 'PENDING_REVIEW', 'OPEN', 'ACTIVE', 'ASSIGNED', 'SUBMITTED', 'COMPLETED', 'CLOSED', 'ARCHIVED'].map((value) => <option key={value}>{value}</option>)}</select>
-      <select aria-label='Filter by assignment' className='input' value={props.assignment} onChange={(event) => props.setAssignment(event.target.value)}><option value='ALL'>Any assignment</option><option value='ASSIGNED'>Assigned</option><option value='UNASSIGNED'>Unassigned</option></select>
-      <select aria-label='Filter by submission' className='input' value={props.submission} onChange={(event) => props.setSubmission(event.target.value)}><option value='ALL'>Any submission</option><option value='HAS_SUBMISSION'>Has submission</option><option value='NO_SUBMISSION'>No submission</option><option value='DRAFT'>Draft</option><option value='SUBMITTED'>Submitted</option><option value='EVALUATED'>Evaluated</option></select>
-      <select aria-label='Sort items' className='input' value={props.sort} onChange={(event) => props.setSort(event.target.value as SortValue)}><option value='deadline'>Deadline</option><option value='name'>Name</option><option value='status'>Status</option></select>
+    <div className='rounded-lg border border-border bg-surface mb-5 grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-5'>
+      <label className='relative sm:col-span-2 xl:col-span-1'><Search size={14} className='absolute left-3 top-3 text-muted' /><Input fullWidth aria-label={props.searchPlaceholder} className='pl-9' placeholder={props.searchPlaceholder} value={props.search} onChange={(event) => props.setSearch(event.target.value)} /></label>
+      <CompactSelect label='Status' value={props.status} onChange={props.setStatus} options={['ALL', 'DRAFT', 'PENDING_REVIEW', 'OPEN', 'ACTIVE', 'ASSIGNED', 'SUBMITTED', 'COMPLETED', 'CLOSED', 'ARCHIVED']} />
+      <CompactSelect label='Assignment' value={props.assignment} onChange={props.setAssignment} options={['ALL', 'ASSIGNED', 'UNASSIGNED']} />
+      <CompactSelect label='Submission' value={props.submission} onChange={props.setSubmission} options={['ALL', 'HAS_SUBMISSION', 'NO_SUBMISSION', 'DRAFT', 'SUBMITTED', 'EVALUATED']} />
+      <CompactSelect label='Sort' value={props.sort} onChange={(value) => props.setSort(value as SortValue)} options={['deadline', 'name', 'status']} />
     </div>
   );
 }
@@ -179,8 +187,8 @@ export function MyPartiesPage() {
       : a.party.status.localeCompare(b.party.status)), [query.data, search, status, assignment, submission, sort]);
 
   return (
-    <div className='animate-fade-up'>
-      <div className='page-header'><h1 className='page-title'>My Parties</h1><p className='page-subtitle'>Track your supervised parties, projects, and submissions.</p></div>
+    <div className=''>
+      <PageHeader title='My parties' description='Track your supervised parties, projects, and submissions.' />
       <Filters search={search} setSearch={setSearch} status={status} setStatus={setStatus} assignment={assignment} setAssignment={setAssignment} submission={submission} setSubmission={setSubmission} sort={sort} setSort={setSort} searchPlaceholder='Search parties' />
       {query.isLoading ? <LoadingCards /> : rows.length === 0 ? <EmptyState icon={Users}>No parties match these filters.</EmptyState> : <div className='grid gap-4 md:grid-cols-2'>{rows.map(({ party, submissionStatus }) => <PartyCard key={party.id} party={party} submissionStatus={submissionStatus} />)}</div>}
     </div>
@@ -189,11 +197,11 @@ export function MyPartiesPage() {
 
 function PartyCard({ party, submissionStatus, browse = false, isMine = false }: { party: Party; submissionStatus?: string; browse?: boolean; isMine?: boolean }) {
   return (
-    <Link to={browse ? `/party-supervisor/browse/${party.id}` : `/party-supervisor/parties/${party.id}`} className='card block p-5 hover:border-ember-500/30'>
-      <div className='flex items-start justify-between gap-3'><div className='flex flex-wrap items-center gap-2'><h2 className='font-display font-semibold text-white'>{party.name}</h2>{isMine && <span className='badge badge-ember text-[9px]'>My party</span>}</div><span className='badge badge-active text-[10px]'>{party.status}</span></div>
-      <p className='mt-2 text-xs text-ink-400'>{(party.members ?? []).length} members · {party.assignedProjectTitle || 'No project assigned'}</p>
-      <p className='mt-1 text-xs text-ink-500'>Party supervisor: {party.supervisorName || 'Unassigned'}</p>
-      {submissionStatus && <span className='mt-3 inline-flex badge badge-open text-[9px]'>{submissionStatus.replace('_', ' ')}</span>}
+    <Link to={browse ? `/party-supervisor/browse/${party.id}` : `/party-supervisor/parties/${party.id}`} className='rounded-lg border border-border bg-surface block p-5 hover:border-accent'>
+      <div className='flex items-start justify-between gap-3'><div className='flex flex-wrap items-center gap-2'><h2 className='font-semibold'>{party.name}</h2>{isMine && <StatusBadge status='ASSIGNED' label='My party' />}</div><StatusBadge status={party.status} /></div>
+      <p className='mt-2 text-xs text-muted'>{(party.members ?? []).length} members · {party.assignedProjectTitle || 'No project assigned'}</p>
+      <p className='mt-1 text-xs text-muted'>Party supervisor: {party.supervisorName || 'Unassigned'}</p>
+      {submissionStatus && <StatusBadge status={submissionStatus} className='mt-3' />}
       {party.assignedProjectDeadline && <div className='mt-4'><DeadlineCountdown deadline={party.assignedProjectDeadline} submitted={submitted(party.status)} compact /></div>}
     </Link>
   );
@@ -205,9 +213,9 @@ export function BrowsePartiesPage() {
   const query = useQuery({ queryKey: ['browse-parties'], queryFn: () => partyApi.browse().then((response) => response.data) });
   const parties = (query.data ?? []).filter((party) => party.name.toLowerCase().includes(search.toLowerCase()));
   return (
-    <div className='animate-fade-up'>
-      <div className='page-header'><h1 className='page-title'>Browse Parties</h1><p className='page-subtitle'>Review available teams before choosing who to supervise.</p></div>
-      <label className='relative mb-5 block max-w-md'><Search size={14} className='absolute left-3 top-3 text-ink-500' /><input className='input pl-9' placeholder='Search parties' value={search} onChange={(event) => setSearch(event.target.value)} /></label>
+    <div className=''>
+      <PageHeader title='Browse parties' description='Review available teams before choosing who to supervise.' />
+      <label className='relative mb-5 block max-w-md'><Search size={14} className='absolute left-3 top-3 text-muted' /><Input fullWidth aria-label='Search parties' className='pl-9' placeholder='Search parties' value={search} onChange={(event) => setSearch(event.target.value)} /></label>
       {query.isLoading ? <LoadingCards /> : parties.length === 0 ? <EmptyState icon={Users}>No parties are available.</EmptyState> : <div className='grid gap-4 md:grid-cols-2'>{parties.map((party) => <PartyCard key={party.id} party={party} browse isMine={party.supervisorId === user?.id} />)}</div>}
     </div>
   );
@@ -263,7 +271,7 @@ function BrowsePartyDetail() {
   return (
     <div>
       {!party.supervisorId && (party.status === 'ACTIVE' || party.status === 'ASSIGNED') && (
-        <div className='mb-4 flex justify-end'><button className='btn-primary' disabled={claim.isPending} onClick={() => claim.mutate()}>{claim.isPending ? 'Selecting...' : 'Pick this party'}</button></div>
+        <div className='mb-4 flex justify-end'><Button variant='primary' isDisabled={claim.isPending} onPress={() => claim.mutate()}>{claim.isPending ? 'Selecting' : 'Pick this party'}</Button></div>
       )}
       <WorkDetail kind='party' party={party} applications={[]} browse />
     </div>
@@ -276,9 +284,9 @@ function WorkDetail({ kind, project, party, applications, submission, browse = f
   const back = kind === 'project' ? '/project-supervisor/projects' : browse ? '/party-supervisor/browse' : '/party-supervisor/parties';
   const title = kind === 'project' ? project!.title : party!.name;
   return (
-    <div className='animate-fade-up max-w-5xl'>
-      <Link to={back} className='mb-6 flex items-center gap-2 text-sm text-ink-400 hover:text-white'><ArrowLeft size={14} /> Back</Link>
-      <div className='page-header'><h1 className='page-title'>{title}</h1><p className='page-subtitle'>{kind === 'project' ? `${project!.companyName} · ${project!.status}` : `${party!.semester ?? ''} ${party!.academicYear ?? ''} · ${party!.status}`}</p></div>
+    <div className=' max-w-5xl'>
+      <Link to={back} className={buttonVariants({ variant: 'ghost', size: 'sm' })}><ArrowLeft size={14} /> Back</Link>
+      <div className='mt-4'><PageHeader title={title} description={kind === 'project' ? `${project!.companyName} · ${project!.status}` : `${party!.semester ?? ''} ${party!.academicYear ?? ''} · ${party!.status}`} /></div>
       {project && <ProjectBrief project={project} />}
       {party && <PartyMembers party={party} showScorecards={!browse} />}
       {kind === 'party' && !project && !browse && <Applications applications={applications} kind='party' />}
@@ -291,14 +299,14 @@ function WorkDetail({ kind, project, party, applications, submission, browse = f
 
 function ProjectBrief({ project }: { project: Project }) {
   return (
-    <div className='card mb-5 p-6'>
-      <div className='mb-5 flex flex-wrap items-center justify-between gap-3'><h2 className='font-display font-semibold text-white'>Project brief</h2><DeadlineCountdown deadline={project.deadline ?? null} compact /></div>
+    <div className='rounded-lg border border-border bg-surface mb-5 p-6'>
+      <div className='mb-5 flex flex-wrap items-center justify-between gap-3'><h2 className=' font-semibold text-foreground'>Project brief</h2><DeadlineCountdown deadline={project.deadline ?? null} compact /></div>
       <div className='grid gap-5 md:grid-cols-2'>{[
         ['Description', project.description], ['Scope', project.scope], ['Deliverables', project.deliverables], ['Evaluation criteria', project.evaluationCriteria],
-      ].filter(([, value]) => value).map(([label, value]) => <div key={label}><p className='mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-500'>{label}</p><p className='text-sm leading-relaxed text-ink-200'>{value}</p></div>)}</div>
-      {(project.tools ?? []).length > 0 && <div className='mt-5 flex flex-wrap gap-2 border-t border-ink-800 pt-4'>{project.tools.map((tool) => <span key={tool} className='rounded-lg border border-ink-700 bg-ink-800 px-2.5 py-1 text-xs text-ink-300'>{tool}</span>)}</div>}
-      {project.projectSupervisorName && <p className='mt-4 text-sm text-ink-300'>Project supervisor: <span className='text-white'>{project.projectSupervisorName}</span></p>}
-      {project.assignedPartyName && <p className='mt-5 flex items-center gap-2 border-t border-ink-800 pt-4 text-sm text-ink-300'><Users size={14} className='text-ember-400' /> Assigned party: {project.assignedPartyName}</p>}
+      ].filter(([, value]) => value).map(([label, value]) => <div key={label}><p className='mb-1 text-[10px] font-bold uppercase tracking-wider text-muted'>{label}</p><p className='text-sm leading-relaxed text-foreground'>{value}</p></div>)}</div>
+      {(project.tools ?? []).length > 0 && <div className='mt-5 flex flex-wrap gap-2 border-t border-border pt-4'>{project.tools.map((tool) => <span key={tool} className='rounded-lg border border-border bg-surface-secondary px-2.5 py-1 text-xs text-foreground'>{tool}</span>)}</div>}
+      {project.projectSupervisorName && <p className='mt-4 text-sm text-foreground'>Project supervisor: <span className='text-foreground'>{project.projectSupervisorName}</span></p>}
+      {project.assignedPartyName && <p className='mt-5 flex items-center gap-2 border-t border-border pt-4 text-sm text-foreground'><Users size={14} className='text-accent' /> Assigned party: {project.assignedPartyName}</p>}
     </div>
   );
 }
@@ -313,12 +321,12 @@ function PartyMembers({ party, showScorecards }: { party: Party; showScorecards:
     enabled: showScorecards,
   });
   return (
-    <div className='card mb-5 p-6'>
-      <div className='mb-4 flex flex-wrap items-center justify-between gap-2'><h2 className='font-display font-semibold text-white'>Party members</h2>{party.assignedProjectTitle && <span className='text-xs text-ink-400'>{party.assignedProjectTitle}</span>}</div>
+    <div className='rounded-lg border border-border bg-surface mb-5 p-6'>
+      <div className='mb-4 flex flex-wrap items-center justify-between gap-2'><h2 className=' font-semibold text-foreground'>Party members</h2>{party.assignedProjectTitle && <span className='text-xs text-muted'>{party.assignedProjectTitle}</span>}</div>
       <div className='grid gap-3 sm:grid-cols-2'>
         {(party.members ?? []).map((member) => {
           const scorecard = scorecards.data?.[member.id] as Scorecard | null | undefined;
-          return <Link key={member.id} to={`/supervisor/students/${member.id}`} className='rounded-xl border border-ink-700/50 bg-ink-800/50 p-4 hover:border-ember-500/30'><div className='flex items-center justify-between'><p className='text-sm font-semibold text-white'>{member.firstName} {member.lastName}</p>{party.leader?.id === member.id && <span className='badge badge-ember text-[9px]'>Leader</span>}</div><p className='mt-1 text-xs text-ink-500'>{member.email}</p>{showScorecards && <p className='mt-3 text-xs text-ink-400'>Scorecard: <span className='font-semibold text-white'>{scorecard ? `${scorecard.averageScore.toFixed(0)} avg · ${scorecard.totalProjects} projects` : 'No scores yet'}</span></p>}</Link>;
+          return <Link key={member.id} to={`/supervisor/students/${member.id}`} className='rounded-lg border border-border bg-surface-secondary p-4 hover:border-accent'><div className='flex items-center justify-between'><p className='text-sm font-semibold'>{member.firstName} {member.lastName}</p>{party.leader?.id === member.id && <StatusBadge status='ASSIGNED' label='Leader' />}</div><p className='mt-1 text-xs text-muted'>{member.email}</p>{showScorecards && <p className='mt-3 text-xs text-muted'>Scorecard: <span className='font-semibold text-foreground'>{scorecard ? `${scorecard.averageScore.toFixed(0)} avg · ${scorecard.totalProjects} projects` : 'No scores yet'}</span></p>}</Link>;
         })}
       </div>
     </div>
@@ -327,20 +335,20 @@ function PartyMembers({ party, showScorecards }: { party: Party; showScorecards:
 
 function Applications({ applications, kind }: { applications: Application[]; kind: ItemKind }) {
   return (
-    <div className='card mb-5 overflow-hidden'>
-      <div className='border-b border-ink-800 px-6 py-4'><h2 className='font-display font-semibold text-white'>Applications and rankings</h2></div>
-      {applications.length === 0 ? <p className='p-6 text-sm text-ink-400'>No applications.</p> : <div className='divide-y divide-ink-800'>{[...applications].sort((a, b) => a.rankPosition - b.rankPosition).map((application) => <div key={application.id} className='flex gap-4 p-5'><span className='flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-ink-800 text-sm font-bold text-ember-400'>#{application.rankPosition}</span><div><p className='text-sm font-semibold text-white'>{kind === 'party' ? application.projectTitle : application.partyName}</p><p className='mt-1 text-xs text-ink-400'>{application.proposalText || 'No proposal provided.'}</p><span className='mt-2 inline-flex badge badge-pending text-[9px]'>{application.status}</span></div></div>)}</div>}
+    <div className='rounded-lg border border-border bg-surface mb-5 overflow-hidden'>
+      <div className='border-b border-border px-6 py-4'><h2 className=' font-semibold text-foreground'>Applications and rankings</h2></div>
+      {applications.length === 0 ? <p className='p-6 text-sm text-muted'>No applications.</p> : <div className='divide-y divide-separator'>{[...applications].sort((a, b) => a.rankPosition - b.rankPosition).map((application) => <div key={application.id} className='flex gap-4 p-5'><span className='flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-surface-secondary text-sm font-bold text-accent'>#{application.rankPosition}</span><div><p className='text-sm font-semibold'>{kind === 'party' ? application.projectTitle : application.partyName}</p><p className='mt-1 text-xs text-muted'>{application.proposalText || 'No proposal provided.'}</p><StatusBadge status={application.status} className='mt-2' /></div></div>)}</div>}
     </div>
   );
 }
 
 function SubmissionPanel({ submission }: { submission: Submission }) {
   return (
-    <div className='card mb-5 p-6'>
-      <div className='mb-4 flex items-center justify-between'><h2 className='flex items-center gap-2 font-display font-semibold text-white'><Send size={15} className='text-ember-400' /> Submission</h2><span className='badge badge-open text-[10px]'>{submission.status?.replace('_', ' ') || 'UNKNOWN'}</span></div>
-      {submission.repoUrl && <a href={submission.repoUrl} target='_blank' rel='noreferrer' className='flex items-center gap-2 text-sm text-ember-400 hover:text-ember-300'><ExternalLink size={13} /> {submission.repoUrl}</a>}
-      {submission.notes && <p className='mt-3 text-sm text-ink-300'>{submission.notes}</p>}
-      {(submission.documentUrls ?? []).length > 0 && <div className='mt-4 flex flex-wrap gap-2'>{(submission.documentUrls ?? []).map((url, index) => <a key={url} href={url} target='_blank' rel='noreferrer' className='btn-secondary px-3 py-2 text-xs'><FileText size={12} /> Document {index + 1}</a>)}</div>}
+    <div className='rounded-lg border border-border bg-surface mb-5 p-6'>
+      <div className='mb-4 flex items-center justify-between'><h2 className='flex items-center gap-2 font-semibold'><Send size={15} className='text-accent' /> Submission</h2><StatusBadge status={submission.status || 'UNKNOWN'} /></div>
+      {submission.repoUrl && <a href={submission.repoUrl} target='_blank' rel='noreferrer' className='flex items-center gap-2 text-sm text-accent hover:text-accent'><ExternalLink size={13} /> {submission.repoUrl}</a>}
+      {submission.notes && <p className='mt-3 text-sm text-foreground'>{submission.notes}</p>}
+      {(submission.documentUrls ?? []).length > 0 && <div className='mt-4 flex flex-wrap gap-2'>{(submission.documentUrls ?? []).map((url, index) => <a key={url} href={url} target='_blank' rel='noreferrer' className={buttonVariants({ variant: 'secondary', size: 'sm' })}><FileText size={12} /> Document {index + 1}</a>)}</div>}
     </div>
   );
 }
@@ -349,10 +357,14 @@ function EvaluationPanel({ submissionId }: { submissionId: string }) {
   const query = useQuery({ queryKey: ['supervisor-evaluation', submissionId], queryFn: () => evaluationApi.getBySubmission(submissionId).then((response) => response.data), retry: false });
   if (query.isLoading || !query.data) return null;
   return (
-    <div className='card overflow-hidden'>
+    <div className='rounded-lg border border-border bg-surface overflow-hidden'>
       <EvaluationReportPanel report={query.data}>
-        {query.data.finalized && <span className='mt-4 inline-flex badge badge-open text-[9px]'>Finalized</span>}
+        {query.data.finalized && <StatusBadge status='EVALUATED' label='Finalized' className='mt-4' />}
       </EvaluationReportPanel>
     </div>
   );
+}
+
+function CompactSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
+  return <Select.Root selectedKey={value} onSelectionChange={(key) => onChange(String(key))}><Label>{label}</Label><Select.Trigger aria-label={label}><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{options.map((option) => <ListBox.Item key={option} id={option}>{option.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase())}</ListBox.Item>)}</ListBox></Select.Popover></Select.Root>;
 }

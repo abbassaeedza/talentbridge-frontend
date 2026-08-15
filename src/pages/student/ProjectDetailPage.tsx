@@ -7,6 +7,7 @@ import clsx from 'clsx';
 import { Button, buttonVariants } from '@heroui/react/button';
 import { Spinner } from '@heroui/react/spinner';
 import { TextArea } from '@heroui/react/textarea';
+import { ToggleButton } from '@heroui/react/toggle-button';
 import { partyApi, projectApi } from '../../api/services';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
 import { StatusBadge } from '../../components/ui/TalentBridgeUI';
@@ -114,18 +115,17 @@ export default function ProjectDetailPage() {
                     <p className='text-xs font-medium'>Priority rank</p>
                     <div className='mt-2 grid grid-cols-5 gap-1'>
                       {[1, 2, 3, 4, 5].map((rank) => (
-                        <button
+                        <ToggleButton
                           key={rank}
-                          type='button'
-                          aria-pressed={rankPosition === rank}
-                          onClick={() => setRankPosition(rank)}
+                          isSelected={rankPosition === rank}
+                          onChange={() => setRankPosition(rank)}
                           className={clsx(
                             'min-h-10 rounded-sm border text-sm font-semibold',
                             rankPosition === rank ? 'border-accent bg-accent text-accent-foreground' : 'border-border bg-default',
                           )}
                         >
                           {rank}
-                        </button>
+                        </ToggleButton>
                       ))}
                     </div>
                     <p className='mt-1 text-[11px] text-muted'>1 is the party's first choice.</p>

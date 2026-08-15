@@ -1,80 +1,54 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
+import { Building2, Check, Github, Globe, GraduationCap, Linkedin, Mail, MapPin, Pencil, Phone, Plus, X } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Avatar } from '@heroui/react/avatar';
+import { Button } from '@heroui/react/button';
+import { Input } from '@heroui/react/input';
+import { Label } from '@heroui/react/label';
+import { ListBox } from '@heroui/react/list-box';
+import { Select } from '@heroui/react/select';
+import { Spinner } from '@heroui/react/spinner';
+import { TextArea } from '@heroui/react/textarea';
+import { TextField } from '@heroui/react/textfield';
 import { useAuth } from '../../contexts/AuthContext';
 import { userApi } from '../../api/services';
-import {
-  UserCircle,
-  Mail,
-  Phone,
-  Building2,
-  Globe,
-  Linkedin,
-  Github,
-  GraduationCap,
-  Briefcase,
-  Pencil,
-  Check,
-  X,
-  MapPin,
-  BookOpen,
-  Star,
-} from 'lucide-react';
-import toast from 'react-hot-toast';
-import clsx from 'clsx';
+import { PageHeader } from '../../components/ui/TalentBridgeUI';
 
-// ── Skill tag input ────────────────────────────────────────────────────────
-function SkillsInput({
-  value,
-  onChange,
-}: {
-  value: string[];
-  onChange: (v: string[]) => void;
-}) {
+const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Postgraduate'];
+
+function Field({ label, value, onChange, ...props }: { label: string; value: string | number; onChange: (value: string) => void } & Omit<React.ComponentProps<typeof Input>, 'value' | 'onChange'>) {
+  return <TextField fullWidth><Label>{label}</Label><Input fullWidth value={String(value ?? '')} onChange={(event) => onChange(event.target.value)} {...props} /></TextField>;
+}
+
+function InfoRow({ icon: Icon, label, value, href }: { icon: React.ElementType; label: string; value?: string | null; href?: string }) {
+  if (!value) return null;
+  const content = href ? <a className='text-sm text-accent hover:underline' href={href} target='_blank' rel='noreferrer'>{value}</a> : <p className='text-sm'>{value}</p>;
+  return (
+    <div className='grid gap-1 border-b border-separator py-3 last:border-0 sm:grid-cols-[10rem_1fr] sm:items-center'>
+      <p className='flex items-center gap-2 text-xs font-medium text-muted'><Icon size={14} /> {label}</p>
+      <div className='min-w-0'>{content}</div>
+    </div>
+  );
+}
+
+function SkillsInput({ value, onChange }: { value: string[]; onChange: (value: string[]) => void }) {
   const [input, setInput] = useState('');
   const add = () => {
-    const s = input.trim();
-    if (s && !value.includes(s)) {
-      onChange([...value, s]);
-      setInput('');
-    }
+    const skill = input.trim().slice(0, 100);
+    if (skill && !value.includes(skill) && value.length < 20) onChange([...value, skill]);
+    setInput('');
   };
   return (
     <div>
-      <div className='flex gap-2 mb-2'>
-        <input
-          className='input flex-1 text-sm py-2'
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              add();
-            }
-          }}
-          placeholder='Type a skill and press Enter'
-        />
-        <button
-          type='button'
-          onClick={add}
-          className='btn-secondary px-3 py-2 text-xs'
-        >
-          Add
-        </button>
+      <div className='flex gap-2'>
+        <Input fullWidth maxLength={100} value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); add(); } }} placeholder='Add a skill' />
+        <Button type='button' variant='secondary' isIconOnly aria-label='Add skill' isDisabled={!input.trim()} onPress={add}><Plus size={16} /></Button>
       </div>
-      <div className='flex flex-wrap gap-1.5'>
-        {value.map((s) => (
-          <span
-            key={s}
-            className='flex items-center gap-1 px-2.5 py-1 rounded-full bg-ink-700 border border-ink-600/50 text-xs text-ink-200'
-          >
-            {s}
-            <button
-              type='button'
-              onClick={() => onChange(value.filter((x) => x !== s))}
-              className='text-ink-500 hover:text-red-400 ml-0.5'
-            >
-              <X size={11} />
-            </button>
+      <div className='mt-3 flex flex-wrap gap-2'>
+        {value.map((skill) => (
+          <span key={skill} className='inline-flex items-center gap-1.5 rounded-sm bg-default px-2 py-1 text-xs font-medium'>
+            {skill}<Button isIconOnly size='sm' variant='ghost' aria-label={`Remove ${skill}`} onPress={() => onChange(value.filter((item) => item !== skill))}><X size={12} /></Button>
           </span>
         ))}
       </div>
@@ -82,526 +56,138 @@ function SkillsInput({
   );
 }
 
-// ── Info row ───────────────────────────────────────────────────────────────
-function InfoRow({
-  icon: Icon,
-  label,
-  value,
-  href,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value?: string | null;
-  href?: string;
-}) {
-  if (!value) return null;
-  return (
-    <div className='flex items-start gap-3 py-3 border-b border-ink-800/50 last:border-0'>
-      <div className='w-7 h-7 rounded-lg bg-ink-800 flex items-center justify-center flex-shrink-0 mt-0.5'>
-        <Icon size={13} className='text-ink-400' />
-      </div>
-      <div className='flex-1 min-w-0'>
-        <p className='text-[10px] text-ink-500 uppercase tracking-wider mb-0.5'>
-          {label}
-        </p>
-        {href ? (
-          <a
-            href={href}
-            target='_blank'
-            rel='noopener noreferrer'
-            className='text-sm text-ember-400 hover:text-ember-300 truncate block'
-          >
-            {value}
-          </a>
-        ) : (
-          <p className='text-sm text-ink-100 truncate'>{value}</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-
 export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
-  const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
-
-  const sp = (user as any)?.studentProfile;
-  const cp = (user as any)?.companyProfile;
-  const supervisor = user?.supervisorProfile;
-
   const [form, setForm] = useState<Record<string, any>>({});
-
-  const startEdit = () => {
-    setForm({
-      firstName: user?.firstName ?? '',
-      lastName: user?.lastName ?? '',
-      phoneNumber: user?.phoneNumber ?? '',
-      // Student
-      university: sp?.university ?? '',
-      major: sp?.major ?? '',
-      yearOfStudy: sp?.yearOfStudy ?? '',
-      bio: sp?.bio ?? '',
-      linkedinUrl: sp?.linkedinUrl ?? '',
-      portfolioUrl: sp?.portfolioUrl ?? '',
-      pastExperience: sp?.pastExperience ?? '',
-      skills: sp?.skills ?? [],
-      gpa: sp?.gpa ?? '',
-      // Company
-      companyName: cp?.companyName ?? '',
-      industry: cp?.industry ?? '',
-      description: cp?.description ?? '',
-      website: cp?.website ?? '',
-      city: cp?.city ?? '',
-      country: cp?.country ?? '',
-    });
-    setEditing(true);
-  };
-
-  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
-
-  const mutation = useMutation({
-    mutationFn: () =>
-      userApi.updateMyProfile({
-        ...form,
-        gpa: form.gpa ? parseFloat(form.gpa) : undefined,
-      }),
-    onSuccess: async () => {
-      await refreshUser();
-      toast.success('Profile updated!');
-      setEditing(false);
-    },
-    onError: (e: any) =>
-      toast.error(e?.response?.data?.message || 'Update failed'),
-  });
-
   if (!user) return null;
-
-  const initials = `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`;
+  const student = (user as any).studentProfile;
+  const company = (user as any).companyProfile;
+  const supervisor = user.supervisorProfile;
   const isStudent = user.role === 'STUDENT';
   const isCompany = user.role === 'COMPANY';
   const isSupervisor = user.role === 'PARTY_SUPERVISOR' || user.role === 'PROJECT_SUPERVISOR';
-  const supervisorPhotoUrl = supervisor?.profilePhotoUrl
-    ? new URL(supervisor.profilePhotoUrl, import.meta.env.VITE_API_URL || 'http://localhost:8080').toString()
-    : undefined;
+  const initials = `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`;
+  const photo = supervisor?.profilePhotoUrl ? new URL(supervisor.profilePhotoUrl, import.meta.env.VITE_API_URL || 'http://localhost:8080').toString() : undefined;
+  const set = (key: string, value: any) => setForm((current) => ({ ...current, [key]: value }));
+  const startEdit = () => {
+    setForm({
+      firstName: user.firstName ?? '', lastName: user.lastName ?? '', phoneNumber: user.phoneNumber ?? '',
+      university: student?.university ?? '', major: student?.major ?? '', yearOfStudy: student?.yearOfStudy ?? '', bio: student?.bio ?? '',
+      linkedinUrl: student?.linkedinUrl ?? '', portfolioUrl: student?.portfolioUrl ?? '', pastExperience: student?.pastExperience ?? '', skills: student?.skills ?? [], gpa: student?.gpa ?? '',
+      companyName: company?.companyName ?? '', industry: company?.industry ?? '', description: company?.description ?? '', website: company?.website ?? '', city: company?.city ?? '', country: company?.country ?? '',
+    });
+    setEditing(true);
+  };
+  const mutation = useMutation({
+    mutationFn: () => userApi.updateMyProfile({ ...form, gpa: form.gpa ? Number(form.gpa) : undefined }),
+    onSuccess: async () => { await refreshUser(); setEditing(false); toast.success('Profile updated'); },
+    onError: (error: any) => toast.error(error?.response?.data?.message || 'Could not update profile'),
+  });
+  const subtitle = isStudent
+    ? [student?.major, student?.university].filter(Boolean).join(' · ')
+    : isCompany ? company?.companyName
+      : isSupervisor ? [supervisor?.jobTitle, supervisor?.department].filter(Boolean).join(' · ')
+        : user.role.replace(/_/g, ' ');
 
   return (
-    <div className='animate-fade-up max-w-2xl'>
-      <div className='flex items-center justify-between mb-8'>
-        <div>
-          <h1 className='page-title'>My Profile</h1>
-          <p className='page-subtitle'>
-            Your personal information and account details.
-          </p>
-        </div>
-        {!editing && !isSupervisor && (
-          <button
-            onClick={startEdit}
-            className='btn-secondary flex items-center gap-2'
-          >
-            <Pencil size={14} /> Edit Profile
-          </button>
-        )}
-      </div>
+    <div className='max-w-3xl'>
+      <PageHeader
+        title='Profile'
+        description='Your account and professional information.'
+        action={!editing && !isSupervisor ? <Button variant='secondary' onPress={startEdit}><Pencil size={15} /> Edit profile</Button> : undefined}
+      />
 
-      {/* Avatar + name hero */}
-      <div className='card p-6 mb-5'>
-        <div className='flex items-center gap-5'>
-          <div className='w-16 h-16 rounded-2xl bg-gradient-to-br from-ember-500/30 to-ink-700 border border-ink-600/50 flex items-center justify-center flex-shrink-0'>
-            {supervisorPhotoUrl
-              ? <img src={supervisorPhotoUrl} alt='' className='h-full w-full rounded-2xl object-cover' />
-              : <span className='font-display font-bold text-2xl text-white'>{initials}</span>}
+      <section className='border-b border-separator pb-6'>
+        <div className='flex flex-col gap-4 sm:flex-row sm:items-center'>
+          <Avatar size='lg'>{photo && <Avatar.Image src={photo} alt='' />}<Avatar.Fallback>{initials}</Avatar.Fallback></Avatar>
+          <div className='min-w-0 flex-1'>
+            <h2 className='text-xl font-semibold'>{user.firstName} {user.lastName}</h2>
+            <p className='mt-1 text-sm text-muted'>{subtitle || user.email}</p>
           </div>
-          <div className='flex-1 min-w-0'>
-            {editing ? (
-              <div className='flex gap-3'>
-                <div className='flex-1'>
-                  <label className='input-label'>First name</label>
-                  <input
-                    className='input'
-                    value={form.firstName}
-                    onChange={(e) => set('firstName', e.target.value)}
-                  />
-                </div>
-                <div className='flex-1'>
-                  <label className='input-label'>Last name</label>
-                  <input
-                    className='input'
-                    value={form.lastName}
-                    onChange={(e) => set('lastName', e.target.value)}
-                  />
-                </div>
+          {user.githubUsername && <a href={`https://github.com/${user.githubUsername}`} target='_blank' rel='noreferrer' className='inline-flex min-h-11 items-center gap-2 rounded-md border border-border px-3 text-sm hover:bg-default'><Github size={16} /> {user.githubUsername}</a>}
+        </div>
+        {!editing && (student?.bio || company?.description || supervisor?.bio) && <p className='mt-5 max-w-2xl text-sm leading-6 text-muted'>{student?.bio || company?.description || supervisor?.bio}</p>}
+      </section>
+
+      {editing ? (
+        <div className='space-y-8 py-7'>
+          <section>
+            <h3 className='mb-5 text-base font-semibold'>Account details</h3>
+            <div className='grid gap-5 sm:grid-cols-2'>
+              <Field label='First name' value={form.firstName} onChange={(value) => set('firstName', value)} maxLength={100} />
+              <Field label='Last name' value={form.lastName} onChange={(value) => set('lastName', value)} maxLength={100} />
+              <Field label='Phone number' value={form.phoneNumber} onChange={(value) => set('phoneNumber', value)} maxLength={30} />
+            </div>
+          </section>
+
+          {isStudent && (
+            <section className='border-t border-separator pt-7'>
+              <h3 className='mb-5 text-base font-semibold'>Academic profile</h3>
+              <div className='grid gap-5 sm:grid-cols-2'>
+                <Field label='University' value={form.university} onChange={(value) => set('university', value)} maxLength={255} />
+                <Field label='Major' value={form.major} onChange={(value) => set('major', value)} maxLength={255} />
+                <Select.Root fullWidth aria-label='Year of study' selectedKey={form.yearOfStudy || null} onSelectionChange={(key) => set('yearOfStudy', String(key))}>
+                  <Label>Year of study</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{YEARS.map((year) => <ListBox.Item key={year} id={year}>{year}</ListBox.Item>)}</ListBox></Select.Popover>
+                </Select.Root>
+                <Field label='GPA' value={form.gpa} onChange={(value) => set('gpa', value)} type='number' min='0' max='4' step='0.01' />
+                <Field label='LinkedIn URL' value={form.linkedinUrl} onChange={(value) => set('linkedinUrl', value)} type='url' maxLength={500} />
+                <Field label='Portfolio URL' value={form.portfolioUrl} onChange={(value) => set('portfolioUrl', value)} type='url' maxLength={500} />
               </div>
-            ) : (
-              <>
-                <h2 className='font-display font-bold text-xl text-white'>
-                  {user.firstName} {user.lastName}
-                </h2>
-                <p className='text-sm text-ink-400 mt-0.5'>
-                  {isStudent
-                    ? sp?.major
-                      ? `${sp.major} · ${sp?.university ?? ''}`
-                      : sp?.university
-                    : ''}
-                  {isCompany ? cp?.companyName : ''}
-                  {isSupervisor ? `${supervisor?.jobTitle ?? user.role.replace('_', ' ')}${supervisor?.department ? ` · ${supervisor.department}` : ''}` : ''}
-                  {!isStudent && !isCompany && !isSupervisor ? user.role.replace('_', ' ') : ''}
-                </p>
-              </>
-            )}
-          </div>
-          {/* GitHub badge */}
-          {user.githubUsername && (
-            <a
-              href={`https://github.com/${user.githubUsername}`}
-              target='_blank'
-              rel='noopener noreferrer'
-              className='flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-ink-800 border border-ink-700/50 text-xs text-ink-300 hover:text-white transition-colors'
-            >
-              <Github size={13} /> {user.githubUsername}
-            </a>
+              <TextField fullWidth className='mt-5'><Label>Bio</Label><TextArea fullWidth rows={3} maxLength={2000} value={form.bio} onChange={(event) => set('bio', event.target.value)} /></TextField>
+              <div className='mt-5'><Label>Skills</Label><div className='mt-2'><SkillsInput value={form.skills ?? []} onChange={(value) => set('skills', value)} /></div></div>
+              <TextField fullWidth className='mt-5'><Label>Past experience</Label><TextArea fullWidth rows={4} maxLength={3000} value={form.pastExperience} onChange={(event) => set('pastExperience', event.target.value)} /></TextField>
+            </section>
           )}
+
+          {isCompany && (
+            <section className='border-t border-separator pt-7'>
+              <h3 className='mb-5 text-base font-semibold'>Company profile</h3>
+              <div className='grid gap-5 sm:grid-cols-2'>
+                <Field label='Company name' value={form.companyName} onChange={(value) => set('companyName', value)} maxLength={255} />
+                <Field label='Industry' value={form.industry} onChange={(value) => set('industry', value)} maxLength={255} />
+                <Field label='Website' value={form.website} onChange={(value) => set('website', value)} type='url' maxLength={500} />
+                <Field label='City' value={form.city} onChange={(value) => set('city', value)} maxLength={255} />
+                <Field label='Country' value={form.country} onChange={(value) => set('country', value)} maxLength={255} />
+              </div>
+              <TextField fullWidth className='mt-5'><Label>Company description</Label><TextArea fullWidth rows={4} maxLength={2000} value={form.description} onChange={(event) => set('description', event.target.value)} /></TextField>
+            </section>
+          )}
+
+          <div className='sticky bottom-0 flex justify-end gap-2 border-t border-border bg-background/95 py-4 backdrop-blur'>
+            <Button variant='ghost' onPress={() => setEditing(false)}><X size={15} /> Cancel</Button>
+            <Button variant='primary' isDisabled={mutation.isPending} onPress={() => mutation.mutate()}>{mutation.isPending ? <Spinner size='sm' /> : <Check size={15} />} Save changes</Button>
+          </div>
         </div>
-
-        {/* Bio */}
-        {isStudent && (
-          <div className='mt-4 pt-4 border-t border-ink-800/50'>
-            {editing ? (
-              <>
-                <label className='input-label'>Bio</label>
-                <textarea
-                  className='textarea'
-                  rows={3}
-                  value={form.bio}
-                  onChange={(e) => set('bio', e.target.value)}
-                  placeholder='Tell us about yourself...'
-                />
-              </>
-            ) : sp?.bio ? (
-              <p className='text-sm text-ink-300 leading-relaxed'>{sp.bio}</p>
-            ) : (
-              <p className='text-sm text-ink-500 italic'>No bio added yet.</p>
-            )}
-          </div>
-        )}
-
-        {isCompany && (
-          <div className='mt-4 pt-4 border-t border-ink-800/50'>
-            {editing ? (
-              <>
-                <label className='input-label'>Company description</label>
-                <textarea
-                  className='textarea'
-                  rows={3}
-                  value={form.description}
-                  onChange={(e) => set('description', e.target.value)}
-                />
-              </>
-            ) : cp?.description ? (
-              <p className='text-sm text-ink-300 leading-relaxed'>
-                {cp.description}
-              </p>
-            ) : null}
-          </div>
-        )}
-
-        {isSupervisor && supervisor?.bio && (
-          <div className='mt-4 pt-4 border-t border-ink-800/50'>
-            <p className='text-sm text-ink-300 leading-relaxed'>{supervisor.bio}</p>
-          </div>
-        )}
-      </div>
-
-      {/* Contact & details card */}
-      <div className='card p-6 mb-5'>
-        <h3 className='font-semibold text-white text-sm mb-4'>
-          Contact & Details
-        </h3>
-        {editing ? (
-          <div className='space-y-4'>
-            <div>
-              <label className='input-label'>Phone number</label>
-              <input
-                className='input'
-                value={form.phoneNumber}
-                onChange={(e) => set('phoneNumber', e.target.value)}
-                placeholder='+1 234 567 8900'
-              />
-            </div>
-
-            {isStudent && (
-              <>
-                <div className='grid grid-cols-2 gap-3'>
-                  <div>
-                    <label className='input-label'>University</label>
-                    <input
-                      className='input'
-                      value={form.university}
-                      onChange={(e) => set('university', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className='input-label'>Major</label>
-                    <input
-                      className='input'
-                      value={form.major}
-                      onChange={(e) => set('major', e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className='grid grid-cols-2 gap-3'>
-                  <div>
-                    <label className='input-label'>Year of study</label>
-                    <select
-                      className='input'
-                      value={form.yearOfStudy}
-                      onChange={(e) => set('yearOfStudy', e.target.value)}
-                    >
-                      <option value=''>Select...</option>
-                      {[
-                        '1st Year',
-                        '2nd Year',
-                        '3rd Year',
-                        '4th Year',
-                        'Postgraduate',
-                      ].map((y) => (
-                        <option key={y} value={y}>
-                          {y}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className='input-label'>GPA (optional)</label>
-                    <input
-                      className='input'
-                      type='number'
-                      step='0.01'
-                      min='0'
-                      max='4'
-                      value={form.gpa}
-                      onChange={(e) => set('gpa', e.target.value)}
-                      placeholder='3.80'
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className='input-label'>LinkedIn URL</label>
-                  <input
-                    className='input'
-                    value={form.linkedinUrl}
-                    onChange={(e) => set('linkedinUrl', e.target.value)}
-                    placeholder='https://linkedin.com/in/...'
-                  />
-                </div>
-                <div>
-                  <label className='input-label'>Portfolio / GitHub URL</label>
-                  <input
-                    className='input'
-                    value={form.portfolioUrl}
-                    onChange={(e) => set('portfolioUrl', e.target.value)}
-                  />
-                </div>
-              </>
-            )}
-
-            {isCompany && (
-              <>
-                <div className='grid grid-cols-2 gap-3'>
-                  <div>
-                    <label className='input-label'>Company name</label>
-                    <input
-                      className='input'
-                      value={form.companyName}
-                      onChange={(e) => set('companyName', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className='input-label'>Industry</label>
-                    <input
-                      className='input'
-                      value={form.industry}
-                      onChange={(e) => set('industry', e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className='input-label'>Website</label>
-                  <input
-                    className='input'
-                    value={form.website}
-                    onChange={(e) => set('website', e.target.value)}
-                    placeholder='https://...'
-                  />
-                </div>
-                <div className='grid grid-cols-2 gap-3'>
-                  <div>
-                    <label className='input-label'>City</label>
-                    <input
-                      className='input'
-                      value={form.city}
-                      onChange={(e) => set('city', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className='input-label'>Country</label>
-                    <input
-                      className='input'
-                      value={form.country}
-                      onChange={(e) => set('country', e.target.value)}
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-            {isSupervisor && (
-              <>
-                <InfoRow icon={Briefcase} label='Job title' value={supervisor?.jobTitle} />
-                <InfoRow icon={Building2} label='Department' value={supervisor?.department} />
-                <InfoRow icon={Linkedin} label='LinkedIn' value={supervisor?.linkedinUrl} href={supervisor?.linkedinUrl} />
-              </>
-            )}
-          </div>
-        ) : (
-          <div>
-            <InfoRow icon={Mail} label='Email' value={user.email} />
-            <InfoRow icon={Phone} label='Phone' value={user.phoneNumber} />
-            {isStudent && (
-              <>
-                <InfoRow
-                  icon={GraduationCap}
-                  label='University'
-                  value={sp?.university}
-                />
-                <InfoRow icon={BookOpen} label='Major' value={sp?.major} />
-                <InfoRow icon={BookOpen} label='Year' value={sp?.yearOfStudy} />
-                <InfoRow
-                  icon={Star}
-                  label='GPA'
-                  value={sp?.gpa ? `${sp.gpa} / 4.0` : null}
-                />
-                <InfoRow
-                  icon={Linkedin}
-                  label='LinkedIn'
-                  value={sp?.linkedinUrl}
-                  href={sp?.linkedinUrl}
-                />
-                <InfoRow
-                  icon={Globe}
-                  label='Portfolio'
-                  value={sp?.portfolioUrl}
-                  href={sp?.portfolioUrl}
-                />
-              </>
-            )}
-            {isCompany && (
-              <>
-                <InfoRow
-                  icon={Building2}
-                  label='Company'
-                  value={cp?.companyName}
-                />
-                <InfoRow
-                  icon={Briefcase}
-                  label='Industry'
-                  value={cp?.industry}
-                />
-                <InfoRow
-                  icon={Globe}
-                  label='Website'
-                  value={cp?.website}
-                  href={cp?.website}
-                />
-                <InfoRow
-                  icon={MapPin}
-                  label='Location'
-                  value={[cp?.city, cp?.country].filter(Boolean).join(', ')}
-                />
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Skills card — student only */}
-      {isStudent && (
-        <div className='card p-6 mb-5'>
-          <h3 className='font-semibold text-white text-sm mb-4'>Skills</h3>
-          {editing ? (
-            <SkillsInput
-              value={form.skills ?? []}
-              onChange={(v) => set('skills', v)}
-            />
-          ) : (
-            <div className='flex flex-wrap gap-2'>
-              {(sp?.skills ?? []).length > 0 ? (
-                (sp?.skills ?? []).map((s: string) => (
-                  <span
-                    key={s}
-                    className='px-3 py-1 rounded-full bg-ink-700 border border-ink-600/50 text-xs text-ink-200'
-                  >
-                    {s}
-                  </span>
-                ))
-              ) : (
-                <p className='text-sm text-ink-500 italic'>
-                  No skills added yet.
-                </p>
-              )}
+      ) : (
+        <div className='py-7'>
+          <h3 className='mb-2 text-base font-semibold'>Details</h3>
+          <InfoRow icon={Mail} label='Email' value={user.email} />
+          <InfoRow icon={Phone} label='Phone' value={user.phoneNumber} />
+          {isStudent && <>
+            <InfoRow icon={GraduationCap} label='University' value={student?.university} />
+            <InfoRow icon={GraduationCap} label='Major' value={student?.major} />
+            <InfoRow icon={GraduationCap} label='Year of study' value={student?.yearOfStudy} />
+            <InfoRow icon={Linkedin} label='LinkedIn' value={student?.linkedinUrl} href={student?.linkedinUrl} />
+            <InfoRow icon={Globe} label='Portfolio' value={student?.portfolioUrl} href={student?.portfolioUrl} />
+          </>}
+          {isCompany && <>
+            <InfoRow icon={Building2} label='Company' value={company?.companyName} />
+            <InfoRow icon={Building2} label='Industry' value={company?.industry} />
+            <InfoRow icon={Globe} label='Website' value={company?.website} href={company?.website} />
+            <InfoRow icon={MapPin} label='Location' value={[company?.city, company?.country].filter(Boolean).join(', ')} />
+          </>}
+          {isSupervisor && <>
+            <InfoRow icon={Building2} label='Job title' value={supervisor?.jobTitle} />
+            <InfoRow icon={Building2} label='Department' value={supervisor?.department} />
+            <InfoRow icon={Linkedin} label='LinkedIn' value={supervisor?.linkedinUrl} href={supervisor?.linkedinUrl} />
+          </>}
+          {isStudent && (
+            <div className='mt-7 grid gap-7 border-t border-separator pt-7 sm:grid-cols-2'>
+              <section><h3 className='text-sm font-semibold'>Skills</h3><div className='mt-3 flex flex-wrap gap-2'>{(student?.skills ?? []).length ? student.skills.map((skill: string) => <span key={skill} className='rounded-sm bg-default px-2 py-1 text-xs'>{skill}</span>) : <p className='text-sm text-muted'>No skills added.</p>}</div></section>
+              <section><h3 className='text-sm font-semibold'>Past experience</h3><p className='mt-3 whitespace-pre-wrap text-sm leading-6 text-muted'>{student?.pastExperience || 'No experience added.'}</p></section>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Past experience — student only */}
-      {isStudent && (
-        <div className='card p-6 mb-5'>
-          <h3 className='font-semibold text-white text-sm mb-4'>
-            Past Experience
-          </h3>
-          {editing ? (
-            <textarea
-              className='textarea'
-              rows={4}
-              value={form.pastExperience}
-              onChange={(e) => set('pastExperience', e.target.value)}
-              placeholder='Describe your previous projects, internships, or relevant experience...'
-            />
-          ) : sp?.pastExperience ? (
-            <p className='text-sm text-ink-300 leading-relaxed whitespace-pre-wrap'>
-              {sp.pastExperience}
-            </p>
-          ) : (
-            <p className='text-sm text-ink-500 italic'>
-              No experience added yet.
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Save / Cancel */}
-      {editing && (
-        <div className='flex gap-3 sticky bottom-6'>
-          <button
-            onClick={() => setEditing(false)}
-            className='btn-secondary flex-1 flex items-center justify-center gap-2'
-          >
-            <X size={15} /> Cancel
-          </button>
-          <button
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending}
-            className='btn-primary flex-1 flex items-center justify-center gap-2'
-          >
-            {mutation.isPending ? (
-              <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
-            ) : (
-              <Check size={15} />
-            )}
-            {mutation.isPending ? 'Saving…' : 'Save Changes'}
-          </button>
         </div>
       )}
     </div>

@@ -6,6 +6,13 @@ import { Github, Upload, Send, Save, CheckCircle2, AlertCircle } from 'lucide-re
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import clsx from 'clsx'
+import { Button } from '@heroui/react/button'
+import { Input } from '@heroui/react/input'
+import { Label } from '@heroui/react/label'
+import { Spinner } from '@heroui/react/spinner'
+import { TextArea } from '@heroui/react/textarea'
+import { TextField } from '@heroui/react/textfield'
+import { EmptyState, PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI'
 
 export default function SubmissionPage() {
   const qc = useQueryClient()
@@ -60,105 +67,82 @@ export default function SubmissionPage() {
     onError: (e: any) => toast.error(e?.response?.data?.message || 'Submission failed'),
   })
 
-  if (partyLoading) return <div className="py-24 text-center text-sm text-ink-400">Loading submission...</div>
+  if (partyLoading) return <div className='flex justify-center py-24'><Spinner /></div>
 
   if (!party) return (
-    <div className="flex flex-col items-center justify-center py-24 gap-4">
-      <AlertCircle size={32} className="text-amber-400" />
-      <p className="text-ink-400 text-sm">You need to be in a party with an assigned project to submit.</p>
-    </div>
+    <EmptyState icon={AlertCircle} title='No party available' description='Join a party with an assigned project before creating a submission.' />
   )
 
   if (!party.assignedProjectId) return (
-    <div className="flex flex-col items-center justify-center py-24 gap-4">
-      <AlertCircle size={32} className="text-amber-400" />
-      <p className="text-ink-400 text-sm">Your party hasn't been assigned a project yet.</p>
-    </div>
+    <EmptyState icon={AlertCircle} title='No assigned project' description='A submission becomes available when your party receives a project.' />
   )
 
   const isSubmitted = submission?.status === 'SUBMITTED' || submission?.status === 'UNDER_EVALUATION' || submission?.status === 'EVALUATED'
 
   return (
-    <div className="animate-fade-up max-w-2xl">
-      <div className="page-header">
-        <h1 className="page-title">Project Submission</h1>
-        <p className="page-subtitle">Submit your team's work for {party.assignedProjectTitle}</p>
-      </div>
+    <div className=" max-w-2xl">
+      <PageHeader title='Project Submission' description={`Submit your team’s work for ${party.assignedProjectTitle}.`} />
 
       {/* Status banner */}
       {submission && (
-        <div className={clsx('mb-6 p-4 rounded-2xl flex items-center gap-3 border',
+        <div className={clsx('mb-6 p-4 rounded-lg flex items-center gap-3 border',
           isSubmitted
-            ? 'bg-jade-500/10 border-jade-500/30'
-            : 'bg-ink-900 border-ink-700/50'
+            ? 'bg-success border-success'
+            : 'bg-surface border-border'
         )}>
           {isSubmitted
-            ? <CheckCircle2 size={20} className="text-jade-400 flex-shrink-0" />
-            : <Save size={20} className="text-ink-400 flex-shrink-0" />
+            ? <CheckCircle2 size={20} className="text-success flex-shrink-0" />
+            : <Save size={20} className="text-muted flex-shrink-0" />
           }
           <div>
-            <p className="text-sm font-semibold text-white">
+            <p className="text-sm font-semibold text-foreground">
               {isSubmitted ? 'Submission received' : 'Draft saved'}
             </p>
             {submission.submittedAt && (
-              <p className="text-xs text-ink-400">
+              <p className="text-xs text-muted">
                 Submitted {format(new Date(submission.submittedAt), 'dd MMM yyyy, HH:mm')}
               </p>
             )}
           </div>
-          <span className={clsx('badge ml-auto text-[10px]',
-            submission.status === 'DRAFT' && 'badge-pending',
-            submission.status === 'SUBMITTED' && 'badge-active',
-            submission.status === 'UNDER_EVALUATION' && 'badge-ember',
-            submission.status === 'EVALUATED' && 'badge-open',
-          )}>{submission.status.replace('_', ' ')}</span>
+          <StatusBadge status={submission.status} className='ml-auto' />
         </div>
       )}
 
-      <div className="card p-6 space-y-5">
+      <div className="rounded-lg border border-border bg-surface p-6 space-y-5">
         {/* GitHub repo */}
-        <div>
-          <label htmlFor="submissionRepoUrl" className="input-label flex items-center gap-2">
-            <Github size={14} /> GitHub Repository URL *
-          </label>
-          <input
-            id="submissionRepoUrl"
-            className="input"
+        <TextField fullWidth isRequired>
+          <Label><Github size={14} /> GitHub repository URL</Label>
+          <Input
             maxLength={500}
             value={repoUrl}
             onChange={e => setRepoUrl(e.target.value)}
             placeholder="https://github.com/your-org/your-project"
             disabled={isSubmitted}
           />
-        </div>
+        </TextField>
 
-        <div>
-          <label htmlFor="submissionBranch" className="input-label">Branch</label>
-          <input
-            id="submissionBranch"
-            className="input"
+        <TextField fullWidth><Label>Branch</Label><Input
             maxLength={100}
             value={branch}
             onChange={e => setBranch(e.target.value)}
             placeholder="main"
             disabled={isSubmitted}
-          />
-        </div>
+          /></TextField>
 
         {/* Documents */}
         <div>
-          <label className="input-label flex items-center gap-2">
+          <Label className="flex items-center gap-2">
             <Upload size={14} /> Supporting Documents (optional)
-          </label>
+          </Label>
           <div
             onClick={() => !isSubmitted && document.getElementById('file-input')?.click()}
             className={clsx(
-              'border-2 border-dashed rounded-xl p-6 text-center transition-colors',
-              isSubmitted ? 'border-ink-700/30 cursor-not-allowed' : 'border-ink-600/50 hover:border-ember-500/40 cursor-pointer'
+              'border-2 border-dashed rounded-lg p-6 text-center transition-colors',
+              isSubmitted ? 'border-border cursor-not-allowed' : 'border-border hover:border-accent cursor-pointer'
             )}
           >
-            <Upload size={24} className="text-ink-500 mx-auto mb-2" />
-            <p className="text-xs text-ink-400">Click to upload PDFs, docs, or any project files</p>
+            <Upload size={24} className="text-muted mx-auto mb-2" />
+            <p className="text-xs text-muted">Click to upload PDFs, docs, or any project files</p>
             <input
               id="file-input"
               type="file"
@@ -170,28 +154,24 @@ export default function SubmissionPage() {
           {files.length > 0 && (
             <div className="mt-2 space-y-1">
               {files.map((f, i) => (
-                <p key={i} className="text-xs text-ink-400 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-jade-500" />
-                  {f.name} <span className="text-ink-600">({(f.size / 1024).toFixed(0)}KB)</span>
+                <p key={i} className="text-xs text-muted flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-success" />
+                  {f.name} <span className="text-muted">({(f.size / 1024).toFixed(0)}KB)</span>
                 </p>
               ))}
             </div>
           )}
           {submission?.documentUrls && submission.documentUrls.length > 0 && (
             <div className="mt-2">
-              <p className="text-xs text-ink-500 mb-1">Previously uploaded:</p>
+              <p className="text-xs text-muted mb-1">Previously uploaded:</p>
               {submission.documentUrls.map((url, i) => (
-                <p key={i} className="text-xs text-ink-400">• {url.split('/').pop()}</p>
+                <p key={i} className="text-xs text-muted">• {url.split('/').pop()}</p>
               ))}
             </div>
           )}
         </div>
 
-        <div>
-          <label htmlFor="submissionNotes" className="input-label">Notes for evaluators (optional)</label>
-          <textarea
-            id="submissionNotes"
-            className="textarea"
+        <TextField fullWidth><Label>Notes for evaluators (optional)</Label><TextArea
             maxLength={2000}
             rows={3}
             value={notes}
@@ -199,35 +179,30 @@ export default function SubmissionPage() {
             placeholder="Any context or notes you want the evaluators to know…"
             disabled={isSubmitted}
           />
-          <p className="mt-1 text-right text-[10px] text-ink-500">{notes.length}/2000</p>
-        </div>
+          <p className="mt-1 text-right text-[10px] text-muted">{notes.length}/2000</p>
+        </TextField>
 
         {!isSubmitted && (
           <div className="flex gap-3 pt-2">
-            <button
-              onClick={() => saveDraftMutation.mutate()}
-              disabled={saveDraftMutation.isPending}
-              className="btn-secondary flex-1"
-            >
+            <Button variant='secondary' className='flex-1' onPress={() => saveDraftMutation.mutate()} isDisabled={saveDraftMutation.isPending}>
               <Save size={15} />
               {saveDraftMutation.isPending ? 'Saving…' : 'Save Draft'}
-            </button>
-            <button
-              onClick={() => {
+            </Button>
+            <Button variant='primary' className='flex-1'
+              onPress={() => {
                 if (!repoUrl) { toast.error('GitHub URL is required for final submission'); return }
                 if (confirm('Are you sure? Final submission cannot be undone.')) submitMutation.mutate()
               }}
-              disabled={submitMutation.isPending || !repoUrl}
-              className="btn-primary flex-1"
+              isDisabled={submitMutation.isPending || !repoUrl}
             >
               <Send size={15} />
               {submitMutation.isPending ? 'Submitting…' : 'Final Submit'}
-            </button>
+            </Button>
           </div>
         )}
       </div>
       {evaluationReport && (
-        <div className='card mt-5 overflow-hidden'>
+        <div className='rounded-lg border border-border bg-surface mt-5 overflow-hidden'>
           <EvaluationReportPanel report={evaluationReport} />
         </div>
       )}

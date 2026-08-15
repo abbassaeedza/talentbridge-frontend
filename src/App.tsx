@@ -14,7 +14,10 @@ import { userApi } from './api/services';
 import { isGitHubOAuthStateValid } from './utils/githubOAuth';
 import AppLayout from './components/layout/AppLayout';
 import type { UserRole } from './types';
-import { Layers, AlertTriangle, Ghost } from 'lucide-react';
+import { AlertTriangle, Ghost } from 'lucide-react';
+import { Button } from '@heroui/react/button';
+import { Spinner } from '@heroui/react/spinner';
+import { PublicShell } from './components/ui/TalentBridgeUI';
 
 // Auth pages
 import LoginPage from './pages/auth/LoginPage';
@@ -75,45 +78,23 @@ function RejectedScreen() {
   const navigate = useNavigate();
   const reason = (user as any)?.rejectionReason ?? null;
   return (
-    <div className='min-h-screen bg-ink-950 mesh-bg flex items-center justify-center p-8'>
-      <div className='text-center max-w-md'>
-        <div className='w-20 h-20 rounded-3xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto mb-6'>
-          <AlertTriangle size={36} className='text-red-400' />
+    <PublicShell>
+      <div className='mx-auto max-w-md text-center'>
+        <div className='mx-auto flex size-12 items-center justify-center rounded-md bg-danger text-danger-foreground'>
+          <AlertTriangle size={22} />
         </div>
-        <h1 className='font-display text-2xl font-bold text-white mb-3'>
-          Account Not Approved
-        </h1>
-        <p className='text-ink-400 text-sm leading-relaxed mb-4'>
-          Your account has been rejected. Please contact the coordinator for
-          more information.
-        </p>
+        <h1 className='mt-5 text-2xl font-semibold tracking-tight'>Account not approved</h1>
+        <p className='mt-2 text-sm leading-6 text-muted'>Your account was rejected. Contact the coordinator if you need more information.</p>
         {reason && (
-          <div className='mb-6 p-4 rounded-2xl bg-ink-900 border border-red-500/20 text-left'>
-            <p className='text-xs font-semibold text-ink-400 uppercase tracking-wider mb-1'>
-              Reason
-            </p>
-            <p className='text-sm text-red-300'>{reason}</p>
+          <div className='mt-5 rounded-lg border border-border bg-surface p-4 text-left'>
+            <p className='text-xs font-semibold uppercase tracking-wider text-muted'>Reason</p>
+            <p className='mt-1 text-sm'>{reason}</p>
           </div>
         )}
-        <div className='p-4 rounded-2xl bg-ink-900 border border-ink-700/50 mb-6 text-left'>
-          <p className='text-xs font-semibold text-ink-400 uppercase tracking-wider mb-1'>
-            Contact Coordinator
-          </p>
-          <p className='text-sm text-ember-400 font-mono'>
-            coordinator@talentbridge.com
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            logout();
-            navigate('/login');
-          }}
-          className='btn-ghost text-ink-300'
-        >
-          Sign out
-        </button>
+        <p className='mt-5 text-sm text-muted'>Coordinator: <a href='mailto:coordinator@talentbridge.com' className='text-accent hover:underline'>coordinator@talentbridge.com</a></p>
+        <Button className='mt-6' variant='secondary' onPress={() => { logout(); navigate('/login'); }}>Sign out</Button>
       </div>
-    </div>
+    </PublicShell>
   );
 }
 
@@ -121,31 +102,15 @@ function RejectedScreen() {
 function NotFoundPage() {
   const navigate = useNavigate();
   return (
-    <div className='min-h-screen bg-ink-950 mesh-bg flex items-center justify-center p-8'>
-      <div className='text-center max-w-md'>
-        <div className='w-24 h-24 rounded-3xl bg-ink-800 border border-ink-700/50 flex items-center justify-center mx-auto mb-6'>
-          <Ghost size={44} className='text-ink-400' />
-        </div>
-        <p className='font-mono text-ember-400 text-sm font-semibold mb-2'>
-          404
-        </p>
-        <h1 className='font-display text-3xl font-bold text-white mb-3'>
-          This page ghosted you
-        </h1>
-        <p className='text-ink-400 text-sm leading-relaxed mb-8'>
-          Looks like this route packed its bags and left. Maybe it never
-          existed, or maybe it's just playing hard to get.
-        </p>
-        <div className='flex gap-3 justify-center'>
-          <button onClick={() => navigate(-1)} className='btn-secondary'>
-            Go back
-          </button>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className='btn-primary'
-          >
-            <Layers size={15} /> Go home
-          </button>
+    <div className='mx-auto flex min-h-[60vh] max-w-md items-center justify-center py-16 text-center'>
+      <div>
+        <Ghost size={34} className='mx-auto text-muted' />
+        <p className='mt-4 font-mono text-sm text-muted'>404</p>
+        <h1 className='mt-2 text-2xl font-semibold'>Page not found</h1>
+        <p className='mt-2 text-sm leading-6 text-muted'>The requested TalentBridge page does not exist or is not available to your role.</p>
+        <div className='mt-6 flex justify-center gap-2'>
+          <Button variant='secondary' onPress={() => navigate(-1)}>Go back</Button>
+          <Button variant='primary' onPress={() => navigate('/dashboard')}>Go to overview</Button>
         </div>
       </div>
     </div>
@@ -155,13 +120,8 @@ function NotFoundPage() {
 // ── Loading screen ────────────────────────────────────────────────────────────
 function FullScreenLoader() {
   return (
-    <div className='min-h-screen bg-ink-950 flex items-center justify-center'>
-      <div className='flex flex-col items-center gap-4'>
-        <div className='w-10 h-10 rounded-xl bg-ember-500/20 border border-ember-500/30 flex items-center justify-center'>
-          <div className='w-4 h-4 border-2 border-ember-500 border-t-transparent rounded-full animate-spin' />
-        </div>
-        <span className='text-ink-400 text-sm'>Loading TalentBridge…</span>
-      </div>
+    <div className='flex min-h-dvh items-center justify-center bg-background'>
+      <div className='flex items-center gap-3 text-sm text-muted'><Spinner size='sm' /> Loading TalentBridge</div>
     </div>
   );
 }

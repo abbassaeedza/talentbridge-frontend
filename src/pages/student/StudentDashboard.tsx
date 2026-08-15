@@ -15,33 +15,12 @@ import clsx from 'clsx';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
 import toast from 'react-hot-toast';
 import { createGitHubOAuthRequest } from '../../utils/githubOAuth';
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  color,
-  to,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string | number;
-  color: string;
-  to?: string;
-}) {
-  const inner = (
-    <div className='stat-card hover:border-ink-600/60 transition-colors'>
-      <div className={clsx('stat-icon', color)}>
-        <Icon size={20} />
-      </div>
-      <div>
-        <p className='text-2xl font-display font-bold text-white'>{value}</p>
-        <p className='text-xs text-ink-400 mt-0.5'>{label}</p>
-      </div>
-    </div>
-  );
-  return to ? <Link to={to}>{inner}</Link> : inner;
-}
+import { Avatar } from '@heroui/react/avatar';
+import { Button, buttonVariants } from '@heroui/react/button';
+import { Card } from '@heroui/react/card';
+import { ProgressBar } from '@heroui/react/progress-bar';
+import { Skeleton } from '@heroui/react/skeleton';
+import { PageHeader, StatCard, StatusBadge } from '../../components/ui/TalentBridgeUI';
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -115,18 +94,12 @@ export default function StudentDashboard() {
     : globalDeadline;
 
   return (
-    <div className='animate-fade-up'>
-      {/* Header */}
-      <div className='page-header'>
-        <h1 className='page-title'>Good morning, {currentUser?.firstName} 👋</h1>
-        <p className='page-subtitle'>
-          Here's what's happening on your TalentBridge account.
-        </p>
-      </div>
+    <div className=''>
+      <PageHeader title={`Overview${currentUser?.firstName ? ` for ${currentUser.firstName}` : ''}`} description='Your party, project deadline, GitHub connection, and results.' />
 
       <div className='mb-8'>
         {partyPending ? (
-          <div className='h-52 animate-pulse rounded-3xl border border-ink-700/50 bg-ink-900' />
+          <Skeleton className='h-52 rounded-lg' />
         ) : (
           <DeadlineCountdown
             deadline={dashboardDeadline}
@@ -140,81 +113,59 @@ export default function StudentDashboard() {
 
       {/* GitHub connection */}
       {hasGithub ? (
-        <div className='mb-6 flex flex-wrap items-center gap-4 rounded-2xl border border-jade-500/30 bg-ink-900 p-4'>
-          <div className='flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-jade-500/10'>
-            <Github size={20} className='text-jade-400' />
+        <div className='mb-6 flex flex-wrap items-center gap-4 rounded-lg border border-success bg-surface p-4'>
+          <div className='flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-default'>
+            <Github size={20} className='text-success' />
           </div>
           <div className='flex-1'>
-            <p className='text-sm font-semibold text-white'>GitHub connected</p>
+            <p className='text-sm font-semibold text-foreground'>GitHub connected</p>
             <a
               href={`https://github.com/${encodeURIComponent(currentUser!.githubUsername!)}`}
               target='_blank'
               rel='noreferrer'
               aria-label={`@${currentUser!.githubUsername}`}
-              className='mt-0.5 inline-flex items-center gap-1 text-xs text-jade-400 hover:text-jade-300'
+              className='mt-0.5 inline-flex items-center gap-1 text-xs text-success hover:text-success'
             >
               @{currentUser!.githubUsername} <ExternalLink size={11} />
             </a>
           </div>
         </div>
       ) : (
-        <div className='mb-6 flex items-center gap-4 rounded-2xl border border-amber-500/30 bg-ink-900 p-4'>
-          <div className='flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/10'>
-            <Github size={20} className='text-amber-400' />
+        <div className='mb-6 flex items-center gap-4 rounded-lg border border-amber-500/30 bg-surface p-4'>
+          <div className='flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-default'>
+            <Github size={20} className='text-warning' />
           </div>
           <div className='flex-1'>
-            <p className='text-sm font-semibold text-white'>Connect your GitHub account</p>
-            <p className='mt-0.5 text-xs text-ink-400'>Required for project submission and AI evaluation scoring.</p>
+            <p className='text-sm font-semibold text-foreground'>Connect your GitHub account</p>
+            <p className='mt-0.5 text-xs text-muted'>Required for project submission and AI evaluation scoring.</p>
           </div>
-          <button
+          <Button
             type='button'
-            onClick={connectGitHub}
-            className='btn-secondary text-xs px-3 py-2 flex-shrink-0'
+            onPress={connectGitHub}
+            variant='secondary'
+            className='flex-shrink-0'
           >
             Connect GitHub
-          </button>
+          </Button>
         </div>
       )}
 
       {/* Stats */}
       <div className='grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8'>
-        <StatCard
-          icon={Users}
-          label='Party status'
-          value={party ? party.status : 'No party'}
-          color='bg-violet-500/15 text-violet-400'
-          to='/student/party'
-        />
-        <StatCard
-          icon={FolderKanban}
-          label='Open projects'
-          value={projects?.totalElements ?? '—'}
-          color='bg-jade-500/15 text-jade-400'
-          to='/student/projects'
-        />
-        <StatCard
-          icon={Star}
-          label='Avg score'
-          value={scorecard ? `${scorecard.averageScore}/100` : '—'}
-          color='bg-ember-500/15 text-ember-400'
-          to='/student/scorecard'
-        />
-        <StatCard
-          icon={Briefcase}
-          label='Projects done'
-          value={scorecard?.totalProjects ?? 0}
-          color='bg-ink-600/40 text-ink-300'
-        />
+        <Link to='/student/party'><StatCard icon={Users} label='Party status' value={party ? party.status : 'No party'} /></Link>
+        <Link to='/student/projects'><StatCard icon={FolderKanban} label='Open projects' value={projects?.totalElements ?? '-'} /></Link>
+        <Link to='/student/scorecard'><StatCard icon={Star} label='Average score' value={scorecard ? `${scorecard.averageScore}/100` : '-'} /></Link>
+        <StatCard icon={Briefcase} label='Projects completed' value={scorecard?.totalProjects ?? 0} />
       </div>
 
       <div className='grid lg:grid-cols-2 gap-6 mb-8'>
         {/* Party card */}
-        <div className='card p-5'>
+        <Card><Card.Content className='p-5'>
           <div className='flex items-center justify-between mb-4'>
-            <h2 className='font-display font-semibold text-white'>My Party</h2>
+            <h2 className=' font-semibold text-foreground'>My Party</h2>
             <Link
               to='/student/party'
-              className='text-xs text-ember-400 hover:text-ember-300 flex items-center gap-1'
+              className='text-xs text-accent hover:text-accent flex items-center gap-1'
             >
               Manage <ArrowRight size={12} />
             </Link>
@@ -223,45 +174,34 @@ export default function StudentDashboard() {
           {party ? (
             <div>
               <div className='flex items-center gap-3 mb-3'>
-                <div className='w-10 h-10 rounded-xl bg-ink-700 flex items-center justify-center font-display font-bold text-ink-200'>
+                <div className='w-10 h-10 rounded-lg bg-default flex items-center justify-center  font-bold text-foreground'>
                   {party.name?.[0] ?? '?'}
                 </div>
                 <div>
-                  <p className='font-semibold text-white text-sm'>
+                  <p className='font-semibold text-foreground text-sm'>
                     {party.name}
                   </p>
-                  <span
-                    className={clsx(
-                      'badge text-[10px]',
-                      party.status === 'FORMING' && 'badge-forming',
-                      party.status === 'ACTIVE' && 'badge-active',
-                      party.status === 'ASSIGNED' && 'badge-assigned',
-                      party.status === 'SUBMITTED' && 'badge-submitted',
-                    )}
-                  >
-                    {party.status}
-                  </span>
+                  <StatusBadge status={party.status} />
                 </div>
               </div>
 
               {members.length > 0 && (
                 <div className='flex -space-x-2'>
                   {members.map((m) => (
-                    <div
+                    <Avatar
                       key={m.id}
                       title={`${m.firstName} ${m.lastName}`}
-                      className='w-8 h-8 rounded-full bg-ink-700 border-2 border-ink-900 flex items-center justify-center text-xs font-bold text-ink-200'
+                      size='sm'
                     >
-                      {m.firstName?.[0]}
-                      {m.lastName?.[0]}
-                    </div>
+                      <Avatar.Fallback>{m.firstName?.[0]}{m.lastName?.[0]}</Avatar.Fallback>
+                    </Avatar>
                   ))}
                 </div>
               )}
 
               {party.assignedProjectTitle && (
                 <div className='mt-3 space-y-2'>
-                  <p className='text-xs text-jade-400 flex items-center gap-1.5'>
+                  <p className='text-xs text-success flex items-center gap-1.5'>
                     <Briefcase size={11} /> Assigned: {party.assignedProjectTitle}
                   </p>
                   <DeadlineCountdown
@@ -274,28 +214,25 @@ export default function StudentDashboard() {
             </div>
           ) : (
             <div className='text-center py-4'>
-              <p className='text-ink-400 text-sm mb-3'>
+              <p className='text-muted text-sm mb-3'>
                 You're not in a party yet.
               </p>
-              <Link
-                to='/student/party'
-                className='btn-primary text-xs px-4 py-2'
-              >
+              <Link to='/student/party' className={buttonVariants({ variant: 'primary', size: 'sm' })}>
                 Create or join a party
               </Link>
             </div>
           )}
-        </div>
+        </Card.Content></Card>
 
         {/* Scorecard mini */}
-        <div className='card p-5'>
+        <Card><Card.Content className='p-5'>
           <div className='flex items-center justify-between mb-4'>
-            <h2 className='font-display font-semibold text-white'>
+            <h2 className=' font-semibold text-foreground'>
               My Scorecard
             </h2>
             <Link
               to='/student/scorecard'
-              className='text-xs text-ember-400 hover:text-ember-300 flex items-center gap-1'
+              className='text-xs text-accent hover:text-accent flex items-center gap-1'
             >
               View all <ArrowRight size={12} />
             </Link>
@@ -306,28 +243,23 @@ export default function StudentDashboard() {
               {entries.slice(0, 3).map((e) => (
                 <div key={e.id} className='flex items-center gap-3'>
                   <div className='flex-1 min-w-0'>
-                    <p className='text-xs font-medium text-ink-100 truncate'>
+                    <p className='text-xs font-medium text-foreground truncate'>
                       {e.project?.title}
                     </p>
-                    <div className='score-bar-track mt-1.5'>
-                      <div
-                        className='score-bar-fill bg-gradient-to-r from-ember-500 to-ember-400'
-                        style={{ width: `${e.score ?? 0}%` }}
-                      />
-                    </div>
+                    <ProgressBar aria-label={`${e.project?.title} score`} value={e.score ?? 0} className='mt-2'><ProgressBar.Track><ProgressBar.Fill /></ProgressBar.Track></ProgressBar>
                   </div>
-                  <span className='text-sm font-bold text-white flex-shrink-0'>
+                  <span className='text-sm font-bold text-foreground flex-shrink-0'>
                     {e.score ?? 0}
                   </span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className='text-ink-400 text-sm text-center py-4'>
+            <p className='text-muted text-sm text-center py-4'>
               No evaluations yet.
             </p>
           )}
-        </div>
+        </Card.Content></Card>
       </div>
 
     </div>

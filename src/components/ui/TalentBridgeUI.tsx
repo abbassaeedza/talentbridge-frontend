@@ -3,6 +3,8 @@ import type { LucideIcon } from 'lucide-react';
 import { Layers, Moon, Sun } from 'lucide-react';
 import { Button } from '@heroui/react/button';
 import { Chip } from '@heroui/react/chip';
+import { Modal } from '@heroui/react/modal';
+import { Spinner } from '@heroui/react/spinner';
 import clsx from 'clsx';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -110,7 +112,7 @@ const STATUS_COLOR: Record<string, 'success' | 'warning' | 'danger' | 'default' 
   ASSIGNED: 'accent',
 };
 
-export function StatusBadge({ status, className }: { status: string; className?: string }) {
+export function StatusBadge({ status, label, className }: { status: string; label?: string; className?: string }) {
   return (
     <Chip
       size='sm'
@@ -118,7 +120,65 @@ export function StatusBadge({ status, className }: { status: string; className?:
       color={STATUS_COLOR[status] ?? 'default'}
       className={clsx('uppercase', className)}
     >
-      {status.replace(/_/g, ' ')}
+      {label ?? status.replace(/_/g, ' ')}
     </Chip>
+  );
+}
+
+export function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  action,
+}: {
+  icon: LucideIcon;
+  title: string;
+  description?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className='rounded-lg border border-dashed border-border px-5 py-14 text-center'>
+      <Icon size={28} className='mx-auto text-muted' />
+      <p className='mt-4 text-sm font-semibold'>{title}</p>
+      {description && <p className='mx-auto mt-1 max-w-md text-sm leading-6 text-muted'>{description}</p>}
+      {action && <div className='mt-5 flex justify-center'>{action}</div>}
+    </div>
+  );
+}
+
+export function ConfirmationDialog({
+  open,
+  title,
+  description,
+  confirmLabel = 'Confirm',
+  pending = false,
+  danger = false,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  title: string;
+  description: ReactNode;
+  confirmLabel?: string;
+  pending?: boolean;
+  danger?: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Modal isOpen={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <Modal.Backdrop isDismissable={!pending}>
+        <Modal.Container>
+          <Modal.Dialog className='max-w-md'>
+            <Modal.Header><Modal.Heading>{title}</Modal.Heading></Modal.Header>
+            <Modal.Body><div className='text-sm leading-6 text-muted'>{description}</div></Modal.Body>
+            <Modal.Footer>
+              <Button variant='ghost' isDisabled={pending} onPress={onClose}>Cancel</Button>
+              <Button variant={danger ? 'danger' : 'primary'} isDisabled={pending} onPress={onConfirm}>{pending && <Spinner size='sm' />}{confirmLabel}</Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+    </Modal>
   );
 }

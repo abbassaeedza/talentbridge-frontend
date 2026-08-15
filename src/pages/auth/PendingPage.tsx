@@ -1,27 +1,24 @@
-import { Link } from 'react-router-dom'
-import { Clock, Layers, LogOut } from 'lucide-react'
-import { useAuth } from '../../contexts/AuthContext'
-import { useNavigate } from 'react-router-dom'
+import { Clock, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@heroui/react/button';
+import { useAuth } from '../../contexts/AuthContext';
+import { PublicShell } from '../../components/ui/TalentBridgeUI';
 
 export default function PendingPage() {
-  const { logout } = useAuth()
-  const navigate = useNavigate()
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   return (
-    <div className="min-h-screen bg-ink-950 mesh-bg flex items-center justify-center p-8">
-      <div className="text-center max-w-md">
-        <div className="w-20 h-20 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto mb-6">
-          <Clock size={36} className="text-amber-400" />
-        </div>
-        <h1 className="font-display text-2xl font-bold text-white mb-3">Account Pending Approval</h1>
-        <p className="text-ink-400 text-sm leading-relaxed mb-8">
-          Your account has been registered and is awaiting coordinator approval.
-          You'll receive a notification once your account is activated.
+    <PublicShell>
+      <div className='text-center'>
+        <div className='mx-auto flex size-12 items-center justify-center rounded-md bg-warning text-warning-foreground'><Clock size={22} /></div>
+        <h1 className='mt-5 text-2xl font-semibold tracking-tight'>Approval pending</h1>
+        <p className='mx-auto mt-2 max-w-sm text-sm leading-6 text-muted'>
+          Your account is waiting for coordinator approval. We will notify you when access is available.
         </p>
-        <button onClick={() => { logout(); navigate('/login') }}
-          className="btn-ghost text-ink-300 gap-2">
-          <LogOut size={16} />Sign out
-        </button>
+        <Button className='mt-6' variant='secondary' onPress={() => { logout(); navigate('/login'); }}>
+          <LogOut size={16} /> Sign out
+        </Button>
       </div>
-    </div>
-  )
+    </PublicShell>
+  );
 }

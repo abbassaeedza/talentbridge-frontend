@@ -10,6 +10,7 @@ import { Select } from '@heroui/react/select';
 import { Spinner } from '@heroui/react/spinner';
 import { TextArea } from '@heroui/react/textarea';
 import { TextField } from '@heroui/react/textfield';
+import { ToggleButton } from '@heroui/react/toggle-button';
 import { projectSupervisorInvitationApi } from '../../api/services';
 import { PROJECT_FIELDS, type Project, type ProjectDraft } from '../../types';
 
@@ -213,18 +214,17 @@ export default function ProjectForm({
             <Label>Project field</Label>
             <div className='mt-2 flex flex-wrap gap-2'>
               {PROJECT_FIELDS.map((field) => (
-                <button
+                <ToggleButton
                   key={field}
-                  type='button'
-                  aria-pressed={selectedField === field}
-                  onClick={() => { setSelectedField(field); if (field !== 'Other') setCustomField(''); }}
+                  isSelected={selectedField === field}
+                  onChange={() => { setSelectedField(field); if (field !== 'Other') setCustomField(''); }}
                   className={clsx(
                     'min-h-9 rounded-sm border px-3 text-xs font-medium transition-colors',
                     selectedField === field ? 'border-accent bg-default text-foreground' : 'border-border bg-surface text-muted hover:bg-default hover:text-foreground',
                   )}
                 >
                   {field}
-                </button>
+                </ToggleButton>
               ))}
             </div>
             {selectedField === 'Other' && (
@@ -257,7 +257,7 @@ export default function ProjectForm({
                 {tools.map((tool) => (
                   <span key={tool} className='inline-flex items-center gap-1.5 rounded-sm bg-default px-2 py-1 text-xs font-medium'>
                     {tool}
-                    <button type='button' onClick={() => setTools((current) => current.filter((item) => item !== tool))} aria-label={`Remove ${tool}`}><X size={12} /></button>
+                    <Button isIconOnly size='sm' variant='ghost' onPress={() => setTools((current) => current.filter((item) => item !== tool))} aria-label={`Remove ${tool}`}><X size={12} /></Button>
                   </span>
                 ))}
               </div>

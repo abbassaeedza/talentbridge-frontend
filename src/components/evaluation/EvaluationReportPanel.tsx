@@ -1,117 +1,78 @@
 import { useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import clsx from 'clsx';
+import { Button } from '@heroui/react/button';
 import type { EvaluationReport } from '../../types';
 
 const dimensions = [
   { key: 'aiDetection', label: 'AI authenticity', weight: 20 },
-  { key: 'codeQuality', label: 'Code Quality', weight: 25 },
+  { key: 'codeQuality', label: 'Code quality', weight: 25 },
   { key: 'functionality', label: 'Functionality', weight: 25 },
-  { key: 'scopeAlignment', label: 'Scope Alignment', weight: 20 },
-  { key: 'teamCollaboration', label: 'Team Collaboration', weight: 10 },
+  { key: 'scopeAlignment', label: 'Scope alignment', weight: 20 },
+  { key: 'teamCollaboration', label: 'Team collaboration', weight: 10 },
 ] as const;
 
-function ScoreDimension({
-  label,
-  weight,
-  score,
-  notes,
-}: {
-  label: string;
-  weight: number;
-  score: number;
-  notes: string;
-}) {
+function ScoreDimension({ label, weight, score, notes }: { label: string; weight: number; score: number; notes: string }) {
   const [open, setOpen] = useState(false);
-  const color = score >= 80 ? 'bg-jade-500' : score >= 60 ? 'bg-ember-500' : 'bg-red-500';
+  const color = score >= 80 ? 'bg-success' : score >= 60 ? 'bg-warning' : 'bg-danger';
   return (
     <div>
-      <div className='mb-1 flex items-center justify-between gap-3'>
-        <button
-          type='button'
-          onClick={() => setOpen((value) => !value)}
-          className='flex items-center gap-1 text-xs text-ink-300 hover:text-ink-100'
-        >
+      <div className='mb-1.5 flex items-center justify-between gap-3'>
+        <Button size='sm' variant='ghost' className='h-auto min-h-8 px-1 text-xs' aria-expanded={open} onPress={() => setOpen((value) => !value)}>
           {label}
-          <span className='rounded-md bg-ink-800 px-1.5 py-0.5 text-[10px] text-ink-400'>
-            {weight}%
-          </span>
-          {open ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-        </button>
-        <span className='text-xs font-bold text-white'>{score.toFixed(0)}</span>
+          <span className='rounded-sm bg-default px-1.5 py-0.5 text-[10px] text-muted'>{weight}%</span>
+          {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        </Button>
+        <span className='text-sm font-semibold'>{score.toFixed(0)}</span>
       </div>
-      <div className='score-bar-track mb-1'>
-        <div className={clsx('score-bar-fill', color)} style={{ width: `${score}%` }} />
+      <div className='h-1.5 overflow-hidden rounded-full bg-surface-tertiary' aria-label={`${label}: ${score.toFixed(0)} out of 100`}>
+        <div className={clsx('h-full rounded-full', color)} style={{ width: `${Math.max(0, Math.min(100, score))}%` }} />
       </div>
-      {open && <p className='mt-1 text-[11px] leading-relaxed text-ink-400'>{notes}</p>}
+      {open && <p className='mt-2 text-xs leading-5 text-muted'>{notes}</p>}
     </div>
   );
 }
 
-export default function EvaluationReportPanel({
-  report,
-  children,
-  className,
-}: {
-  report: EvaluationReport;
-  children?: ReactNode;
-  className?: string;
-}) {
+export default function EvaluationReportPanel({ report, children, className }: { report: EvaluationReport; children?: ReactNode; className?: string }) {
   return (
-    <div className={clsx('evaluation-report-panel bg-ink-950/50 p-5', className)}>
-      <div className='mb-4 flex items-start justify-between gap-4'>
+    <section className={clsx('evaluation-report-panel rounded-lg border border-border bg-surface p-5', className)} aria-label='AI evaluation report'>
+      <div className='mb-5 flex flex-col gap-3 border-b border-separator pb-5 sm:flex-row sm:items-start sm:justify-between'>
         <div>
-          <p className='text-sm font-semibold text-white'>AI Evaluation Report</p>
-          <p className='mt-0.5 text-xs text-ink-400'>{report.overallSummary}</p>
+          <h3 className='text-base font-semibold'>AI Evaluation Report</h3>
+          <p className='mt-1 max-w-3xl text-sm leading-6 text-muted'>{report.overallSummary}</p>
         </div>
-        <div className='flex-shrink-0 text-right'>
-          <p className='font-display text-2xl font-bold text-white'>{report.totalScore.toFixed(0)}</p>
-          <p className='text-xs text-ink-400'>Team project score /100</p>
+        <div className='shrink-0 sm:text-right'>
+          <p className='font-mono text-3xl font-semibold'>{report.totalScore.toFixed(0)}</p>
+          <p className='text-xs text-muted'>Team project score /100</p>
         </div>
       </div>
-
-      <div className='mb-4 space-y-3'>
+      <div className='space-y-4'>
         {dimensions.map(({ key, label, weight }) => (
-          <ScoreDimension
-            key={key}
-            label={label}
-            weight={weight}
-            score={report[`${key}Score`]}
-            notes={report[`${key}Notes`]}
-          />
+          <ScoreDimension key={key} label={label} weight={weight} score={report[`${key}Score`]} notes={report[`${key}Notes`]} />
         ))}
       </div>
-
       {report.studentScores?.length > 0 && (
-        <div>
-          <p className='mb-2 text-xs font-semibold uppercase tracking-wider text-ink-400'>Individual Scores</p>
-          <div className='space-y-1.5'>
+        <div className='mt-6 border-t border-separator pt-5'>
+          <h4 className='mb-3 text-xs font-semibold uppercase tracking-wider text-muted'>Individual scores</h4>
+          <div className='divide-y divide-separator rounded-md border border-border'>
             {report.studentScores.map((score) => (
-              <div key={score.id} className='flex items-center gap-3 rounded-lg bg-ink-800/50 p-2 text-xs'>
-                <span className='flex-1 font-medium text-ink-200'>
+              <div key={score.id} className='grid gap-1 px-3 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center sm:gap-5'>
+                <span className='min-w-0 font-medium'>
                   {score.student.firstName} {score.student.lastName}
                   {score.student.githubUsername && (
-                    <a
-                      href={`https://github.com/${encodeURIComponent(score.student.githubUsername)}`}
-                      target='_blank'
-                      rel='noreferrer'
-                      className='ml-1.5 font-normal text-ink-400 hover:text-ember-400'
-                    >
+                    <a href={`https://github.com/${encodeURIComponent(score.student.githubUsername)}`} target='_blank' rel='noreferrer' className='ml-2 font-normal text-accent hover:underline'>
                       @{score.student.githubUsername}
                     </a>
                   )}
                 </span>
-                <span className='text-ink-400'>
-                  {score.totalCommits} commits ({score.contributionPercentage}%)
-                </span>
-                <span className='font-bold text-white'>{score.individualScore.toFixed(0)}</span>
+                <span className='text-xs text-muted'>{score.totalCommits} commits ({score.contributionPercentage}%)</span>
+                <span className='font-mono font-semibold'>{score.individualScore.toFixed(0)}</span>
               </div>
             ))}
           </div>
         </div>
       )}
-
       {children}
-    </div>
+    </section>
   );
 }

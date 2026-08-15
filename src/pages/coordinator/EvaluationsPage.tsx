@@ -5,6 +5,10 @@ import { Award, Play, CheckSquare, BarChart3, Check, LoaderCircle } from 'lucide
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import EvaluationReportPanel from '../../components/evaluation/EvaluationReportPanel'
+import { Button } from '@heroui/react/button'
+import { ProgressBar } from '@heroui/react/progress-bar'
+import { Skeleton } from '@heroui/react/skeleton'
+import { EmptyState, PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI'
 
 const evaluationSteps = [
   { label: 'AI Detection', weight: 20 },
@@ -16,10 +20,10 @@ const evaluationSteps = [
 
 function EvaluationProgress({ currentStep }: { currentStep: number }) {
   return (
-    <div role='status' aria-label='Evaluation progress' className='border-t border-ink-800/50 bg-ink-950/40 px-5 py-4'>
+    <div role='status' aria-label='Evaluation progress' className='border-t border-border bg-background/40 px-5 py-4'>
       <div className='mb-3 flex items-center justify-between'>
-        <p className='text-xs font-semibold uppercase tracking-wider text-ink-300'>Evaluation progress</p>
-        <p className='text-[10px] text-ink-500'>Weights total 100%</p>
+        <p className='text-xs font-semibold uppercase tracking-wider text-foreground'>Evaluation progress</p>
+        <p className='text-[10px] text-muted'>Weights total 100%</p>
       </div>
       <div className='grid gap-2 sm:grid-cols-5'>
         {evaluationSteps.map((step, index) => {
@@ -31,27 +35,32 @@ function EvaluationProgress({ currentStep }: { currentStep: number }) {
               key={step.label}
               aria-label={`${step.label} ${state}`}
               className={clsx(
-                'rounded-xl border p-3 transition-colors',
-                complete && 'border-jade-500/30 bg-jade-500/10',
-                active && 'border-ember-500/40 bg-ember-500/10',
-                !complete && !active && 'border-ink-800 bg-ink-900/60',
+                'rounded-lg border p-3 transition-colors',
+                complete && 'border-success bg-success',
+                active && 'border-accent bg-accent',
+                !complete && !active && 'border-border bg-surface/60',
               )}
             >
               <div className='mb-2 flex items-center justify-between'>
                 {complete ? (
-                  <Check size={15} className='text-jade-400' />
+                  <Check size={15} className='text-success' />
                 ) : active ? (
-                  <LoaderCircle size={15} className='animate-spin text-ember-400' />
+                  <LoaderCircle size={15} className='animate-spin text-accent' />
                 ) : (
-                  <span className='h-3.5 w-3.5 rounded-full border border-ink-600' />
+                  <span className='h-3.5 w-3.5 rounded-full border border-border' />
                 )}
-                <span className='text-[10px] font-semibold text-ink-400'>{step.weight}%</span>
+                <span className='text-[10px] font-semibold text-muted'>{step.weight}%</span>
               </div>
-              <p className='text-[11px] font-medium text-ink-200'>{step.label}</p>
+              <p className='text-[11px] font-medium text-foreground'>{step.label}</p>
             </div>
           )
         })}
       </div>
+      <ProgressBar aria-label='Evaluation completion' value={Math.min(currentStep, evaluationSteps.length)} maxValue={evaluationSteps.length} className='mt-3'>
+        <ProgressBar.Track>
+          <ProgressBar.Fill />
+        </ProgressBar.Track>
+      </ProgressBar>
     </div>
   )
 }
@@ -124,70 +133,56 @@ export default function EvaluationsPage() {
       retry: false,
     })
 
-    if (isLoading) return <p className="text-xs text-ink-400 p-4">Loading report…</p>
-    if (isError) return <p className="p-4 text-xs text-red-400">Could not load the evaluation report.</p>
-    if (!report) return <p className="text-xs text-ink-400 p-4">No evaluation report yet.</p>
+    if (isLoading) return <p className="text-xs text-muted p-4">Loading report…</p>
+    if (isError) return <p className="p-4 text-xs text-danger">Could not load the evaluation report.</p>
+    if (!report) return <p className="text-xs text-muted p-4">No evaluation report yet.</p>
 
     return (
-      <EvaluationReportPanel report={report} className='border-t border-ink-800/50'>
+      <EvaluationReportPanel report={report} className='border-t border-border'>
         {!report.finalized && (
           <div className='mt-4 flex flex-wrap gap-2'>
-            <button
-              onClick={() => evaluationMutation.mutate({ submissionId, reportId: report.id })}
-              disabled={evaluationMutation.isPending || finalizeMutation.isPending}
-              title='Refresh GitHub contribution scores without changing the AI analysis'
-              className='btn-secondary text-xs'
+            <Button size='sm' variant='secondary'
+              onPress={() => evaluationMutation.mutate({ submissionId, reportId: report.id })}
+              isDisabled={evaluationMutation.isPending || finalizeMutation.isPending}
             >
               <Play size={13} />
               {evaluationMutation.isPending ? 'Reevaluating…' : 'Reevaluate'}
-            </button>
-            <button onClick={() => finalizeMutation.mutate(report.id)}
-              disabled={finalizeMutation.isPending || evaluationMutation.isPending}
-              className="btn-primary text-xs">
+            </Button>
+            <Button size='sm' variant='primary' onPress={() => finalizeMutation.mutate(report.id)}
+              isDisabled={finalizeMutation.isPending || evaluationMutation.isPending}>
               <CheckSquare size={13} />
               {finalizeMutation.isPending ? 'Finalizing…' : 'Finalize Report'}
-            </button>
+            </Button>
           </div>
         )}
         {report.finalized && (
-          <span className="badge badge-open text-[10px] mt-3">Report Finalized</span>
+          <StatusBadge status='EVALUATED' label='Report finalized' className='mt-3' />
         )}
       </EvaluationReportPanel>
     )
   }
 
   return (
-    <div className="animate-fade-up">
-      <div className="page-header">
-        <h1 className="page-title">Evaluations</h1>
-        <p className="page-subtitle">Trigger AI evaluation for submitted projects.</p>
-      </div>
+    <div className="">
+      <PageHeader title='Evaluations' description='Review submissions, run evaluation, and finalize reports.' />
 
       <div className="space-y-3">
         {submissionsQuery.isLoading ? (
-          Array.from({ length: 3 }).map((_, i) => <div key={i} className="card h-16 animate-pulse" />)
+          Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className='h-20 rounded-lg' />)
         ) : submissions.length === 0 ? (
-          <div className="card p-16 text-center">
-            <Award size={32} className="text-ink-600 mx-auto mb-3" />
-            <p className="text-ink-400 text-sm">No submissions to evaluate yet.</p>
-          </div>
+          <EmptyState icon={Award} title='No submissions to evaluate' />
         ) : (
           submissions.map((sub: any) => (
-            <div key={sub.id} className="card overflow-hidden">
+            <div key={sub.id} className="rounded-lg border border-border bg-surface overflow-hidden">
               <div className="px-5 py-4 flex items-center gap-4">
                 <div className="flex-1">
-                  <p className="font-semibold text-white text-sm">{sub.partyName}</p>
-                  <p className="text-xs text-ink-400">{sub.assignedProjectTitle}</p>
+                  <p className="font-semibold text-foreground text-sm">{sub.partyName}</p>
+                  <p className="text-xs text-muted">{sub.assignedProjectTitle}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className={clsx('badge text-[10px]',
-                      sub.status === 'DRAFT' && 'badge-pending',
-                      sub.status === 'SUBMITTED' && 'badge-active',
-                      sub.status === 'UNDER_EVALUATION' && 'badge-ember',
-                      sub.status === 'EVALUATED' && 'badge-open',
-                    )}>{sub.status?.replace('_', ' ')}</span>
+                    <StatusBadge status={sub.status} />
                     {sub.repoUrl && (
                       <a href={sub.repoUrl} target="_blank" rel="noreferrer"
-                        className="text-[10px] text-ink-400 hover:text-ember-400 underline">
+                        className="text-[10px] text-muted hover:text-accent underline">
                         {sub.repoUrl.replace('https://github.com/', '')}
                       </a>
                     )}
@@ -196,19 +191,17 @@ export default function EvaluationsPage() {
 
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {sub.status === 'SUBMITTED' && (
-                    <button onClick={() => evaluationMutation.mutate({ submissionId: sub.id })}
-                      disabled={evaluationMutation.isPending}
-                      className="btn-primary text-xs px-3 py-2">
+                    <Button size='sm' variant='primary' onPress={() => evaluationMutation.mutate({ submissionId: sub.id })}
+                      isDisabled={evaluationMutation.isPending}>
                       <Play size={13} />
                       {evaluationMutation.isPending && evaluationProgress?.submissionId === sub.id ? 'Running…' : 'Evaluate'}
-                    </button>
+                    </Button>
                   )}
                   {(sub.status === 'EVALUATED' || sub.status === 'UNDER_EVALUATION') && (
-                    <button onClick={() => setExpandedSubmission(expandedSubmission === sub.id ? null : sub.id)}
-                      className="btn-secondary text-xs px-3 py-2 gap-1.5">
+                    <Button size='sm' variant='secondary' onPress={() => setExpandedSubmission(expandedSubmission === sub.id ? null : sub.id)}>
                       <BarChart3 size={13} />
                       {expandedSubmission === sub.id ? 'Hide' : 'View Report'}
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>

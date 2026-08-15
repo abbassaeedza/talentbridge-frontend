@@ -126,7 +126,7 @@ export default function ChatBot() {
       )}
 
       {open && (
-        <Surface data-testid='chat-panel' className='fixed inset-0 z-30 flex h-dvh flex-col overflow-hidden border border-border shadow-2xl sm:inset-auto sm:bottom-6 sm:right-6 sm:h-[min(600px,calc(100dvh-3rem))] sm:w-[400px] sm:rounded-lg'>
+        <Surface data-testid='chat-panel' className='fixed inset-0 z-[80] flex h-dvh flex-col overflow-hidden border border-border shadow-2xl sm:inset-auto sm:bottom-6 sm:right-6 sm:h-[min(600px,calc(100dvh-3rem))] sm:w-[400px] sm:rounded-lg'>
           <div className='flex shrink-0 items-center gap-3 border-b border-border px-4 py-3'>
             <div className='flex size-8 items-center justify-center rounded-md bg-default text-foreground'>
               <Bot size={16} />

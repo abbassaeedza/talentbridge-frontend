@@ -7,6 +7,14 @@ import { Search, Users, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
 import clsx from 'clsx';
+import { Button } from '@heroui/react/button';
+import { Input } from '@heroui/react/input';
+import { Label } from '@heroui/react/label';
+import { ListBox } from '@heroui/react/list-box';
+import { Select } from '@heroui/react/select';
+import { Skeleton } from '@heroui/react/skeleton';
+import { ToggleButton } from '@heroui/react/toggle-button';
+import { EmptyState, PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
 
 const SORT_OPTIONS = [
   { value: 'createdAt', label: 'Newest' },
@@ -60,82 +68,61 @@ export default function ProjectsListPage() {
   const activeFilters = selectedFields.length + selectedTools.length;
 
   return (
-    <div className='animate-fade-up'>
-      <div className='page-header'>
-        <h1 className='page-title'>Browse Projects</h1>
-        <p className='page-subtitle'>{data?.totalElements ?? '…'} open projects available</p>
-      </div>
+    <div className=''>
+      <PageHeader title='Projects' description={`${data?.totalElements ?? 0} open projects available`} />
 
       {/* Search + sort + filter toggle */}
       <div className='flex gap-3 mb-4 flex-wrap'>
         <form onSubmit={handleSearch} className='flex-1 min-w-48 relative'>
-          <Search size={16} className='absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400' />
-          <input className='input pl-10' value={search} onChange={(e) => setSearch(e.target.value)}
+          <Search size={16} className='absolute left-3.5 top-1/2 -translate-y-1/2 text-muted' />
+          <Input fullWidth aria-label='Search projects' className='pl-10' value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder='Search by title, description, tools…' />
         </form>
 
-        <select className='input w-auto' value={sortBy} onChange={(e) => { setSortBy(e.target.value); setPage(0); }}>
-          {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
+        <Select.Root aria-label='Sort projects' selectedKey={sortBy} onSelectionChange={(key) => { setSortBy(String(key)); setPage(0); }}><Label>Sort</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{SORT_OPTIONS.map((option) => <ListBox.Item key={option.value} id={option.value}>{option.label}</ListBox.Item>)}</ListBox></Select.Popover></Select.Root>
 
-        <button onClick={() => setFilterOpen((v) => !v)}
-          className={clsx('flex items-center gap-2 px-4 h-10 rounded-xl border text-sm font-medium transition-colors',
-            filterOpen || activeFilters > 0
-              ? 'bg-ember-500/15 border-ember-500/40 text-ember-300'
-              : 'bg-ink-800 border-ink-700/50 text-ink-300 hover:text-white',
-          )}>
+        <Button variant={filterOpen || activeFilters > 0 ? 'primary' : 'secondary'} onPress={() => setFilterOpen((v) => !v)}>
           Filters
           {activeFilters > 0 && (
-            <span className='w-5 h-5 rounded-full bg-ember-500 text-white text-[10px] font-bold flex items-center justify-center'>
+            <span className='w-5 h-5 rounded-full bg-accent text-foreground text-[10px] font-bold flex items-center justify-center'>
               {activeFilters}
             </span>
           )}
           {filterOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-        </button>
+        </Button>
       </div>
 
       {/* Filter panel */}
       {filterOpen && (
-        <div className='card p-4 mb-5 space-y-4'>
+        <div className='rounded-lg border border-border bg-surface p-4 mb-5 space-y-4'>
           <div>
-            <p className='text-xs font-semibold text-ink-400 uppercase tracking-wider mb-2'>Project Field</p>
+            <p className='text-xs font-semibold text-muted uppercase tracking-wider mb-2'>Project Field</p>
             <div className='flex flex-wrap gap-2'>
               {PROJECT_FIELDS.map((f) => (
-                <button key={f} type='button' onClick={() => toggleField(f)}
-                  className={clsx('px-3 py-1 rounded-xl text-xs font-medium border transition-colors',
-                    selectedFields.includes(f)
-                      ? 'bg-ember-500/20 border-ember-500/40 text-ember-300'
-                      : 'bg-ink-800 border-ink-700/50 text-ink-400 hover:text-ink-200',
-                  )}>
+                <ToggleButton key={f} size='sm' isSelected={selectedFields.includes(f)} onChange={() => toggleField(f)}>
                   {f}
-                </button>
+                </ToggleButton>
               ))}
             </div>
           </div>
 
           {allTools.length > 0 && (
             <div>
-              <p className='text-xs font-semibold text-ink-400 uppercase tracking-wider mb-2'>Tools / Technologies</p>
+              <p className='text-xs font-semibold text-muted uppercase tracking-wider mb-2'>Tools / Technologies</p>
               <div className='flex flex-wrap gap-2'>
                 {allTools.slice(0, 16).map((t) => (
-                  <button key={t} type='button' onClick={() => toggleTool(t)}
-                    className={clsx('px-3 py-1 rounded-xl text-xs font-medium border transition-colors font-mono',
-                      selectedTools.includes(t)
-                        ? 'bg-jade-500/15 border-jade-500/30 text-jade-300'
-                        : 'bg-ink-800 border-ink-700/50 text-ink-400 hover:text-ink-200',
-                    )}>
+                  <ToggleButton key={t} size='sm' className='font-mono' isSelected={selectedTools.includes(t)} onChange={() => toggleTool(t)}>
                     {t}
-                  </button>
+                  </ToggleButton>
                 ))}
               </div>
             </div>
           )}
 
           {activeFilters > 0 && (
-            <button onClick={() => { setSelectedFields([]); setSelectedTools([]); }}
-              className='flex items-center gap-1.5 text-xs text-ink-500 hover:text-ink-300 transition-colors'>
+            <Button size='sm' variant='ghost' onPress={() => { setSelectedFields([]); setSelectedTools([]); }}>
               <X size={12} /> Clear all filters
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -143,17 +130,13 @@ export default function ProjectsListPage() {
       {isLoading ? (
         <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-4'>
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className='card p-4 animate-pulse'>
-              <div className='h-4 bg-ink-700 rounded mb-3 w-3/4' />
-              <div className='h-3 bg-ink-800 rounded mb-2' />
-              <div className='h-3 bg-ink-800 rounded w-2/3' />
-            </div>
+            <Skeleton key={i} className='h-64 rounded-lg' />
           ))}
         </div>
       ) : (
         <>
           {activeFilters > 0 && (
-            <p className='text-xs text-ink-500 mb-3'>
+            <p className='text-xs text-muted mb-3'>
               {displayed.length} result{displayed.length !== 1 ? 's' : ''} after filters
             </p>
           )}
@@ -161,44 +144,44 @@ export default function ProjectsListPage() {
           <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-4'>
             {displayed.map((p) => (
               <Link key={p.id} to={`/student/projects/${p.id}`}
-                className='card p-5 hover:border-ember-500/30 hover:bg-ink-800/20 transition-all duration-200 group flex flex-col'>
+                className='rounded-lg border border-border bg-surface p-5 hover:border-accent hover:bg-surface-secondary transition-all duration-200 group flex flex-col'>
                 <div className='flex items-start justify-between gap-2 mb-3'>
-                  <div className='w-9 h-9 rounded-xl bg-ink-700 border border-ink-600/50 flex items-center justify-center font-display font-bold text-ink-200 flex-shrink-0'>
+                  <div className='w-9 h-9 rounded-lg bg-default border border-border flex items-center justify-center  font-bold text-foreground flex-shrink-0'>
                     {p.companyName[0]}
                   </div>
                   <div className='flex flex-wrap gap-1'>
-                    <span className='badge badge-open text-[10px]'>OPEN</span>
+                    <StatusBadge status='OPEN' />
                     {p.projectField && (
-                      <span className='badge bg-ink-700/50 text-ink-400 border-ink-600/30 text-[10px]'>
+                      <span className='inline-flex items-center rounded-sm bg-default px-2 py-1 text-[10px] text-muted'>
                         {p.projectField}
                       </span>
                     )}
                     {!p.projectField && p.companyIndustry && (
-                      <span className='badge bg-ink-700/50 text-ink-400 border-ink-600/30 text-[10px]'>
+                      <span className='inline-flex items-center rounded-sm bg-default px-2 py-1 text-[10px] text-muted'>
                         {p.companyIndustry}
                       </span>
                     )}
                   </div>
                 </div>
 
-                <h3 className='font-semibold text-white text-sm mb-2 group-hover:text-ember-300 transition-colors line-clamp-2'>
+                <h3 className='font-semibold text-foreground text-sm mb-2 group-hover:text-accent transition-colors line-clamp-2'>
                   {p.title}
                 </h3>
-                <p className='text-xs text-ink-400 mb-3 line-clamp-3 flex-1'>{p.description}</p>
+                <p className='text-xs text-muted mb-3 line-clamp-3 flex-1'>{p.description}</p>
 
                 {p.tools.length > 0 && (
                   <div className='flex flex-wrap gap-1 mb-3'>
                     {p.tools.slice(0, 4).map((t) => (
-                      <span key={t} className='px-2 py-0.5 rounded-md bg-ink-700/60 text-ink-400 text-[10px] font-mono'>{t}</span>
+                      <span key={t} className='px-2 py-0.5 rounded-md bg-default text-muted text-[10px] font-mono'>{t}</span>
                     ))}
-                    {p.tools.length > 4 && <span className='text-[10px] text-ink-500'>+{p.tools.length - 4}</span>}
+                    {p.tools.length > 4 && <span className='text-[10px] text-muted'>+{p.tools.length - 4}</span>}
                   </div>
                 )}
 
-                <div className='border-t border-ink-800/50 pt-3 mt-auto space-y-2'>
-                  <div className='flex items-center justify-between text-xs text-ink-400'>
+                <div className='border-t border-border pt-3 mt-auto space-y-2'>
+                  <div className='flex items-center justify-between text-xs text-muted'>
                     <span className='font-medium'>{p.companyName}</span>
-                    <span className='flex items-center gap-1 text-ink-500'>
+                    <span className='flex items-center gap-1 text-muted'>
                       <Users size={10} />
                       {p.partyApplicationCount} party application{p.partyApplicationCount !== 1 ? 's' : ''}
                     </span>
@@ -206,7 +189,7 @@ export default function ProjectsListPage() {
                   <div className='flex items-center justify-between gap-2'>
                     <DeadlineCountdown deadline={p.deadline ?? null} compact />
                     {p.deadline && (
-                      <span className='text-[10px] text-ink-500'>
+                      <span className='text-[10px] text-muted'>
                         {format(new Date(p.deadline), 'dd MMM yyyy')}
                       </span>
                     )}
@@ -219,18 +202,14 @@ export default function ProjectsListPage() {
           {/* Pagination */}
           {data && data.totalPages > 1 && (
             <div className='flex justify-center gap-2 mt-8'>
-              <button onClick={() => setPage((p) => p - 1)} disabled={data.first}
-                className='btn-secondary px-4 py-2 text-xs'>Previous</button>
-              <span className='px-4 py-2 text-xs text-ink-400'>Page {page + 1} of {data.totalPages}</span>
-              <button onClick={() => setPage((p) => p + 1)} disabled={data.last}
-                className='btn-secondary px-4 py-2 text-xs'>Next</button>
+              <Button size='sm' variant='secondary' onPress={() => setPage((p) => p - 1)} isDisabled={data.first}>Previous</Button>
+              <span className='px-4 py-2 text-xs text-muted'>Page {page + 1} of {data.totalPages}</span>
+              <Button size='sm' variant='secondary' onPress={() => setPage((p) => p + 1)} isDisabled={data.last}>Next</Button>
             </div>
           )}
 
           {displayed.length === 0 && !isLoading && (
-            <div className='text-center py-20'>
-              <p className='text-ink-400 text-sm'>No projects found. Try adjusting your search or filters.</p>
-            </div>
+            <EmptyState icon={Search} title='No projects found' description='Try adjusting your search or filters.' />
           )}
         </>
       )}

@@ -7,6 +7,7 @@ import { Input } from '@heroui/react/input';
 import { Label } from '@heroui/react/label';
 import { Spinner } from '@heroui/react/spinner';
 import { TextField } from '@heroui/react/textfield';
+import { ToggleButton } from '@heroui/react/toggle-button';
 import clsx from 'clsx';
 import { authApi } from '../../api/services';
 import { PublicShell } from '../../components/ui/TalentBridgeUI';
@@ -103,11 +104,10 @@ export default function RegisterPage() {
         <p className='mb-2 text-sm font-medium'>Account type</p>
         <div className='grid gap-2 sm:grid-cols-3' role='group' aria-label='Account type'>
           {ROLES.map((item) => (
-            <button
+            <ToggleButton
               key={item.value}
-              type='button'
-              aria-pressed={role === item.value}
-              onClick={() => setRole(item.value)}
+              isSelected={role === item.value}
+              onChange={() => setRole(item.value)}
               className={clsx(
                 'min-h-20 rounded-md border p-3 text-left transition-colors',
                 role === item.value
@@ -118,7 +118,7 @@ export default function RegisterPage() {
               <item.icon size={18} aria-hidden='true' />
               <span className='mt-2 block text-sm font-medium'>{item.label}</span>
               <span className='mt-0.5 block text-xs text-muted'>{item.description}</span>
-            </button>
+            </ToggleButton>
           ))}
         </div>
       </div>
@@ -143,7 +143,7 @@ export default function RegisterPage() {
           </fieldset>
         )}
 
-        <div className='sticky bottom-0 bg-background py-2'>
+        <div className='py-2'>
           <Button type='submit' fullWidth size='lg' variant='primary' isDisabled={loading}>
             {loading ? <Spinner size='sm' /> : <><span>Create account</span><ArrowRight size={17} /></>}
           </Button>

@@ -7,6 +7,15 @@ import clsx from 'clsx';
 import useUserStatusMutation from '../../hooks/useUserStatusMutation';
 import toast from 'react-hot-toast';
 import BulkActionToolbar from '../../components/coordinator/BulkActionToolbar';
+import { Button } from '@heroui/react/button';
+import { Checkbox } from '@heroui/react/checkbox';
+import { Input } from '@heroui/react/input';
+import { Label } from '@heroui/react/label';
+import { ListBox } from '@heroui/react/list-box';
+import { Select } from '@heroui/react/select';
+import { Spinner } from '@heroui/react/spinner';
+import { Tabs } from '@heroui/react/tabs';
+import { PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
 
 export default function CompaniesDirectoryPage() {
   const [query, setQuery] = useState('');
@@ -89,66 +98,48 @@ export default function CompaniesDirectoryPage() {
   }, [filtered]);
 
   return (
-    <div className='animate-fade-up'>
-      <div className='page-header'>
-        <h1 className='page-title'>Companies Directory</h1>
-        <p className='page-subtitle'>{companyGroups.length} compan{companyGroups.length === 1 ? 'y' : 'ies'} · {filtered.length} profile{filtered.length === 1 ? '' : 's'}</p>
-      </div>
+    <div className=''>
+      <PageHeader title='Companies' description={`${companyGroups.length} compan${companyGroups.length === 1 ? 'y' : 'ies'} · ${filtered.length} profile${filtered.length === 1 ? '' : 's'}`} />
 
-      <div className='mb-4 flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl bg-ink-900 p-1' role='tablist' aria-label='Company approval status'>
-        {([
+      <Tabs.Root variant='secondary' selectedKey={status} onSelectionChange={(key) => { setStatus(String(key)); setSelected([]); }} className='mb-4'><Tabs.ListContainer><Tabs.List aria-label='Company approval status'>{([
           ['ALL', 'All Companies'],
           ['PENDING', 'Pending Requests'],
           ['APPROVED', 'Approved'],
           ['SUSPENDED', 'Suspended'],
           ['REJECTED', 'Rejected'],
         ] as const).map(([value, label]) => (
-          <button
-            key={value}
-            role='tab'
-            aria-selected={status === value}
-            onClick={() => { setStatus(value); setSelected([]); }}
-            className={clsx('whitespace-nowrap rounded-lg px-4 py-2 text-xs font-semibold transition',
-              status === value ? 'bg-ink-700 text-white' : 'text-ink-400 hover:text-white')}
-          >
-            {label}
-          </button>
+          <Tabs.Tab key={value} id={value}>{label}</Tabs.Tab>
         ))}
-      </div>
+      </Tabs.List></Tabs.ListContainer></Tabs.Root>
 
-      <div className='card p-4 mb-5 grid md:grid-cols-[1fr_auto] gap-3'>
+      <div className='rounded-lg border border-border bg-surface p-4 mb-5 grid md:grid-cols-[1fr_auto] gap-3'>
         <div className='relative'>
-          <Search size={15} className='absolute left-3 top-1/2 -translate-y-1/2 text-ink-500' />
-          <input className='input pl-9' placeholder='Search company, industry, location…' value={query} onChange={(e) => setQuery(e.target.value)} />
+          <Search size={15} className='absolute left-3 top-1/2 -translate-y-1/2 text-muted' />
+          <Input fullWidth className='pl-9' aria-label='Search companies' placeholder='Search company, industry, or location' value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
-        <select className='input text-sm' value={industry} onChange={(e) => setIndustry(e.target.value)}>
-          {industries.map((i) => <option key={i} value={i}>{i === 'ALL' ? 'All industries' : i}</option>)}
-        </select>
-        <label className='md:col-span-2 flex w-fit items-center gap-2 text-xs text-ink-300'>
-          <input type='checkbox' aria-label='Select all filtered companies' checked={allFilteredSelected} onChange={() => setSelected(allFilteredSelected ? [] : filtered.map((company) => company.id))} className='h-4 w-4 accent-orange-500' />
-          Select all {filtered.length} filtered companies
-        </label>
+        <Select.Root aria-label='Industry' selectedKey={industry} onSelectionChange={(key) => setIndustry(String(key))}><Label>Industry</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{industries.map((item) => <ListBox.Item key={item} id={item}>{item === 'ALL' ? 'All industries' : item}</ListBox.Item>)}</ListBox></Select.Popover></Select.Root>
+        <div className='md:col-span-2 flex w-fit items-center gap-2 text-xs'><SelectCheckbox selected={allFilteredSelected} onChange={() => setSelected(allFilteredSelected ? [] : filtered.map((company) => company.id))} label='Select all filtered companies' /> Select all {filtered.length} filtered companies</div>
       </div>
 
       <BulkActionToolbar noun='company' selectedCount={selected.length} eligible={eligible} rejectionReason={rejectReason} onRejectionReasonChange={setRejectReason} loadingAction={bulkAction} onAction={runBulk} />
 
       <div className='space-y-3'>
         {isLoading ? (
-          Array.from({ length: 4 }).map((_, i) => <div key={i} className='card h-20 animate-pulse' />)
+          <div className='flex min-h-48 items-center justify-center'><Spinner /></div>
         ) : filtered.length === 0 ? (
-          <div className='card p-12 text-center text-sm text-ink-400'>No companies found.</div>
+          <div className='rounded-lg border border-border bg-surface p-12 text-center text-sm text-muted'>No companies found.</div>
         ) : companyGroups.map((group) => (
-          <section key={group.name} className='card overflow-hidden'>
-            <div className='flex items-center gap-3 border-b border-ink-800/50 bg-ink-800/30 px-5 py-3'>
-              <div className='flex h-9 w-9 items-center justify-center rounded-xl bg-ember-500/15 text-ember-400'>
+          <section key={group.name} className='rounded-lg border border-border bg-surface overflow-hidden'>
+            <div className='flex items-center gap-3 border-b border-border bg-surface-secondary px-5 py-3'>
+              <div className='flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-accent'>
                 <Building2 size={17} />
               </div>
               <div>
-                <h2 className='font-display font-semibold text-white'>{group.name}</h2>
-                <p className='text-[11px] text-ink-500'>{group.accounts.length} company profile{group.accounts.length === 1 ? '' : 's'}</p>
+                <h2 className=' font-semibold text-foreground'>{group.name}</h2>
+                <p className='text-[11px] text-muted'>{group.accounts.length} company profile{group.accounts.length === 1 ? '' : 's'}</p>
               </div>
             </div>
-            <div className='divide-y divide-ink-800/50'>
+            <div className='divide-y divide-separator'>
               {group.accounts.map((company, index) => {
                 const profile = company.companyProfile;
                 const relatedProjects = (projects ?? []).filter((p) => p.companyId === profile?.id);
@@ -156,58 +147,48 @@ export default function CompaniesDirectoryPage() {
                 return (
                   <div key={company.id}>
               <div className='flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-start'>
-                <input
-                  type='checkbox'
-                  aria-label={`Select ${getUserName(company)}`}
-                  checked={selected.includes(company.id)}
-                  onChange={() => setSelected((current) => current.includes(company.id)
+                <SelectCheckbox label={`Select ${getUserName(company)}`} selected={selected.includes(company.id)} onChange={() => setSelected((current) => current.includes(company.id)
                     ? current.filter((id) => id !== company.id)
-                    : [...current, company.id])}
-                  className='mt-3 h-4 w-4 flex-shrink-0 accent-orange-500'
-                />
+                    : [...current, company.id])} />
                 <div className='flex-1'>
                   <div className='flex flex-wrap items-center gap-2'>
-                    <h3 className='font-semibold text-white'>{getUserName(company)}</h3>
-                    <span className='badge text-[10px] bg-ink-700/50 text-ink-300 border-ink-600/30'>Profile {index + 1}</span>
-                    <span className='badge badge-ember text-[10px]'>{profile?.industry ?? 'Industry not set'}</span>
-                    <span className={clsx('badge text-[10px]',
-                      company.status === 'APPROVED' && 'badge-open',
-                      company.status === 'PENDING' && 'badge-pending',
-                      company.status === 'SUSPENDED' && 'bg-red-500/15 text-red-400 border-red-500/20',
-                    )}>{company.status}</span>
+                    <h3 className='font-semibold text-foreground'>{getUserName(company)}</h3>
+                    <span className='inline-flex items-center rounded-sm bg-default px-2 py-1 font-medium text-[10px] bg-default text-foreground border-border'>Profile {index + 1}</span>
+                    <span className='inline-flex items-center rounded-sm bg-default px-2 py-1 text-xs font-medium text-foreground text-[10px]'>{profile?.industry ?? 'Industry not set'}</span>
+                    <StatusBadge status={company.status} />
                   </div>
-                  <p className='text-xs text-ink-400 mt-1'>{company.email}</p>
-                  <p className='text-xs text-ink-500 mt-1'>{[profile?.city, profile?.country].filter(Boolean).join(', ') || 'Location not set'}</p>
+                  <p className='text-xs text-muted mt-1'>{company.email}</p>
+                  <p className='text-xs text-muted mt-1'>{[profile?.city, profile?.country].filter(Boolean).join(', ') || 'Location not set'}</p>
                   {profile?.website && (
-                    <a href={profile.website} target='_blank' rel='noreferrer' className='text-xs text-ember-400 hover:text-ember-300 inline-flex gap-1 mt-1'>
+                    <a href={profile.website} target='_blank' rel='noreferrer' className='text-xs text-accent hover:text-accent inline-flex gap-1 mt-1'>
                       Website <ExternalLink size={11} />
                     </a>
                   )}
                 </div>
                 <div className='flex flex-wrap gap-2 sm:justify-end'>
-                  {(company.status === 'PENDING' || company.status === 'REJECTED') && <button onClick={() => userApi.approve(company.id).then(invalidate)} className='btn-primary text-xs px-3 py-1.5'><CheckCircle size={13} /> Approve</button>}
-                  {company.status === 'PENDING' && <button onClick={() => userApi.reject(company.id, rejectReason).then(invalidate)} className='btn-secondary text-xs px-3 py-1.5 text-red-300'><XCircle size={13} /> Reject</button>}
-                  {company.status === 'APPROVED' && <button onClick={() => statusMutation.mutate({ id: company.id, suspended: true })} className='btn-secondary text-xs px-3 py-1.5'><PauseCircle size={13} /> Suspend</button>}
-                  {company.status === 'SUSPENDED' && <button onClick={() => statusMutation.mutate({ id: company.id, suspended: false })} className='btn-primary text-xs px-3 py-1.5'><PlayCircle size={13} /> Unsuspend</button>}
-                  {company.status === 'REJECTED' && <button onClick={() => confirm(`Delete ${getUserName(company)} so this email can register again?`) && userApi.deleteRejected(company.id).then(invalidate)} className='btn-secondary text-xs px-3 py-1.5 text-red-300'><Trash2 size={13} /> Delete</button>}
-                  <button onClick={() => setExpanded(isOpen ? null : company.id)} className='btn-ghost text-xs'>
+                  {(company.status === 'PENDING' || company.status === 'REJECTED') && <Button size='sm' variant='primary' onPress={() => userApi.approve(company.id).then(invalidate)}><CheckCircle size={13} /> Approve</Button>}
+                  {company.status === 'PENDING' && <Button size='sm' variant='danger-soft' onPress={() => userApi.reject(company.id, rejectReason).then(invalidate)}><XCircle size={13} /> Reject</Button>}
+                  {company.status === 'APPROVED' && <Button size='sm' variant='secondary' onPress={() => statusMutation.mutate({ id: company.id, suspended: true })}><PauseCircle size={13} /> Suspend</Button>}
+                  {company.status === 'SUSPENDED' && <Button size='sm' variant='primary' onPress={() => statusMutation.mutate({ id: company.id, suspended: false })}><PlayCircle size={13} /> Unsuspend</Button>}
+                  {company.status === 'REJECTED' && <Button size='sm' variant='danger-soft' onPress={() => confirm(`Delete ${getUserName(company)} so this email can register again?`) && userApi.deleteRejected(company.id).then(invalidate)}><Trash2 size={13} /> Delete</Button>}
+                  <Button size='sm' variant='ghost' onPress={() => setExpanded(isOpen ? null : company.id)}>
                     {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />} Projects ({relatedProjects.length})
-                  </button>
+                  </Button>
                 </div>
               </div>
               {isOpen && (
-                <div className='border-t border-ink-800/50 px-5 py-4'>
+                <div className='border-t border-border px-5 py-4'>
                   {relatedProjects.length === 0 ? (
-                    <p className='text-xs text-ink-500'>No projects posted yet.</p>
+                    <p className='text-xs text-muted'>No projects posted yet.</p>
                   ) : (
                     <div className='space-y-2'>
                       {relatedProjects.map((project) => (
-                        <div key={project.id} className='p-3 rounded-xl bg-ink-800/50 border border-ink-700/40 flex items-center gap-3'>
+                        <div key={project.id} className='p-3 rounded-lg bg-surface-secondary border border-border flex items-center gap-3'>
                           <div className='flex-1'>
-                            <p className='text-sm font-medium text-ink-100'>{project.title}</p>
-                            <p className='text-xs text-ink-500'>{project.projectField ?? project.companyIndustry ?? 'No field'} · {project.partyApplicationCount} applications</p>
+                            <p className='text-sm font-medium text-foreground'>{project.title}</p>
+                            <p className='text-xs text-muted'>{project.projectField ?? project.companyIndustry ?? 'No field'} · {project.partyApplicationCount} applications</p>
                           </div>
-                          <span className='badge text-[10px] bg-ink-700/50 text-ink-300 border-ink-600/30'>{project.status.replace('_', ' ')}</span>
+                          <span className='inline-flex items-center rounded-sm bg-default px-2 py-1 font-medium text-[10px] bg-default text-foreground border-border'>{project.status.replace('_', ' ')}</span>
                         </div>
                       ))}
                     </div>
@@ -223,4 +204,8 @@ export default function CompaniesDirectoryPage() {
       </div>
     </div>
   );
+}
+
+function SelectCheckbox({ selected, onChange, label }: { selected: boolean; onChange: (selected: boolean) => void; label: string }) {
+  return <Checkbox isSelected={selected} onChange={onChange} aria-label={label}><Checkbox.Content><Checkbox.Control><Checkbox.Indicator /></Checkbox.Control></Checkbox.Content></Checkbox>;
 }

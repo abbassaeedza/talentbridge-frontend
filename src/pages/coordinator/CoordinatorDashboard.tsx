@@ -2,8 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Award, FolderKanban, UserCheck, Users } from 'lucide-react';
 import {
-  Bar,
-  BarChart,
+  Area,
+  AreaChart,
   Cell,
   Pie,
   PieChart,
@@ -155,7 +155,7 @@ export default function CoordinatorDashboard() {
         <ChartPanel title='Projects by status' empty={!projectRows.length}>
           <ResponsiveContainer width='100%' height='100%'>
             <PieChart>
-              <Pie data={projectRows} dataKey='value' nameKey='name' outerRadius={78} innerRadius={48} paddingAngle={2}>
+              <Pie data={projectRows} dataKey='value' nameKey='name' outerRadius={72} innerRadius={60} paddingAngle={4} stroke='none'>
                 {projectRows.map((row, index) => <Cell key={row.name} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
               </Pie>
               <Tooltip contentStyle={tooltipStyle} />
@@ -164,22 +164,22 @@ export default function CoordinatorDashboard() {
         </ChartPanel>
         <ChartPanel title='Users by role' empty={!userRows.length}>
           <ResponsiveContainer width='100%' height='100%'>
-            <BarChart data={userRows} margin={{ left: -25, right: 4 }}>
+            <AreaChart data={userRows} margin={{ left: -25, right: 4 }}>
               <XAxis dataKey='name' tick={{ fill: 'var(--muted)', fontSize: 10 }} interval={0} angle={-15} textAnchor='end' height={48} />
               <YAxis tick={{ fill: 'var(--muted)', fontSize: 10 }} allowDecimals={false} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--default)' }} />
-              <Bar dataKey='value' fill='var(--accent)' radius={[3, 3, 0, 0]} />
-            </BarChart>
+              <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: 'var(--separator)' }} />
+              <Area dataKey='value' type='monotone' stroke='var(--accent)' strokeWidth={2} fill='color-mix(in oklch, var(--accent) 12%, transparent)' />
+            </AreaChart>
           </ResponsiveContainer>
         </ChartPanel>
         <ChartPanel title='Submissions by status' empty={!submissionRows.length}>
           <ResponsiveContainer width='100%' height='100%'>
-            <BarChart data={submissionRows} margin={{ left: -25, right: 4 }}>
+            <AreaChart data={submissionRows} margin={{ left: -25, right: 4 }}>
               <XAxis dataKey='name' tick={{ fill: 'var(--muted)', fontSize: 10 }} interval={0} angle={-15} textAnchor='end' height={48} />
               <YAxis tick={{ fill: 'var(--muted)', fontSize: 10 }} allowDecimals={false} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--default)' }} />
-              <Bar dataKey='value' fill='var(--success)' radius={[3, 3, 0, 0]} />
-            </BarChart>
+              <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: 'var(--separator)' }} />
+              <Area dataKey='value' type='monotone' stroke='var(--success)' strokeWidth={2} fill='color-mix(in oklch, var(--success) 10%, transparent)' />
+            </AreaChart>
           </ResponsiveContainer>
         </ChartPanel>
       </div>

@@ -1,255 +1,66 @@
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { evaluationApi, projectApi, partyApi, submissionApi } from '../../api/services'
-import EvaluationReportPanel from '../../components/evaluation/EvaluationReportPanel'
-import { useState } from 'react'
-import {
-  ArrowLeft, FileText, Target, Package, Star,
-  Wrench, Users, Clock, Calendar, Pencil, Tag
-} from 'lucide-react'
-import { format, formatDistanceToNow } from 'date-fns'
-import clsx from 'clsx'
+import { useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowLeft, ExternalLink, Github, Pencil, Users } from 'lucide-react';
+import { format } from 'date-fns';
+import { Button, buttonVariants } from '@heroui/react/button';
+import { Spinner } from '@heroui/react/spinner';
+import { evaluationApi, partyApi, projectApi, submissionApi } from '../../api/services';
+import EvaluationReportPanel from '../../components/evaluation/EvaluationReportPanel';
+import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
+import { EmptyState, StatusBadge } from '../../components/ui/TalentBridgeUI';
 
-const STATUS_INFO: Record<string, { cls: string; label: string }> = {
-  DRAFT:          { cls: 'bg-ink-700/50 text-ink-300 border border-ink-600/30', label: 'Draft' },
-  OPEN:           { cls: 'bg-blue-500/15 text-blue-400 border border-blue-500/20',  label: 'Pending Assignment' },
-  PENDING_REVIEW: { cls: 'badge-pending',                                            label: 'Pending Review' },
-  ASSIGNED:       { cls: 'bg-jade-500/20 text-jade-400 border border-jade-500/30',  label: 'Live' },
-  ARCHIVED:       { cls: 'bg-red-500/15 text-red-400 border border-red-500/20',     label: 'Rejected' },
-  CLOSED:         { cls: 'bg-ink-700/50 text-ink-400 border border-ink-600/30',     label: 'Closed' },
-}
-
-function Section({ icon: Icon, label, children }: {
-  icon: React.ElementType; label: string; children: React.ReactNode
-}) {
-  return (
-    <div className="flex gap-4">
-      <div className="w-8 h-8 rounded-lg bg-ink-800 border border-ink-700/50 flex items-center justify-center flex-shrink-0 mt-0.5">
-        <Icon size={14} className="text-ink-400" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-bold text-ink-500 uppercase tracking-widest mb-1.5">{label}</p>
-        <div className="text-sm text-ink-200 leading-relaxed">{children}</div>
-      </div>
-    </div>
-  )
-}
+const STATUS_LABEL: Record<string, string> = { DRAFT: 'Draft', OPEN: 'Open', PENDING_REVIEW: 'Pending review', ASSIGNED: 'Assigned', ARCHIVED: 'Rejected', CLOSED: 'Closed' };
 
 export default function CompanyProjectViewPage() {
-  const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
-  const [expandedParty, setExpandedParty] = useState<string | null>(null)
-
-  const { data: project, isLoading } = useQuery({
-    queryKey: ['project', id],
-    queryFn: () => projectApi.getById(id!).then(r => r.data),
-    enabled: !!id,
-  })
-
-  const { data: applications } = useQuery({
-    queryKey: ['company-project-applications', id],
-    queryFn: () => partyApi.getApplicationsByProject(id!).then((response) => response.data),
-    enabled: !!id,
-  })
-
-  const { data: selectedParty } = useQuery({
-    queryKey: ['company-application-party', expandedParty],
-    queryFn: () => partyApi.getById(expandedParty!).then((response) => response.data),
-    enabled: !!expandedParty,
-  })
-
-  const { data: submissions } = useQuery({
-    queryKey: ['company-project-submissions', id],
-    queryFn: () => submissionApi.getByProject(id!).then(response => response.data),
-    enabled: !!id,
-    retry: false,
-  })
-  const submission = submissions?.[0]
-  const { data: evaluationReport } = useQuery({
-    queryKey: ['eval-report', submission?.id],
-    queryFn: () => evaluationApi.getBySubmission(submission!.id).then(response => response.data),
-    enabled: submission?.status === 'EVALUATED',
-    retry: false,
-  })
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <div className="w-6 h-6 border-2 border-ember-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  if (!project) {
-    return (
-      <div className="text-center py-24">
-        <p className="text-ink-400">Project not found.</p>
-        <Link to="/company/projects" className="btn-secondary mt-4 inline-flex">Back to Projects</Link>
-      </div>
-    )
-  }
-
-  const p = project as any
-  const { cls, label } = STATUS_INFO[project.status as string] ?? { cls: 'badge-pending', label: project.status }
-  const canEdit = project.status === 'DRAFT' || project.status === 'PENDING_REVIEW' || project.status === 'ARCHIVED'
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [expandedParty, setExpandedParty] = useState<string | null>(null);
+  const { data: project, isLoading } = useQuery({ queryKey: ['project', id], queryFn: () => projectApi.getById(id!).then((response) => response.data), enabled: !!id });
+  const { data: applications = [] } = useQuery({ queryKey: ['company-project-applications', id], queryFn: () => partyApi.getApplicationsByProject(id!).then((response) => response.data), enabled: !!id });
+  const { data: selectedParty } = useQuery({ queryKey: ['company-application-party', expandedParty], queryFn: () => partyApi.getById(expandedParty!).then((response) => response.data), enabled: !!expandedParty });
+  const { data: submissions = [] } = useQuery({ queryKey: ['company-project-submissions', id], queryFn: () => submissionApi.getByProject(id!).then((response) => response.data), enabled: !!id, retry: false });
+  const submission = submissions[0];
+  const { data: evaluation } = useQuery({ queryKey: ['eval-report', submission?.id], queryFn: () => evaluationApi.getBySubmission(submission!.id).then((response) => response.data), enabled: submission?.status === 'EVALUATED', retry: false });
+  if (isLoading) return <div className='flex min-h-64 items-center justify-center'><Spinner /></div>;
+  if (!project) return <EmptyState icon={Users} title='Project not found' action={<Link to='/company/projects' className={buttonVariants({ variant: 'secondary' })}>Back to projects</Link>} />;
+  const details = [['Description', project.description], ['Project scope', project.scope], ['Expected deliverables', project.deliverables], ['Evaluation criteria', project.evaluationCriteria]].filter((item) => item[1]);
+  const canEdit = ['DRAFT', 'PENDING_REVIEW', 'ARCHIVED'].includes(project.status);
 
   return (
-    <div className="animate-fade-up max-w-4xl">
-      {/* Back + actions */}
-      <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={() => navigate('/company/projects')}
-          className="flex items-center gap-2 text-sm text-ink-400 hover:text-ink-100 transition-colors"
-        >
-          <ArrowLeft size={15} /> Back to Projects
-        </button>
+    <div className='max-w-6xl'>
+      <div className='mb-5 flex items-center justify-between gap-3'>
+        <Button variant='ghost' size='sm' onPress={() => navigate('/company/projects')}><ArrowLeft size={15} /> Back to projects</Button>
+        {canEdit && <Link to={`/company/projects/${id}/edit`} className={buttonVariants({ variant: 'secondary', size: 'sm' })}><Pencil size={14} /> {project.status === 'ARCHIVED' ? 'Edit and resubmit' : 'Edit project'}</Link>}
+      </div>
+      <header className='border-b border-separator pb-6'>
+        <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
+          <div className='min-w-0'><div className='mb-3 flex flex-wrap gap-2'><StatusBadge status={project.status} label={STATUS_LABEL[project.status]} />{project.internalName && <span className='rounded-sm bg-default px-2 py-1 text-xs text-muted'>{project.internalName}</span>}</div><h1 className='text-2xl font-semibold tracking-tight sm:text-3xl'>{project.title}</h1><p className='mt-2 text-sm text-muted'>{project.companyName}</p></div>
+          <div className='flex flex-wrap gap-1.5 sm:max-w-sm sm:justify-end'>{(project.tools ?? []).map((tool) => <span key={tool} className='rounded-sm bg-default px-2 py-1 font-mono text-xs'>{tool}</span>)}</div>
+        </div>
+        {project.status === 'ARCHIVED' && <p className='mt-4 rounded-md bg-danger px-3 py-2 text-sm text-danger-foreground'>This project was rejected. Edit and resubmit it for another review.</p>}
+      </header>
 
-        {canEdit && (
-          <Link
-            to={`/company/projects/${id}/edit`}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-ember-500/10 hover:bg-ember-500/20 border border-ember-500/30 text-xs text-ember-400 hover:text-ember-300 transition-colors"
-          >
-            <Pencil size={13} />
-            {project.status === 'ARCHIVED' ? 'Edit & Resubmit' : 'Edit'}
-          </Link>
-        )}
+      <div className='grid gap-8 py-7 xl:grid-cols-[minmax(0,1fr)_20rem]'>
+        <div>{details.map(([title, content], index) => <section key={title} className={`py-6 first:pt-0 ${index < details.length - 1 ? 'border-b border-separator' : ''}`}><h2 className='text-base font-semibold'>{title}</h2><p className='mt-3 whitespace-pre-wrap text-sm leading-7 text-muted'>{content}</p></section>)}</div>
+        <aside className='space-y-4'>
+          <DeadlineCountdown deadline={project.deadline} submitted={project.finished} label='Project deadline' />
+          <section className='rounded-lg border border-border bg-surface p-4'><p className='text-xs text-muted'>Applications</p><p className='mt-1 text-2xl font-semibold'>{project.partyApplicationCount}</p><p className='mt-2 text-xs text-muted'>Posted {format(new Date(project.createdAt), 'dd MMM yyyy')}</p></section>
+          {project.projectSupervisorName && <section className='rounded-lg border border-border bg-surface p-4'><p className='text-xs text-muted'>Project supervisor</p><p className='mt-1 text-sm font-medium'>{project.projectSupervisorName}</p></section>}
+          {project.assignedPartyName && <section className='rounded-lg border border-border bg-surface p-4'><p className='text-xs text-muted'>Assigned party</p><p className='mt-1 text-sm font-medium'>{project.assignedPartyName}</p></section>}
+        </aside>
       </div>
 
-      {/* Header card */}
-      <div className="card px-6 py-5 mb-5">
-        <div className="flex items-start justify-between gap-4 mb-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2.5 flex-wrap mb-2">
-              <span className={clsx('badge text-[10px]', cls)}>{label}</span>
-              {p.internalName && (
-                <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-ember-500/10 border border-ember-500/20 text-[10px] text-ember-400 font-semibold">
-                  <Tag size={9} /> {p.internalName}
-                </span>
-              )}
-            </div>
-            <h1 className="font-display font-bold text-2xl text-white leading-tight">{project.title}</h1>
-            <p className="text-sm text-ink-500 mt-1">{p.companyName}</p>
-          </div>
-        </div>
+      <section className='border-t border-separator py-7'>
+        <h2 className='text-lg font-semibold'>Party applications</h2><p className='mt-1 text-sm text-muted'>Review ranked applications and student profiles.</p>
+        {applications.length === 0 ? <div className='mt-5'><EmptyState icon={Users} title='No party applications yet' /></div> : <div className='mt-5 divide-y divide-separator rounded-lg border border-border bg-surface'>{applications.map((application) => <article key={application.id} className='p-4'>
+          <div className='flex flex-col gap-3 sm:flex-row sm:items-center'><span className='flex size-8 items-center justify-center rounded-md bg-default font-mono text-sm'>#{application.rankPosition}</span><div className='min-w-0 flex-1'><p className='font-medium'>{application.partyName}</p><p className='mt-1 text-xs text-muted'>{application.status.replace(/_/g, ' ')}</p>{application.proposalText && <p className='mt-2 text-sm leading-6 text-muted'>{application.proposalText}</p>}</div><Button size='sm' variant='secondary' onPress={() => setExpandedParty(expandedParty === application.partyId ? null : application.partyId)}>{expandedParty === application.partyId ? 'Hide party' : 'View party'}</Button></div>
+          {expandedParty === application.partyId && selectedParty?.id === application.partyId && <div className='mt-4 grid gap-2 border-t border-separator pt-4 sm:grid-cols-2'>{selectedParty.members.map((member) => <Link key={member.id} to={`/company/students/${member.id}`} className='rounded-md border border-border p-3 hover:bg-default'><p className='text-sm font-medium'>{member.firstName} {member.lastName}</p><p className='mt-1 text-xs text-muted'>{member.email}</p><div className='mt-2 flex flex-wrap gap-1'>{member.skills.slice(0, 3).map((skill) => <span key={skill} className='rounded-sm bg-default px-1.5 py-0.5 text-[10px]'>{skill}</span>)}</div></Link>)}</div>}
+        </article>)}</div>}
+      </section>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 pt-4 border-t border-ink-800/50">
-          <div className="text-center">
-            <p className="text-xl font-display font-bold text-white">{project.partyApplicationCount}</p>
-            <p className="text-[10px] text-ink-500 mt-0.5 flex items-center justify-center gap-1">
-              <Users size={10} /> Applicants
-            </p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm font-semibold text-white">
-              {project.deadline ? format(new Date(project.deadline), 'dd MMM yyyy') : '—'}
-            </p>
-            <p className="text-[10px] text-ink-500 mt-0.5 flex items-center justify-center gap-1">
-              <Clock size={10} /> Deadline
-            </p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm font-semibold text-white">
-              {format(new Date(project.createdAt), 'dd MMM yyyy')}
-            </p>
-            <p className="text-[10px] text-ink-500 mt-0.5 flex items-center justify-center gap-1">
-              <Calendar size={10} /> Posted
-            </p>
-          </div>
-        </div>
-
-        {project.status === 'ARCHIVED' && (
-          <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
-            <p className="text-xs text-red-400">
-              This project was rejected by the coordinator. Edit and resubmit to go live again.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Detail card */}
-      <div className="card px-6 py-6 space-y-6">
-        {project.description && (
-          <Section icon={FileText} label="Description">
-            {project.description}
-          </Section>
-        )}
-
-        {project.scope && (
-          <Section icon={Target} label="Scope">
-            {project.scope}
-          </Section>
-        )}
-
-        {project.deliverables && (
-          <Section icon={Package} label="Deliverables">
-            {project.deliverables}
-          </Section>
-        )}
-
-        {project.evaluationCriteria && (
-          <Section icon={Star} label="Evaluation Criteria">
-            {project.evaluationCriteria}
-          </Section>
-        )}
-
-        {(project.tools ?? []).length > 0 && (
-          <Section icon={Wrench} label="Tools & Technologies">
-            <div className="flex flex-wrap gap-1.5 mt-1">
-              {project.tools.map((t: string) => (
-                <span key={t} className="px-2.5 py-1 rounded-lg bg-ink-700 border border-ink-600/40 text-xs text-ink-200">
-                  {t}
-                </span>
-              ))}
-            </div>
-          </Section>
-        )}
-      </div>
-
-      <div className='card mt-5 overflow-hidden'>
-        <div className='border-b border-ink-800/50 px-6 py-4'>
-          <h2 className='font-display font-semibold text-white'>Party Applications</h2>
-          <p className='mt-1 text-xs text-ink-400'>Review applicants and open each student’s full profile.</p>
-        </div>
-        {!applications || applications.length === 0 ? (
-          <p className='p-6 text-sm text-ink-400'>No party applications yet.</p>
-        ) : (
-          <div className='divide-y divide-ink-800/50'>
-            {applications.map((application) => (
-              <div key={application.id} className='px-6 py-4'>
-                <div className='flex items-center gap-3'>
-                  <span className='flex h-8 w-8 items-center justify-center rounded-lg bg-ink-700 text-sm font-bold text-ember-400'>#{application.rankPosition}</span>
-                  <div className='flex-1'>
-                    <p className='text-sm font-semibold text-ink-100'>{application.partyName}</p>
-                    <p className='text-xs text-ink-500'>{application.status.replace('_', ' ')}</p>
-                  </div>
-                  <button onClick={() => setExpandedParty(expandedParty === application.partyId ? null : application.partyId)} className='btn-secondary px-3 py-2 text-xs'>
-                    {expandedParty === application.partyId ? 'Hide team' : 'View team'}
-                  </button>
-                </div>
-                {expandedParty === application.partyId && selectedParty?.id === application.partyId && (
-                  <div className='mt-4 grid gap-2 sm:grid-cols-2'>
-                    {selectedParty.members.map((member) => (
-                      <Link key={member.id} to={`/company/students/${member.id}`} className='rounded-xl border border-ink-700/40 bg-ink-800/50 p-3 hover:border-ember-500/30'>
-                        <p className='text-sm font-medium text-ink-100'>{member.firstName} {member.lastName}</p>
-                        <p className='mt-1 text-xs text-ink-500'>{member.email}</p>
-                        <div className='mt-2 flex flex-wrap gap-1'>
-                          {member.skills.slice(0, 3).map((skill) => <span key={skill} className='rounded bg-ink-700 px-1.5 py-0.5 text-[10px] text-ink-300'>{skill}</span>)}
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      {evaluationReport && (
-        <div className='card mt-5 overflow-hidden'>
-          <EvaluationReportPanel report={evaluationReport} />
-        </div>
-      )}
+      {submission && <section className='border-t border-separator py-7'><h2 className='text-lg font-semibold'>Submission</h2><div className='mt-4 grid gap-3 text-sm sm:grid-cols-2'><div className='rounded-lg border border-border bg-surface p-4'><p className='text-xs text-muted'>Status</p><div className='mt-2'><StatusBadge status={submission.status} /></div>{submission.submittedAt && <p className='mt-3 text-xs text-muted'>Submitted {format(new Date(submission.submittedAt), 'dd MMM yyyy, HH:mm')}</p>}</div><div className='rounded-lg border border-border bg-surface p-4'><p className='text-xs text-muted'>Repository and documents</p>{submission.repoUrl && <a href={submission.repoUrl} target='_blank' rel='noreferrer' className='mt-2 flex items-center gap-1.5 text-accent hover:underline'><Github size={14} /> Repository <ExternalLink size={12} /></a>}{submission.documentUrls?.map((url, index) => <a key={url} href={url} target='_blank' rel='noreferrer' className='mt-2 flex items-center gap-1.5 text-accent hover:underline'>Document {index + 1} <ExternalLink size={12} /></a>)}</div></div>{submission.notes && <p className='mt-4 text-sm leading-6 text-muted'>{submission.notes}</p>}</section>}
+      {evaluation && <div className='border-t border-separator py-7'><EvaluationReportPanel report={evaluation} /></div>}
     </div>
-  )
+  );
 }

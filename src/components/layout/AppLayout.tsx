@@ -225,12 +225,14 @@ export default function AppLayout() {
   return (
     <div className='flex h-dvh overflow-hidden bg-background text-foreground'>
       {sidebarOpen && (
-        <button
+        <Button
+          isIconOnly
+          variant='ghost'
           type='button'
           data-testid='navigation-overlay'
           aria-label='Close navigation'
           className='fixed inset-0 z-40 bg-black/45 lg:hidden'
-          onClick={() => setSidebarOpen(false)}
+          onPress={() => setSidebarOpen(false)}
         />
       )}
 
@@ -358,11 +360,11 @@ export default function AppLayout() {
                     {notifications.length === 0 ? (
                       <p className='px-4 py-10 text-center text-sm text-muted'>No new notifications.</p>
                     ) : notifications.map((notification: any) => (
-                      <button
-                        type='button'
+                      <Button
+                        variant='ghost'
                         key={notification.id}
-                        className='flex w-full gap-3 border-b border-separator px-4 py-3 text-left last:border-0 hover:bg-default'
-                        onClick={() => !notification.read && markOne.mutate(notification.id)}
+                        className='h-auto w-full justify-start rounded-none border-b border-separator px-4 py-3 text-left last:border-0'
+                        onPress={() => !notification.read && markOne.mutate(notification.id)}
                       >
                         <span className={clsx('mt-1.5 size-1.5 shrink-0 rounded-full', notification.read ? 'bg-transparent' : 'bg-accent')} />
                         <span className='min-w-0'>
@@ -374,7 +376,7 @@ export default function AppLayout() {
                             </span>
                           )}
                         </span>
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 </Popover.Dialog>

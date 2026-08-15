@@ -5,9 +5,15 @@ import { AlertTriangle, CheckCircle, XCircle, Clock, Calendar, RefreshCw, Users 
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
-import clsx from 'clsx';
 import type { GlobalDeadlinePreview } from '../../types';
 import { Link } from 'react-router-dom';
+import { Button } from '@heroui/react/button';
+import { Input } from '@heroui/react/input';
+import { Modal } from '@heroui/react/modal';
+import { Spinner } from '@heroui/react/spinner';
+import { Switch } from '@heroui/react/switch';
+import { Tabs } from '@heroui/react/tabs';
+import { PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
 
 type TabStatus = 'ALL' | 'PENDING_REVIEW' | 'OPEN' | 'ARCHIVED' | 'ASSIGNED';
 
@@ -103,95 +109,69 @@ export default function ManageProjectsPage() {
     });
   };
 
-  const statusBadge = (status: string) => {
-    const map: Record<string, string> = {
-      OPEN:           'badge-open',
-      PENDING_REVIEW: 'badge-pending',
-      ASSIGNED:       'badge-assigned',
-      ARCHIVED:       'bg-red-500/15 text-red-400 border-red-500/20',
-      CLOSED:         'bg-ink-700/50 text-ink-400 border-ink-600/30',
-    };
+  const statusLabel = (status: string) => {
     const labels: Record<string, string> = {
       PENDING_REVIEW: 'Pending',
       ARCHIVED:       'Rejected',
     };
-    return {
-      cls:   map[status] || 'badge-pending',
-      label: labels[status] || status.replace('_', ' '),
-    };
+    return labels[status] || status.replace('_', ' ');
   };
 
   return (
-    <div className='animate-fade-up'>
-      <div className='page-header'>
-        <h1 className='page-title'>Manage Projects</h1>
-        <p className='page-subtitle'>{data?.totalElements ?? 0} total projects</p>
-      </div>
+    <div className=''>
+      <PageHeader title='Manage Projects' description={`${data?.totalElements ?? 0} total projects`} />
 
-      <section className='card mb-6 overflow-hidden'>
-        <div className='flex flex-col gap-4 border-b border-ink-800/60 p-5 sm:flex-row sm:items-start sm:justify-between'>
+      <section className='rounded-lg border border-border bg-surface mb-6 overflow-hidden'>
+        <div className='flex flex-col gap-4 border-b border-border p-5 sm:flex-row sm:items-start sm:justify-between'>
           <div className='flex gap-3'>
-            <div className='flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-ember-500/15 text-ember-400'>
+            <div className='flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-default text-accent'>
               <Calendar size={19} />
             </div>
             <div>
-              <h2 className='font-display font-semibold text-white'>Global Application Deadline</h2>
-              <p className='mt-1 text-xs text-ink-400'>Updates unfinished pending, open, and assigned projects.</p>
+              <h2 className=' font-semibold text-foreground'>Global Application Deadline</h2>
+              <p className='mt-1 text-xs text-muted'>Updates unfinished pending, open, and assigned projects.</p>
             </div>
           </div>
-          <label className='relative flex cursor-pointer items-center gap-3 text-sm text-ink-200'>
-            <span>{globalEnabled ? 'Enabled' : 'Disabled'}</span>
-            <input
-              type='checkbox'
-              role='switch'
-              aria-label='Enable global deadline'
-              checked={globalEnabled}
-              onChange={(event) => setGlobalEnabled(event.target.checked)}
-              className='peer absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0'
-            />
-            <span className='relative h-6 w-11 rounded-full bg-ink-700 transition peer-checked:bg-ember-500 after:absolute after:left-1 after:top-1 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition peer-checked:after:translate-x-5' />
-          </label>
+          <Switch aria-label='Enable global deadline' isSelected={globalEnabled} onChange={setGlobalEnabled}>
+            <Switch.Content>
+              <Switch.Control><Switch.Thumb /></Switch.Control>
+              {globalEnabled ? 'Enabled' : 'Disabled'}
+            </Switch.Content>
+          </Switch>
         </div>
         <div className='grid gap-4 p-5 lg:grid-cols-[1fr_1fr_auto] lg:items-end'>
           <div>
-            <p className='text-[10px] font-bold uppercase tracking-wider text-ink-500'>Current setting</p>
-            <p className='mt-2 text-sm font-semibold text-white'>
+            <p className='text-[10px] font-bold uppercase tracking-wider text-muted'>Current setting</p>
+            <p className='mt-2 text-sm font-semibold text-foreground'>
               {globalDeadlineQuery.data?.enabled ? 'Global deadline is enabled' : 'Global deadline is disabled'}
             </p>
-            <p className='mt-1 text-xs text-ink-400'>
+            <p className='mt-1 text-xs text-muted'>
               {globalDeadlineQuery.data?.deadline
                 ? format(new Date(globalDeadlineQuery.data.deadline), 'dd MMM yyyy HH:mm')
                 : 'No deadline configured'}
             </p>
           </div>
-          <label className='block text-xs font-medium text-ink-300'>
+          <label className='block text-xs font-medium text-foreground'>
             Global deadline date and time
-            <input
+            <Input
               type='datetime-local'
-              className='input mt-2 w-full text-xs'
+              className='mt-2 w-full text-xs'
               value={globalDeadline}
               disabled={!globalEnabled}
               onChange={(event) => setGlobalDeadline(event.target.value)}
             />
           </label>
-          <button
-            onClick={reviewGlobalChange}
-            disabled={(globalEnabled && !globalDeadline) || previewMutation.isPending}
-            className='btn-primary justify-center text-xs lg:min-w-40'
-          >
+          <Button variant='primary' onPress={reviewGlobalChange} isDisabled={(globalEnabled && !globalDeadline) || previewMutation.isPending} className='lg:min-w-40'>
             {previewMutation.isPending ? 'Loading preview...' : 'Preview changes'}
-          </button>
+          </Button>
         </div>
       </section>
 
-      {deadlinePreview && (
-        <div className='fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4' role='presentation'>
-          <section role='dialog' aria-modal='true' aria-labelledby='global-deadline-dialog-title' className='card w-full max-w-lg p-6 shadow-2xl'>
+      <Modal isOpen={!!deadlinePreview} onOpenChange={(open) => { if (!open) setDeadlinePreview(null); }}><Modal.Backdrop><Modal.Container><Modal.Dialog className='max-w-lg'>
+        {deadlinePreview && <><Modal.Header><Modal.Icon className='bg-warning text-warning-foreground'><AlertTriangle size={19} /></Modal.Icon><Modal.Heading>Confirm global deadline</Modal.Heading></Modal.Header><Modal.Body>
             <div className='flex items-start gap-3'>
-              <div className='flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400'><AlertTriangle size={19} /></div>
               <div>
-                <h2 id='global-deadline-dialog-title' className='font-display text-lg font-semibold text-white'>Confirm global deadline</h2>
-                <p className='mt-1 text-sm text-ink-400'>
+                <p className='mt-1 text-sm text-muted'>
                   {globalEnabled
                     ? 'This overwrites individual deadlines on every eligible project.'
                     : 'Disabling global mode keeps every project deadline unchanged.'}
@@ -201,79 +181,64 @@ export default function ManageProjectsPage() {
             {globalEnabled && (
               <div className='mt-5 grid grid-cols-3 gap-2'>
                 {Object.entries(deadlinePreview.affectedCounts).map(([status, count]) => (
-                  <div key={status} className='rounded-xl bg-ink-800/60 p-3 text-center'>
-                    <p className='font-display text-xl font-bold text-white'>{count} <span className='text-[10px] font-normal text-ink-400'>{status.replace('_', ' ').toLowerCase()}</span></p>
+                  <div key={status} className='rounded-lg bg-surface-secondary p-3 text-center'>
+                    <p className=' text-xl font-bold text-foreground'>{count} <span className='text-[10px] font-normal text-muted'>{status.replace('_', ' ').toLowerCase()}</span></p>
                   </div>
                 ))}
               </div>
             )}
-            <p className='mt-4 text-xs text-ink-400'>{deadlinePreview.excludedFinishedCount} finished projects excluded</p>
-            <div className='mt-6 flex justify-end gap-3'>
-              <button className='btn-secondary' onClick={() => setDeadlinePreview(null)}>Cancel</button>
-              <button className='btn-primary' disabled={globalDeadlineMutation.isPending} onClick={() => globalDeadlineMutation.mutate()}>
-                {globalDeadlineMutation.isPending ? 'Applying...' : 'Confirm and apply'}
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
+            <p className='mt-4 text-xs text-muted'>{deadlinePreview.excludedFinishedCount} finished projects excluded</p>
+        </Modal.Body><Modal.Footer><Button variant='ghost' onPress={() => setDeadlinePreview(null)}>Cancel</Button><Button variant='primary' isDisabled={globalDeadlineMutation.isPending} onPress={() => globalDeadlineMutation.mutate()}>{globalDeadlineMutation.isPending && <Spinner size='sm' />}{globalDeadlineMutation.isPending ? 'Applying' : 'Confirm and apply'}</Button></Modal.Footer></>}
+      </Modal.Dialog></Modal.Container></Modal.Backdrop></Modal>
 
       {/* Filter tabs */}
-      <div className='flex gap-1 mb-4 bg-ink-900 p-1 rounded-xl w-fit'>
-        {TABS.map((t) => (
-          <button key={t.value} onClick={() => { setTab(t.value); setPage(0); }}
-            className={clsx('px-4 py-1.5 rounded-lg text-xs font-semibold transition-all',
-              tab === t.value ? 'bg-ink-700 text-white shadow-sm' : 'text-ink-400 hover:text-ink-200')}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs.Root variant='secondary' selectedKey={tab} onSelectionChange={(key) => { setTab(String(key) as TabStatus); setPage(0); }} className='mb-4'><Tabs.ListContainer><Tabs.List aria-label='Project status'>{TABS.map((item) => <Tabs.Tab key={item.value} id={item.value}>{item.label}</Tabs.Tab>)}</Tabs.List></Tabs.ListContainer></Tabs.Root>
 
-      <div className='card overflow-hidden'>
+      <div className='rounded-lg border border-border bg-surface overflow-hidden'>
         {isLoading ? (
           <div className='p-12 flex justify-center'>
-            <div className='w-5 h-5 border-2 border-ember-500 border-t-transparent rounded-full animate-spin' />
+            <Spinner />
           </div>
         ) : !data?.content.length ? (
           <div className='p-12 text-center'>
-            <p className='text-ink-400 text-sm'>No projects in this category.</p>
+            <p className='text-muted text-sm'>No projects in this category.</p>
           </div>
         ) : (
-          <div className='divide-y divide-ink-800/50'>
+          <div className='divide-y divide-separator'>
             {data.content.map((p) => {
-              const { cls, label } = statusBadge(p.status as string);
+              const label = statusLabel(p.status as string);
               return (
                 <div key={p.id} className='px-6 py-4'>
                   <div className='flex items-start gap-4'>
                     <div className='flex-1 min-w-0'>
                       <div className='flex items-center gap-2 mb-1 flex-wrap'>
-                        <Link to={`/coordinator/projects/${p.id}`} className='font-medium text-white text-sm truncate hover:text-ember-400'>{p.title}</Link>
-                        <span className={clsx('badge text-[10px]', cls)}>{label}</span>
+                        <Link to={`/coordinator/projects/${p.id}`} className='font-medium text-foreground text-sm truncate hover:text-accent'>{p.title}</Link>
+                        <StatusBadge status={p.status} label={label} />
                         {p.projectField && (
-                          <span className='px-2 py-0.5 rounded-md bg-ink-700 border border-ink-600/40 text-[10px] text-ink-400'>
+                          <span className='px-2 py-0.5 rounded-md bg-default border border-border text-[10px] text-muted'>
                             {p.projectField}
                           </span>
                         )}
                       </div>
-                      <p className='text-xs text-ink-400'>{p.companyName}</p>
-                      <div className='mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-400'>
+                      <p className='text-xs text-muted'>{p.companyName}</p>
+                      <div className='mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted'>
                         <span>
                           Party:{' '}
-                          {p.assignedPartyId ? <Link to={`/coordinator/parties?party=${p.assignedPartyId}`} className='text-ember-400 hover:text-ember-300'>{p.assignedPartyName}</Link> : 'Unassigned'}
+                          {p.assignedPartyId ? <Link to={`/coordinator/parties?party=${p.assignedPartyId}`} className='text-accent hover:text-accent'>{p.assignedPartyName}</Link> : 'Unassigned'}
                         </span>
                         <span>
                           Project supervisor:{' '}
-                          {p.projectSupervisorId ? <Link to={`/coordinator/supervisors?section=PROJECT_SUPERVISOR&supervisor=${p.projectSupervisorId}`} className='text-ember-400 hover:text-ember-300'>{p.projectSupervisorName}</Link> : 'Unassigned'}
+                          {p.projectSupervisorId ? <Link to={`/coordinator/supervisors?section=PROJECT_SUPERVISOR&supervisor=${p.projectSupervisorId}`} className='text-accent hover:text-accent'>{p.projectSupervisorName}</Link> : 'Unassigned'}
                         </span>
                       </div>
-                      <p className='text-xs text-ink-500 mt-0.5 flex items-center gap-1'>
+                      <p className='text-xs text-muted mt-0.5 flex items-center gap-1'>
                         <Users size={10} />
                         {p.partyApplicationCount} party application{p.partyApplicationCount !== 1 ? 's' : ''}
                       </p>
                       <div className='flex items-center gap-3 mt-1.5 flex-wrap'>
                         <DeadlineCountdown deadline={p.deadline ?? null} compact />
                         {p.deadline && (
-                          <span className='text-xs text-ink-500'>
+                          <span className='text-xs text-muted'>
                             {format(new Date(p.deadline), 'dd MMM yyyy HH:mm')}
                           </span>
                         )}
@@ -284,53 +249,48 @@ export default function ManageProjectsPage() {
                       {/* Pending → approve or reject */}
                       {p.status === 'PENDING_REVIEW' && (
                         <>
-                          <button onClick={() => approveMutation.mutate(p.id)} disabled={approveMutation.isPending}
-                            className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-jade-500/15 border border-jade-500/30 text-jade-400 hover:bg-jade-500/25 text-xs font-medium transition-colors'>
+                          <Button size='sm' variant='secondary' className='text-success' onPress={() => approveMutation.mutate(p.id)} isDisabled={approveMutation.isPending}>
                             <CheckCircle size={13} /> Approve
-                          </button>
-                          <button onClick={() => disapproveMutation.mutate(p.id)} disabled={disapproveMutation.isPending}
-                            className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 text-xs font-medium transition-colors'>
+                          </Button>
+                          <Button size='sm' variant='danger-soft' onPress={() => disapproveMutation.mutate(p.id)} isDisabled={disapproveMutation.isPending}>
                             <XCircle size={13} /> Reject
-                          </button>
+                          </Button>
                         </>
                       )}
 
                       {/* Rejected → reinstate */}
                       {p.status === 'ARCHIVED' && (
-                        <button onClick={() => approveMutation.mutate(p.id)} disabled={approveMutation.isPending}
-                          className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-jade-500/15 border border-jade-500/30 text-jade-400 hover:bg-jade-500/25 text-xs font-medium transition-colors'>
+                        <Button size='sm' variant='secondary' className='text-success' onPress={() => approveMutation.mutate(p.id)} isDisabled={approveMutation.isPending}>
                           <RefreshCw size={13} /> Reinstate
-                        </button>
+                        </Button>
                       )}
 
                       {/* Open and assigned projects keep independent deadlines */}
                       {(p.status === 'OPEN' || p.status === 'ASSIGNED') && (
                         <div className='flex items-center gap-2'>
-                          <input
+                          <Input
                             type='datetime-local'
                             aria-label={`Deadline for ${p.title}`}
-                            className='input text-xs py-1.5 w-44'
+                            className='w-48 text-xs'
                             value={deadlines[p.id] ?? ''}
                             onChange={(e) => setDeadlines((d) => ({ ...d, [p.id]: e.target.value }))} />
-                          <button
+                          <Button size='sm' variant='secondary'
                             aria-label={`Set deadline for ${p.title}`}
-                            onClick={() => deadlineMutation.mutate({ id: p.id, deadline: deadlines[p.id] })}
-                            disabled={!deadlines[p.id] || deadlineMutation.isPending}
-                            className='btn-secondary text-xs px-3 py-1.5'>
+                            onPress={() => deadlineMutation.mutate({ id: p.id, deadline: deadlines[p.id] })}
+                            isDisabled={!deadlines[p.id] || deadlineMutation.isPending}>
                             <Clock size={12} /> Set
-                          </button>
+                          </Button>
                           {p.status === 'OPEN' && (
-                            <button
-                              onClick={() => {
+                            <Button size='sm' variant='danger-soft'
+                              onPress={() => {
                                 if (confirm('Retract this open project? Pending applications will be reassigned.')) {
                                   retractMutation.mutate(p.id);
                                 }
                               }}
-                              disabled={retractMutation.isPending}
-                              className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 text-xs font-medium transition-colors'
+                              isDisabled={retractMutation.isPending}
                             >
                               <XCircle size={13} /> Retract
-                            </button>
+                            </Button>
                           )}
                         </div>
                       )}
@@ -345,11 +305,9 @@ export default function ManageProjectsPage() {
 
       {data && data.totalPages > 1 && (
         <div className='flex justify-center gap-2 mt-6'>
-          <button onClick={() => setPage((p) => p - 1)} disabled={data.first}
-            className='btn-secondary text-xs px-4 py-2'>Previous</button>
-          <span className='px-4 py-2 text-xs text-ink-400'>Page {page + 1} of {data.totalPages}</span>
-          <button onClick={() => setPage((p) => p + 1)} disabled={data.last}
-            className='btn-secondary text-xs px-4 py-2'>Next</button>
+          <Button size='sm' variant='secondary' onPress={() => setPage((p) => p - 1)} isDisabled={data.first}>Previous</Button>
+          <span className='px-4 py-2 text-xs text-muted'>Page {page + 1} of {data.totalPages}</span>
+          <Button size='sm' variant='secondary' onPress={() => setPage((p) => p + 1)} isDisabled={data.last}>Next</Button>
         </div>
       )}
     </div>
