@@ -257,10 +257,12 @@ test('company manages supervisor invitations and assigns an accepted supervisor 
   await page.getByRole('button', { name: 'Send invitation', exact: true }).click();
   await expect(page.getByText('new.supervisor@nexa.example')).toBeVisible();
 
-  await page.getByRole('link', { name: 'Post Project' }).click();
-  await page.getByLabel('Project Title').fill('Operations Dashboard');
-  await page.getByLabel('Project Description').fill('Build an operations dashboard.');
-  await page.getByLabel('Project supervisor').selectOption(ids.projectSupervisor);
+  await page.getByRole('link', { name: 'Projects', exact: true }).click();
+  await page.getByRole('link', { name: 'Post New Project' }).click();
+  await page.getByLabel('Project title').fill('Operations Dashboard');
+  await page.getByLabel('Project description').fill('Build an operations dashboard.');
+  await page.getByLabel('Project supervisor').click();
+  await page.getByRole('option', { name: /Sara Khan/ }).click();
   await page.getByRole('button', { name: 'Submit for review' }).click();
 
   await expect.poll(() => createdProject).toMatchObject({ projectSupervisorId: ids.projectSupervisor });
@@ -281,7 +283,7 @@ test('project supervisor navigates projects and reads assigned party evaluation'
   await page.goto('/project-supervisor/overview');
   await expect(page.getByRole('heading', { name: 'Project Supervisor Overview' })).toBeVisible();
   await expect(page.getByText('AI Support Copilot')).toBeVisible();
-  await page.getByRole('link', { name: 'My Projects', exact: true }).click();
+  await page.getByRole('link', { name: 'Projects', exact: true }).click();
   await page.getByLabel('Filter by submission').selectOption('EVALUATED');
   await expect(page.getByText('Unsubmitted Portal')).toHaveCount(0);
   await page.getByLabel('Filter by submission').selectOption('ALL');

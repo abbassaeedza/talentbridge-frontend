@@ -1,155 +1,126 @@
-import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
-import {
-  LayoutDashboard,
-  FolderKanban,
-  Users,
-  ClipboardList,
-  Award,
-  LogOut,
-  Bell,
-  Briefcase,
-  Send,
-  Star,
-  UserCheck,
-  Layers,
-  GraduationCap,
-  Building2,
-  UserCircle,
-  ChevronUp,
-  Shield,
-  Menu,
-  X,
-  Sun,
-  Moon,
-} from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { partyApi, userApi } from '../../api/services';
+import { useEffect, useState } from 'react';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Avatar } from '@heroui/react/avatar';
+import { Button } from '@heroui/react/button';
+import { Chip } from '@heroui/react/chip';
+import { Dropdown } from '@heroui/react/dropdown';
+import { Popover } from '@heroui/react/popover';
 import { formatDistanceToNow } from 'date-fns';
-import ChatBot from '../chat/ChatBot';
+import {
+  Award,
+  Bell,
+  BriefcaseBusiness,
+  Building2,
+  ChevronDown,
+  ClipboardList,
+  FolderKanban,
+  GraduationCap,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Moon,
+  Send,
+  Settings,
+  Star,
+  Sun,
+  UserCheck,
+  UserCircle,
+  Users,
+  X,
+} from 'lucide-react';
 import clsx from 'clsx';
+import { partyApi, userApi } from '../../api/services';
+import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../hooks/useTheme';
+import ChatBot from '../chat/ChatBot';
+import { Brand } from '../ui/TalentBridgeUI';
 
-// ── Role badge config ─────────────────────────────────────────────────────────
-const ROLE_LABELS: Record<string, string> = {
-  STUDENT: 'Student',
-  COMPANY: 'Company',
-  COORDINATOR: 'Coordinator',
-  PARTY_SUPERVISOR: 'Party Supervisor',
-  PROJECT_SUPERVISOR: 'Project Supervisor',
-};
-
-const ROLE_ICONS: Record<string, React.ElementType> = {
-  STUDENT: GraduationCap,
-  COMPANY: Building2,
-  COORDINATOR: Shield,
-  PARTY_SUPERVISOR: UserCheck,
-  PROJECT_SUPERVISOR: UserCheck,
-};
-
-const ROLE_COLORS: Record<string, string> = {
-  STUDENT: 'text-jade-400',
-  COMPANY: 'text-blue-400',
-  COORDINATOR: 'text-ember-400',
-  PARTY_SUPERVISOR: 'text-violet-400',
-  PROJECT_SUPERVISOR: 'text-violet-400',
-};
-
-// ── Nav items by role ─────────────────────────────────────────────────────────
-function NavItem({
-  to,
-  icon: Icon,
-  label,
-  end,
-  onNavigate,
-}: {
+type NavItem = {
   to: string;
   icon: React.ElementType;
   label: string;
   end?: boolean;
-  onNavigate?: () => void;
-}) {
-  return (
-    <NavLink
-      to={to}
-      end={end}
-      onClick={onNavigate}
-      className={({ isActive }) =>
-        clsx('nav-link', isActive && 'nav-link-active')
-      }
-    >
-      <Icon size={16} />
-      <span>{label}</span>
-    </NavLink>
-  );
-}
+};
 
-const NAV_BY_ROLE: Record<
-  string,
-  { to: string; icon: React.ElementType; label: string; end?: boolean }[]
-> = {
+type NavSection = {
+  label?: string;
+  items: NavItem[];
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  STUDENT: 'Student',
+  COMPANY: 'Company',
+  COORDINATOR: 'Coordinator',
+  PARTY_SUPERVISOR: 'Party supervisor',
+  PROJECT_SUPERVISOR: 'Project supervisor',
+};
+
+const NAV_BY_ROLE: Record<string, NavSection[]> = {
   STUDENT: [
-    { to: '/student/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/student/projects', icon: FolderKanban, label: 'Browse Projects', end: true },
-    { to: '/student/party', icon: Users, label: 'My Party' },
-    { to: '/student/supervisors', icon: UserCheck, label: 'Supervisors' },
-    { to: '/student/submission', icon: Send, label: 'Submission' },
-    { to: '/student/scorecard', icon: Star, label: 'Scorecard' },
-    { to: '/student/notification-settings', icon: Bell, label: 'Notification Settings' },
+    {
+      items: [
+        { to: '/student/dashboard', icon: LayoutDashboard, label: 'Overview' },
+        { to: '/student/projects', icon: FolderKanban, label: 'Projects', end: true },
+        { to: '/student/party', icon: Users, label: 'Party' },
+        { to: '/student/supervisors', icon: UserCheck, label: 'Supervisors' },
+        { to: '/student/submission', icon: Send, label: 'Submission' },
+        { to: '/student/scorecard', icon: Star, label: 'Scorecard' },
+      ],
+    },
+    { label: 'Account', items: [{ to: '/student/notification-settings', icon: Settings, label: 'Settings' }] },
   ],
   COMPANY: [
     {
-      to: '/company/dashboard',
-      icon: LayoutDashboard,
-      label: 'Dashboard',
-      end: true,
+      items: [
+        { to: '/company/dashboard', icon: LayoutDashboard, label: 'Overview', end: true },
+        { to: '/company/projects', icon: FolderKanban, label: 'Projects', end: true },
+        { to: '/company/project-supervisors', icon: UserCheck, label: 'Project supervisors', end: true },
+      ],
     },
-    {
-      to: '/company/projects',
-      icon: FolderKanban,
-      label: 'My Projects',
-      end: true,
-    },
-    {
-      to: '/company/projects/new',
-      icon: Briefcase,
-      label: 'Post Project',
-      end: true,
-    },
-    {
-      to: '/company/project-supervisors',
-      icon: UserCheck,
-      label: 'Project Supervisors',
-      end: true,
-    },
-    { to: '/company/notification-settings', icon: Bell, label: 'Notification Settings' },
+    { label: 'Account', items: [{ to: '/company/notification-settings', icon: Settings, label: 'Settings' }] },
   ],
   COORDINATOR: [
-    { to: '/coordinator/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/coordinator/students', icon: GraduationCap, label: 'Students' },
-    { to: '/coordinator/companies', icon: Building2, label: 'Companies' },
-    { to: '/coordinator/supervisors', icon: UserCheck, label: 'Supervisors' },
-    { to: '/coordinator/projects', icon: FolderKanban, label: 'Projects' },
-    { to: '/coordinator/parties', icon: ClipboardList, label: 'Parties' },
-    { to: '/coordinator/evaluations', icon: Award, label: 'Evaluations' },
-    { to: '/coordinator/notification-settings', icon: Bell, label: 'Notification Settings' },
+    { items: [{ to: '/coordinator/dashboard', icon: LayoutDashboard, label: 'Overview' }] },
+    {
+      label: 'People',
+      items: [
+        { to: '/coordinator/students', icon: GraduationCap, label: 'Students' },
+        { to: '/coordinator/companies', icon: Building2, label: 'Companies' },
+        { to: '/coordinator/supervisors', icon: UserCheck, label: 'Supervisors' },
+      ],
+    },
+    {
+      label: 'Work',
+      items: [
+        { to: '/coordinator/projects', icon: FolderKanban, label: 'Projects' },
+        { to: '/coordinator/parties', icon: ClipboardList, label: 'Parties' },
+        { to: '/coordinator/evaluations', icon: Award, label: 'Evaluations' },
+      ],
+    },
+    { label: 'Account', items: [{ to: '/coordinator/notification-settings', icon: Settings, label: 'Settings' }] },
   ],
   PARTY_SUPERVISOR: [
-    { to: '/party-supervisor/overview', icon: LayoutDashboard, label: 'Overview' },
-    { to: '/party-supervisor/parties', icon: Users, label: 'My Parties' },
-    { to: '/party-supervisor/browse', icon: UserCheck, label: 'Browse Parties' },
-    { to: '/party-supervisor/profile', icon: UserCircle, label: 'Profile' },
-    { to: '/party-supervisor/notification-settings', icon: Bell, label: 'Notification Settings' },
+    {
+      items: [
+        { to: '/party-supervisor/overview', icon: LayoutDashboard, label: 'Overview' },
+        { to: '/party-supervisor/parties', icon: Users, label: 'My parties' },
+        { to: '/party-supervisor/browse', icon: UserCheck, label: 'Browse parties' },
+      ],
+    },
+    { label: 'Account', items: [{ to: '/party-supervisor/notification-settings', icon: Settings, label: 'Settings' }] },
   ],
   PROJECT_SUPERVISOR: [
-    { to: '/project-supervisor/overview', icon: LayoutDashboard, label: 'Overview' },
-    { to: '/project-supervisor/projects', icon: FolderKanban, label: 'My Projects' },
-    { to: '/project-supervisor/profile', icon: UserCircle, label: 'Profile' },
-    { to: '/project-supervisor/notification-settings', icon: Bell, label: 'Notification Settings' },
+    {
+      items: [
+        { to: '/project-supervisor/overview', icon: LayoutDashboard, label: 'Overview' },
+        { to: '/project-supervisor/projects', icon: FolderKanban, label: 'Projects' },
+      ],
+    },
+    { label: 'Account', items: [{ to: '/project-supervisor/notification-settings', icon: Settings, label: 'Settings' }] },
   ],
 };
 
-// ── Profile route by role ─────────────────────────────────────────────────────
 const PROFILE_ROUTE: Record<string, string> = {
   STUDENT: '/student/profile',
   COMPANY: '/company/profile',
@@ -158,373 +129,285 @@ const PROFILE_ROUTE: Record<string, string> = {
   PROJECT_SUPERVISOR: '/project-supervisor/profile',
 };
 
+function SidebarLink({ item, close }: { item: NavItem; close: () => void }) {
+  const Icon = item.icon;
+  return (
+    <NavLink
+      to={item.to}
+      end={item.end}
+      onClick={close}
+      className={({ isActive }) => clsx(
+        'flex min-h-11 items-center gap-3 rounded-md border-l-2 border-transparent px-3 text-sm font-medium text-muted transition-colors hover:bg-default hover:text-foreground',
+        isActive && 'border-l-accent bg-default text-foreground [&_svg]:text-accent',
+      )}
+    >
+      <Icon size={18} strokeWidth={1.8} aria-hidden='true' />
+      <span>{item.label}</span>
+    </NavLink>
+  );
+}
+
 export default function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const qc = useQueryClient();
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const { theme, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [theme, setTheme] = useState<'dark' | 'light'>(() =>
-    document.documentElement.classList.contains('light') ? 'light' : 'dark',
-  );
-  const notifRef = useRef<HTMLDivElement>(null);
-  const userMenuRef = useRef<HTMLDivElement>(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
-  const { data: notifData } = useQuery({
+  const { data: notificationData } = useQuery({
     queryKey: ['notifications'],
-    queryFn: () => userApi.getNotifications().then((r) => r.data),
+    queryFn: () => userApi.getNotifications().then((response) => response.data),
     refetchInterval: 60_000,
   });
 
   const { data: studentParty } = useQuery({
     queryKey: ['my-party'],
-    queryFn: () => partyApi.getMyParty().then((r) => r.data),
+    queryFn: () => partyApi.getMyParty().then((response) => response.data),
     enabled: user?.role === 'STUDENT',
     retry: false,
   });
 
-  const markOneMutation = useMutation({
+  const markOne = useMutation({
     mutationFn: (id: string) => userApi.markNotificationRead(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   });
 
-  const clearMutation = useMutation({
+  const clearAll = useMutation({
     mutationFn: () => userApi.clearNotifications(),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['notifications'] });
-      setNotifOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      setNotificationsOpen(false);
     },
   });
 
-  // Mark all read when panel opens
   useEffect(() => {
-    if (notifOpen && (notifData?.unreadCount ?? 0) > 0) {
-      userApi.markAllNotificationsRead();
-      qc.invalidateQueries({ queryKey: ['notifications'] });
-    }
-  }, [notifOpen]);
+    if (!notificationsOpen || (notificationData?.unreadCount ?? 0) === 0) return;
+    userApi.markAllNotificationsRead().finally(() =>
+      queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+    );
+  }, [notificationData?.unreadCount, notificationsOpen, queryClient]);
 
-  // Close notification panel on outside click
-  useEffect(() => {
-    function onMouseDown(e: MouseEvent) {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node))
-        setNotifOpen(false);
-    }
-    if (notifOpen) document.addEventListener('mousedown', onMouseDown);
-    return () => document.removeEventListener('mousedown', onMouseDown);
-  }, [notifOpen]);
+  if (!user) return null;
 
-  // Close user menu on outside click
-  useEffect(() => {
-    function onMouseDown(e: MouseEvent) {
-      if (
-        userMenuRef.current &&
-        !userMenuRef.current.contains(e.target as Node)
-      )
-        setUserMenuOpen(false);
-    }
-    if (userMenuOpen) document.addEventListener('mousedown', onMouseDown);
-    return () => document.removeEventListener('mousedown', onMouseDown);
-  }, [userMenuOpen]);
+  const baseSections = NAV_BY_ROLE[user.role] ?? [];
+  const sections = user.role === 'STUDENT' && studentParty?.assignedProjectId
+    ? baseSections.map((section, index) => index === 0 ? {
+        ...section,
+        items: [
+          ...section.items.slice(0, 2),
+          {
+            to: `/student/projects/${studentParty.assignedProjectId}`,
+            icon: BriefcaseBusiness,
+            label: 'My project',
+            end: true,
+          },
+          ...section.items.slice(2),
+        ],
+      } : section)
+    : baseSections;
 
-  const handleLogout = () => {
+  const initials = `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase();
+  const notifications = notificationData?.notifications ?? [];
+  const unread = notificationData?.unreadCount ?? 0;
+  const profileRoute = PROFILE_ROUTE[user.role] ?? '/';
+  const subtitle = user.role === 'COMPANY'
+    ? (user as any).companyProfile?.companyName ?? user.email
+    : user.role === 'STUDENT'
+      ? (user as any).studentProfile?.university ?? user.email
+      : user.email;
+
+  const signOut = () => {
     logout();
     navigate('/login');
   };
 
-  const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
-    document.documentElement.classList.toggle('dark', next === 'dark');
-    document.documentElement.classList.toggle('light', next === 'light');
-    localStorage.setItem('talentbridge-theme', next);
-  };
-
-  const toggleNotifications = () => {
-    const opening = !notifOpen;
-    setNotifOpen(opening);
-    if (opening) {
-      setSidebarOpen(false);
-      setUserMenuOpen(false);
-    }
-  };
-
-  const openSidebar = () => {
-    setNotifOpen(false);
-    setUserMenuOpen(false);
-    setSidebarOpen(true);
-  };
-
-  const toggleUserMenu = () => {
-    const opening = !userMenuOpen;
-    setUserMenuOpen(opening);
-    if (opening) setNotifOpen(false);
-  };
-
-  if (!user) return null;
-
-  const baseNavItems = NAV_BY_ROLE[user.role] || [];
-  const navItems = user.role === 'STUDENT' && studentParty?.assignedProjectId
-    ? [
-        ...baseNavItems.slice(0, 2),
-        {
-          to: `/student/projects/${studentParty.assignedProjectId}`,
-          icon: Briefcase,
-          label: 'My Project',
-          end: true,
-        },
-        ...baseNavItems.slice(2),
-      ]
-    : baseNavItems;
-  const initials = `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`;
-  const notifications = notifData?.notifications ?? [];
-  const unread = notifData?.unreadCount ?? 0;
-  const RoleIcon = ROLE_ICONS[user.role] ?? Shield;
-  const roleColor = ROLE_COLORS[user.role] ?? 'text-ink-400';
-  const profileRoute = PROFILE_ROUTE[user.role] ?? '/dashboard';
-
-  // Contextual subtitle under name
-  const userSubtitle = () => {
-    const u = user as any;
-    if (user.role === 'COMPANY')
-      return u.companyProfile?.companyName ?? u.email;
-    if (user.role === 'STUDENT') return u.studentProfile?.university ?? u.email;
-    return u.email;
-  };
-
   return (
-    <div className='flex h-screen bg-ink-950 relative overflow-hidden'>
+    <div className='flex h-dvh overflow-hidden bg-background text-foreground'>
       {sidebarOpen && (
         <button
-          aria-label='Close sidebar overlay'
-          className='fixed inset-0 bg-black/50 z-40 lg:hidden'
+          type='button'
+          data-testid='navigation-overlay'
+          aria-label='Close navigation'
+          className='fixed inset-0 z-40 bg-black/45 lg:hidden'
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* ── Sidebar ── */}
-      <aside className={clsx(
-        'fixed lg:static inset-y-0 left-0 z-50 w-64 flex-shrink-0 flex flex-col bg-ink-950 transform transition-transform duration-200',
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-      )}>
-        {/* Logo — no border-b */}
-        <div className='px-5 py-5'>
-          <div className='flex items-center gap-3'>
-            <div className='w-8 h-8 rounded-lg bg-ember-500 flex items-center justify-center'>
-              <Layers size={16} className='text-white' />
-            </div>
-            <span className='font-display font-bold text-white text-lg tracking-tight'>
-              TalentBridge
-            </span>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className='ml-auto lg:hidden w-10 h-10 rounded-xl flex items-center justify-center text-ink-400 hover:bg-ink-800 hover:text-ink-100'
-              aria-label='Close sidebar'
-            >
-              <X size={18} />
-            </button>
-          </div>
-        </div>
-
-        {/* Role badge — below logo */}
-        <div className='px-4 pb-3'>
-          <div
-            className={clsx(
-              'flex items-center gap-2 px-3 py-1.5 rounded-xl bg-ink-800/60 border border-ink-700/40 w-fit',
-            )}
+      <aside
+        aria-label='Primary navigation'
+        className={clsx(
+          'fixed inset-y-0 left-0 z-50 flex w-[var(--sidebar-width)] flex-col border-r border-border bg-background transition-transform lg:static',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+        )}
+      >
+        <div className='flex h-16 items-center px-4'>
+          <Link to='/' onClick={() => setSidebarOpen(false)}>
+            <Brand />
+          </Link>
+          <Button
+            isIconOnly
+            size='sm'
+            variant='ghost'
+            className='ml-auto lg:hidden'
+            aria-label='Close navigation'
+            onPress={() => setSidebarOpen(false)}
           >
-            <RoleIcon size={12} className={roleColor} />
-            <span className={clsx('text-xs font-semibold', roleColor)}>
-              {ROLE_LABELS[user.role]}
-            </span>
-          </div>
+            <X size={18} />
+          </Button>
         </div>
 
-        {/* Nav */}
-        <nav className='flex-1 px-3 space-y-0.5 overflow-y-auto'>
-          {navItems.map((item) => (
-            <NavItem
-              key={item.to}
-              to={item.to}
-              icon={item.icon}
-              label={item.label}
-              end={item.end}
-              onNavigate={() => setSidebarOpen(false)}
-            />
+        <div className='px-4 pb-4'>
+          <Chip size='sm' variant='soft' color='accent'>{ROLE_LABELS[user.role]}</Chip>
+        </div>
+
+        <nav className='flex-1 overflow-y-auto px-3 pb-4'>
+          {sections.map((section, index) => (
+            <section key={section.label ?? index} className={clsx(index > 0 && 'mt-5')}>
+              {section.label && (
+                <p className='mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted'>
+                  {section.label}
+                </p>
+              )}
+              <div className='space-y-1'>
+                {section.items.map((item) => (
+                  <SidebarLink key={item.to} item={item} close={() => setSidebarOpen(false)} />
+                ))}
+              </div>
+            </section>
           ))}
         </nav>
 
-        {/* User footer — clickable, opens menu */}
-        <div className='p-3' ref={userMenuRef}>
-          {/* User menu popup */}
-          {userMenuOpen && (
-            <div className='mb-2 rounded-xl bg-ink-800 border border-ink-700/50 overflow-hidden shadow-xl shadow-black/40'>
-              <Link
-                to={profileRoute}
-                onClick={() => setUserMenuOpen(false)}
-                className='flex items-center gap-3 px-4 py-3 hover:bg-ink-700/60 transition-colors text-sm text-ink-200 hover:text-white'
-              >
-                <UserCircle size={15} className='text-ink-400' />
-                My Profile
-              </Link>
-              <button
-                onClick={handleLogout}
-                className='w-full flex items-center gap-3 px-4 py-3 hover:bg-red-500/10 transition-colors text-sm text-red-400 hover:text-red-300'
-              >
-                <LogOut size={15} />
-                Sign out
-              </button>
+        <div className='border-t border-border p-4'>
+          <div className='flex items-center gap-3'>
+            <Avatar size='sm'>
+              <Avatar.Fallback>{initials}</Avatar.Fallback>
+            </Avatar>
+            <div className='min-w-0'>
+              <p className='truncate text-sm font-medium'>{user.firstName} {user.lastName}</p>
+              <p className='truncate text-xs text-muted'>{subtitle}</p>
             </div>
-          )}
-
-          <button
-            onClick={toggleUserMenu}
-            className='w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-ink-800/60 transition-colors'
-          >
-            <div className='w-8 h-8 rounded-lg bg-ink-700 border border-ink-600/50 flex items-center justify-center flex-shrink-0'>
-              <span className='text-xs font-bold text-ink-200'>{initials}</span>
-            </div>
-            <div className='flex-1 min-w-0 text-left'>
-              <p className='text-xs font-semibold text-ink-100 truncate'>
-                {user.firstName} {user.lastName}
-              </p>
-              <p className='text-[10px] text-ink-500 truncate'>
-                {userSubtitle()}
-              </p>
-            </div>
-            <ChevronUp
-              size={14}
-              className={clsx(
-                'text-ink-500 transition-transform flex-shrink-0',
-                !userMenuOpen && 'rotate-180',
-              )}
-            />
-          </button>
+          </div>
         </div>
       </aside>
 
-      {/* ── Main ── */}
-      <div className='flex-1 flex flex-col overflow-hidden border-l border-ink-800/60 min-w-0'>
-        {/* Top bar */}
-        <header className='h-14 flex items-center justify-between px-4 sm:px-6 border-b border-ink-800/60 bg-ink-950 flex-shrink-0 relative'>
-          <button
-            onClick={openSidebar}
-            className='lg:hidden w-10 h-10 rounded-xl flex items-center justify-center text-ink-400 hover:text-ink-100 hover:bg-ink-800 transition-colors'
-            aria-label='Open sidebar'
+      <div className='flex min-w-0 flex-1 flex-col'>
+        <header className='relative z-[60] flex h-16 shrink-0 items-center border-b border-border bg-background px-4 sm:px-6'>
+          <Button
+            isIconOnly
+            size='sm'
+            variant='ghost'
+            className='lg:hidden'
+            aria-label='Open navigation'
+            onPress={() => setSidebarOpen(true)}
           >
             <Menu size={19} />
-          </button>
-          <div className='ml-auto flex items-center gap-2'>
-            <button
-              onClick={toggleTheme}
-              className='w-9 h-9 rounded-xl flex items-center justify-center text-ink-400 hover:text-ink-100 hover:bg-ink-800 transition-all'
-              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
-            </button>
+          </Button>
 
-            {/* Notification bell */}
-            <div ref={notifRef} className='relative z-[60]'>
-              <button
-                onClick={toggleNotifications}
+          <div className='ml-auto flex items-center gap-1 sm:gap-2'>
+            <Button
+              isIconOnly
+              size='sm'
+              variant='ghost'
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              onPress={toggleTheme}
+            >
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </Button>
+
+            <Popover.Root
+              isOpen={notificationsOpen}
+              onOpenChange={(open) => {
+                setNotificationsOpen(open);
+                if (open) setSidebarOpen(false);
+              }}
+            >
+              <Button
+                isIconOnly
+                size='sm'
+                variant='ghost'
                 aria-label='Notifications'
-                aria-expanded={notifOpen}
-                aria-controls='notification-panel'
-                className='relative w-9 h-9 rounded-xl flex items-center justify-center text-ink-400 hover:text-ink-100 hover:bg-ink-800 transition-all'
+                className='relative'
               >
-                <Bell size={17} />
+                <Bell size={18} />
                 {unread > 0 && (
-                  <span className='absolute -top-0.5 -right-0.5 w-4 h-4 bg-ember-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold'>
+                  <span className='absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[9px] font-bold text-danger-foreground'>
                     {unread > 9 ? '9+' : unread}
                   </span>
                 )}
-              </button>
-
-              {notifOpen && (
-                <div
-                  id='notification-panel'
-                  className='absolute right-0 top-full mt-2 w-[min(20rem,calc(100vw-2rem))] z-[60] rounded-2xl border border-ink-700/50 bg-ink-900 shadow-2xl shadow-black/60 overflow-hidden'
-                >
-                  <div className='px-4 py-3 border-b border-ink-700/50 flex items-center justify-between'>
-                    <span className='text-sm font-semibold text-white'>
-                      Notifications
-                    </span>
+              </Button>
+              <Popover.Content
+                placement='bottom end'
+                className='w-[min(22rem,calc(100vw-1rem))] overflow-hidden p-0'
+              >
+                <Popover.Dialog className='outline-none'>
+                  <div className='flex items-center justify-between border-b border-border px-4 py-3'>
+                    <Popover.Heading className='text-sm font-semibold'>Notifications</Popover.Heading>
                     {notifications.length > 0 && (
-                      <button
-                        onClick={() => clearMutation.mutate()}
-                        disabled={clearMutation.isPending}
-                        className='text-xs text-red-400 hover:text-red-300 transition-colors'
+                      <Button
+                        size='sm'
+                        variant='ghost'
+                        isDisabled={clearAll.isPending}
+                        onPress={() => clearAll.mutate()}
                       >
                         Clear all
-                      </button>
+                      </Button>
                     )}
                   </div>
-                  <div className='max-h-[min(20rem,calc(100vh-8rem))] overflow-y-auto'>
+                  <div className='max-h-[min(24rem,calc(100dvh-8rem))] overflow-y-auto'>
                     {notifications.length === 0 ? (
-                      <p className='px-4 py-8 text-center text-ink-400 text-sm'>
-                        All caught up 🎉
-                      </p>
-                    ) : (
-                      notifications.map((n: any) => (
-                        <div
-                          key={n.id}
-                          onClick={() =>
-                            !n.read && markOneMutation.mutate(n.id)
-                          }
-                          className={clsx(
-                            'px-4 py-3 border-b border-ink-800/50 last:border-0 transition-colors',
-                            !n.read &&
-                              'bg-ember-500/5 cursor-pointer hover:bg-ember-500/10',
+                      <p className='px-4 py-10 text-center text-sm text-muted'>No new notifications.</p>
+                    ) : notifications.map((notification: any) => (
+                      <button
+                        type='button'
+                        key={notification.id}
+                        className='flex w-full gap-3 border-b border-separator px-4 py-3 text-left last:border-0 hover:bg-default'
+                        onClick={() => !notification.read && markOne.mutate(notification.id)}
+                      >
+                        <span className={clsx('mt-1.5 size-1.5 shrink-0 rounded-full', notification.read ? 'bg-transparent' : 'bg-accent')} />
+                        <span className='min-w-0'>
+                          <span className='block text-sm font-medium'>{notification.title}</span>
+                          <span className='mt-0.5 block text-xs leading-5 text-muted'>{notification.message}</span>
+                          {notification.createdAt && (
+                            <span className='mt-1 block text-[11px] text-muted'>
+                              {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                            </span>
                           )}
-                        >
-                          <div className='flex items-start gap-2'>
-                            {!n.read && (
-                              <div className='w-1.5 h-1.5 rounded-full bg-ember-500 mt-1.5 flex-shrink-0' />
-                            )}
-                            <div className={clsx('flex-1', n.read && 'pl-3.5')}>
-                              <p className='text-xs font-semibold text-ink-100'>
-                                {n.title}
-                              </p>
-                              <p className='text-xs text-ink-400 mt-0.5'>
-                                {n.message}
-                              </p>
-                              {n.createdAt && (
-                                <p className='text-[10px] text-ink-600 mt-1'>
-                                  {formatDistanceToNow(new Date(n.createdAt), {
-                                    addSuffix: true,
-                                  })}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
+                        </span>
+                      </button>
+                    ))}
                   </div>
-                </div>
-              )}
-            </div>
+                </Popover.Dialog>
+              </Popover.Content>
+            </Popover.Root>
 
-            {/* Top-right user button */}
-            <div className='w-px h-5 bg-ink-700/60' />
-            <button
-              onClick={() => navigate(profileRoute)}
-              className='flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-ink-800 transition-colors'
-            >
-              <div className='w-6 h-6 rounded-md bg-ink-700 flex items-center justify-center text-xs font-bold text-ink-200'>
-                {initials}
-              </div>
-              <span className='text-sm text-ink-300 font-medium'>
-                {user.firstName}
-              </span>
-            </button>
+            <Dropdown.Root>
+              <Dropdown.Trigger className='flex min-h-11 items-center gap-2 rounded-md px-2 hover:bg-default'>
+                <Avatar size='sm'><Avatar.Fallback>{initials}</Avatar.Fallback></Avatar>
+                <span className='hidden text-sm font-medium sm:inline'>{user.firstName}</span>
+                <ChevronDown size={14} className='hidden text-muted sm:block' />
+              </Dropdown.Trigger>
+              <Dropdown.Popover placement='bottom end'>
+                <Dropdown.Menu
+                  aria-label='Profile actions'
+                  onAction={(key) => key === 'profile' ? navigate(profileRoute) : signOut()}
+                >
+                  <Dropdown.Item id='profile' textValue='Profile'>
+                    <UserCircle size={16} />
+                    <span>Profile</span>
+                  </Dropdown.Item>
+                  <Dropdown.Item id='sign-out' textValue='Sign out'>
+                    <LogOut size={16} />
+                    <span>Sign out</span>
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown.Popover>
+            </Dropdown.Root>
           </div>
         </header>
 
-        {/* Page content */}
         <main className='flex-1 overflow-y-auto'>
-          <div className='max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8'>
+          <div className='mx-auto w-full max-w-[96rem] px-4 py-6 sm:px-6 sm:py-8 lg:px-8'>
             <Outlet />
           </div>
         </main>

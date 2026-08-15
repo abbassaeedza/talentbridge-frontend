@@ -5,9 +5,14 @@ import { chatApi, projectApi } from '../../api/services';
 import { useAuth } from '../../contexts/AuthContext';
 import type { ChatMessage } from '../../types';
 import clsx from 'clsx';
+import { Button } from '@heroui/react/button';
+import { Surface } from '@heroui/react/surface';
+import { TextArea } from '@heroui/react/textarea';
+import { useLocation } from 'react-router-dom';
 
 export default function ChatBot() {
   const { user } = useAuth();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -16,30 +21,32 @@ export default function ChatBot() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const context = user?.role ?? 'STUDENT';
+  const context = user?.role === 'COMPANY' && location.pathname === '/company/projects/new'
+    ? 'COMPANY_PROJECT_CREATION'
+    : user?.role ?? 'STUDENT';
   const copy = user?.role === 'COMPANY'
     ? {
-        greeting: "Hi! I can help with your projects, supervisors, applications, submissions, or create a project draft. What's on your mind?",
-        subtitle: 'Company workspace',
+        greeting: 'Ask about company projects, supervisors, applications, submissions, or create a project draft.',
+        subtitle: 'Company access',
       }
     : user?.role === 'COORDINATOR'
       ? {
-          greeting: "Hi! I can answer questions about TalentBridge users, approvals, projects, parties, deadlines, and evaluations. What's on your mind?",
-          subtitle: 'Coordinator workspace',
+          greeting: 'Ask about TalentBridge users, approvals, projects, parties, deadlines, or evaluations.',
+          subtitle: 'Coordinator access',
         }
       : user?.role === 'PARTY_SUPERVISOR'
         ? {
-            greeting: "Hi! I can help with your parties, projects, applications, submissions, and evaluations. What's on your mind?",
-            subtitle: 'Party supervisor workspace',
+            greeting: 'Ask about your parties, projects, applications, submissions, or evaluations.',
+            subtitle: 'Party supervisor access',
           }
         : user?.role === 'PROJECT_SUPERVISOR'
           ? {
-              greeting: "Hi! I can help with your supervised projects, assigned parties, submissions, and evaluations. What's on your mind?",
-              subtitle: 'Project supervisor workspace',
+              greeting: 'Ask about supervised projects, assigned parties, submissions, or evaluations.',
+              subtitle: 'Project supervisor access',
             }
           : {
-              greeting: "Hey! I can help with open projects, your party, applications, assigned project, submission, and scorecard. What's on your mind?",
-              subtitle: 'Student workspace',
+              greeting: 'Ask about projects, your party, applications, submission, deadlines, or scorecard.',
+              subtitle: 'Student access',
             };
   const greeting = copy.greeting;
 
@@ -105,51 +112,52 @@ export default function ChatBot() {
 
   return (
     <>
-      {/* Floating button — lower z than modals, higher than content */}
       {!open && (
-        <button
-          onClick={() => setOpen(true)}
+        <Button
+          isIconOnly
+          size='lg'
+          variant='primary'
+          onPress={() => setOpen(true)}
           aria-label='Open AI assistant'
-          className='fixed bottom-6 right-6 w-12 h-12 bg-ember-500 hover:bg-ember-600 text-white rounded-2xl shadow-xl shadow-ember-500/30 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 z-30'
+          className='fixed bottom-4 right-4 z-30 shadow-lg sm:bottom-6 sm:right-6'
         >
           <MessageCircle size={20} />
-        </button>
+        </Button>
       )}
 
-      {/* Chat panel — z-30 so modals at z-50 always appear on top */}
       {open && (
-        <div className='fixed bottom-3 left-3 right-3 h-[calc(100dvh-1.5rem)] max-h-[500px] flex flex-col bg-ink-900 border border-ink-700/50 rounded-2xl shadow-2xl shadow-black/50 z-30 overflow-hidden sm:bottom-6 sm:left-auto sm:right-6 sm:h-[500px] sm:w-[360px]'>
-          {/* Header */}
-          <div className='flex items-center gap-3 px-4 py-3 border-b border-ink-700/50 flex-shrink-0'>
-            <div className='w-7 h-7 rounded-xl bg-ember-500/20 border border-ember-500/30 flex items-center justify-center'>
-              <Bot size={14} className='text-ember-400' />
+        <Surface data-testid='chat-panel' className='fixed inset-0 z-30 flex h-dvh flex-col overflow-hidden border border-border shadow-2xl sm:inset-auto sm:bottom-6 sm:right-6 sm:h-[min(600px,calc(100dvh-3rem))] sm:w-[400px] sm:rounded-lg'>
+          <div className='flex shrink-0 items-center gap-3 border-b border-border px-4 py-3'>
+            <div className='flex size-8 items-center justify-center rounded-md bg-default text-foreground'>
+              <Bot size={16} />
             </div>
             <div className='flex-1'>
-              <p className='text-sm font-semibold text-white'>AI Assistant</p>
-              <p className='text-[10px] text-ink-500'>
-                {copy.subtitle}
-              </p>
+              <p className='text-sm font-semibold'>TalentBridge assistant</p>
+              <p className='text-xs text-muted'>{copy.subtitle}</p>
             </div>
             <div className='flex gap-1'>
-              <button
-                onClick={() => setMessages([])}
+              <Button
+                isIconOnly
+                size='sm'
+                variant='ghost'
+                onPress={() => setMessages([])}
                 aria-label='Clear conversation'
-                className='w-7 h-7 rounded-lg hover:bg-ink-700 flex items-center justify-center text-ink-500 hover:text-ink-300 transition-colors'
               >
-                <Minimize2 size={13} />
-              </button>
-              <button
-                onClick={() => setOpen(false)}
+                <Minimize2 size={16} />
+              </Button>
+              <Button
+                isIconOnly
+                size='sm'
+                variant='ghost'
+                onPress={() => setOpen(false)}
                 aria-label='Close AI assistant'
-                className='w-7 h-7 rounded-lg hover:bg-ink-700 flex items-center justify-center text-ink-500 hover:text-ink-300 transition-colors'
               >
-                <X size={13} />
-              </button>
+                <X size={16} />
+              </Button>
             </div>
           </div>
 
-          {/* Messages */}
-          <div className='flex-1 overflow-y-auto p-4 space-y-3'>
+          <div className='flex-1 space-y-4 overflow-y-auto p-4'>
             {messages.map((m, i) => (
               <div
                 key={i}
@@ -159,16 +167,16 @@ export default function ChatBot() {
                 )}
               >
                 {m.role === 'assistant' && (
-                  <div className='w-5 h-5 rounded-md bg-ember-500/20 border border-ember-500/30 flex items-center justify-center flex-shrink-0 mt-1'>
-                    <Bot size={11} className='text-ember-400' />
+                  <div className='mt-1 flex size-6 shrink-0 items-center justify-center rounded-md bg-default'>
+                    <Bot size={13} />
                   </div>
                 )}
                 <div
                   className={clsx(
-                    'max-w-[85%] px-3 py-2 rounded-xl text-sm',
+                    'max-w-[85%] rounded-lg px-3 py-2 text-sm',
                     m.role === 'user'
-                      ? 'bg-ember-500 text-white rounded-tr-sm'
-                      : 'bg-ink-800 border border-ink-700/50 text-ink-200 rounded-tl-sm',
+                      ? 'bg-accent text-accent-foreground'
+                      : 'border border-border bg-surface-secondary text-foreground',
                   )}
                 >
                   {m.role === 'assistant' ? (
@@ -183,21 +191,21 @@ export default function ChatBot() {
             ))}
             {loading && (
               <div className='flex gap-2'>
-                <div className='w-5 h-5 rounded-md bg-ember-500/20 border border-ember-500/30 flex items-center justify-center flex-shrink-0'>
-                  <Bot size={11} className='text-ember-400' />
+                <div className='flex size-6 shrink-0 items-center justify-center rounded-md bg-default'>
+                  <Bot size={13} />
                 </div>
-                <div className='bg-ink-800 border border-ink-700/50 rounded-xl rounded-tl-sm px-3 py-2.5'>
+                <div className='rounded-lg border border-border bg-surface-secondary px-3 py-2.5'>
                   <div className='flex gap-1 items-center'>
                     <div
-                      className='w-1.5 h-1.5 rounded-full bg-ink-400 animate-bounce'
+                      className='size-1.5 animate-bounce rounded-full bg-muted'
                       style={{ animationDelay: '0ms' }}
                     />
                     <div
-                      className='w-1.5 h-1.5 rounded-full bg-ink-400 animate-bounce'
+                      className='size-1.5 animate-bounce rounded-full bg-muted'
                       style={{ animationDelay: '150ms' }}
                     />
                     <div
-                      className='w-1.5 h-1.5 rounded-full bg-ink-400 animate-bounce'
+                      className='size-1.5 animate-bounce rounded-full bg-muted'
                       style={{ animationDelay: '300ms' }}
                     />
                   </div>
@@ -207,31 +215,33 @@ export default function ChatBot() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Input */}
-          <div className='p-3 border-t border-ink-700/50 flex-shrink-0'>
+          <div className='shrink-0 border-t border-border p-3'>
             <div className='flex gap-2 items-end'>
-              <textarea
+              <TextArea
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKey}
-                placeholder='Ask about TalentBridge…'
+                placeholder='Ask about TalentBridge'
                 maxLength={2000}
                 rows={1}
-                className='flex-1 bg-ink-800 border border-ink-600/50 rounded-xl px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:outline-none focus:ring-2 focus:ring-ember-500/40 resize-none'
+                fullWidth
+                className='min-h-11 flex-1 resize-none'
                 style={{ maxHeight: 72, overflowY: 'auto' }}
               />
-              <button
-                onClick={send}
+              <Button
+                isIconOnly
+                variant='primary'
+                onPress={send}
                 aria-label='Send message'
-                disabled={!input.trim() || loading}
-                className='w-8 h-8 bg-ember-500 hover:bg-ember-600 disabled:opacity-40 text-white rounded-xl flex items-center justify-center transition-all flex-shrink-0'
+                isDisabled={!input.trim() || loading}
+                className='shrink-0'
               >
-                <Send size={13} />
-              </button>
+                <Send size={16} />
+              </Button>
             </div>
           </div>
-        </div>
+        </Surface>
       )}
     </>
   );

@@ -1,4 +1,6 @@
 import { CheckCircle, Loader2, PauseCircle, XCircle } from 'lucide-react';
+import { Button } from '@heroui/react/button';
+import { Input } from '@heroui/react/input';
 
 type Action = 'approve' | 'reject' | 'suspend';
 
@@ -19,31 +21,38 @@ export default function BulkActionToolbar({
   loadingAction: Action | null;
   onAction: (action: Action) => void;
 }) {
-  if (selectedCount === 0) return null;
+  if (!selectedCount) return null;
+
   const run = (action: Action) => {
     const count = eligible[action];
-    if (count > 0 && confirm(`${action[0].toUpperCase()}${action.slice(1)} ${count} selected ${noun}${count === 1 ? '' : 's'}?`)) onAction(action);
+    const label = `${action[0].toUpperCase()}${action.slice(1)}`;
+    if (count && confirm(`${label} ${count} selected ${noun}${count === 1 ? '' : 's'}?`)) onAction(action);
   };
 
   return (
-    <div className='sticky bottom-4 z-30 mt-4 flex flex-col gap-3 rounded-2xl border border-ember-500/30 bg-ink-900/95 p-4 shadow-2xl backdrop-blur md:flex-row md:items-center'>
-      <p className='min-w-24 text-sm font-semibold text-white'>{selectedCount} selected</p>
-      <input
-        className='input py-2 text-xs md:min-w-56 md:flex-1'
-        placeholder='Rejection reason'
+    <div className='sticky bottom-3 z-20 mb-4 flex flex-col gap-3 rounded-lg border border-border bg-overlay p-3 shadow-xl md:flex-row md:items-center'>
+      <p className='shrink-0 text-sm font-semibold'>{selectedCount} selected</p>
+      <Input
+        fullWidth
+        aria-label='Rejection reason'
+        placeholder='Rejection reason required for reject'
         value={rejectionReason}
         onChange={(event) => onRejectionReasonChange(event.target.value)}
+        className='md:min-w-64 md:flex-1'
       />
       <div className='flex flex-wrap gap-2'>
-        <button disabled={eligible.approve === 0 || !!loadingAction} onClick={() => run('approve')} className='btn-primary px-3 py-2 text-xs'>
-          {loadingAction === 'approve' ? <Loader2 size={13} className='animate-spin' /> : <CheckCircle size={13} />} Approve {eligible.approve}
-        </button>
-        <button disabled={eligible.reject === 0 || !rejectionReason.trim() || !!loadingAction} onClick={() => run('reject')} className='btn-secondary px-3 py-2 text-xs text-red-300'>
-          {loadingAction === 'reject' ? <Loader2 size={13} className='animate-spin' /> : <XCircle size={13} />} Reject {eligible.reject}
-        </button>
-        <button disabled={eligible.suspend === 0 || !!loadingAction} onClick={() => run('suspend')} className='btn-secondary px-3 py-2 text-xs'>
-          {loadingAction === 'suspend' ? <Loader2 size={13} className='animate-spin' /> : <PauseCircle size={13} />} Suspend {eligible.suspend}
-        </button>
+        <Button size='sm' variant='primary' isDisabled={!eligible.approve || !!loadingAction} onPress={() => run('approve')}>
+          {loadingAction === 'approve' ? <Loader2 size={14} className='animate-spin' /> : <CheckCircle size={14} />}
+          Approve {eligible.approve}
+        </Button>
+        <Button size='sm' variant='danger-soft' isDisabled={!eligible.reject || !rejectionReason.trim() || !!loadingAction} onPress={() => run('reject')}>
+          {loadingAction === 'reject' ? <Loader2 size={14} className='animate-spin' /> : <XCircle size={14} />}
+          Reject {eligible.reject}
+        </Button>
+        <Button size='sm' variant='secondary' isDisabled={!eligible.suspend || !!loadingAction} onPress={() => run('suspend')}>
+          {loadingAction === 'suspend' ? <Loader2 size={14} className='animate-spin' /> : <PauseCircle size={14} />}
+          Suspend {eligible.suspend}
+        </Button>
       </div>
     </div>
   );

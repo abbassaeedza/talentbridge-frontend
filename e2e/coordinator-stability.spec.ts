@@ -66,9 +66,9 @@ type CoordinatorApiOptions = {
 
 async function loginAsCoordinator(page: Page) {
   await page.goto('/login');
-  await page.getByRole('button', { name: /Coordinator/ }).click();
+  await page.getByRole('button', { name: 'Open coordinator demo' }).click();
   await expect(page).toHaveURL(/\/coordinator\/dashboard$/);
-  await expect(page.getByRole('heading', { name: 'Coordinator Dashboard' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
 }
 
 async function mockCoordinatorApi(page: Page, options: CoordinatorApiOptions = {}) {
@@ -167,9 +167,9 @@ test('navigates from Dashboard to Students without blanking', async ({ page }) =
 
   await page.getByRole('link', { name: 'Students', exact: true }).click();
 
-  await expect(page.getByRole('heading', { name: 'Students Directory' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Students' })).toBeVisible();
   await expect(page.getByText('pending.student@talentbridge.com').first()).toBeVisible();
-  await expect(page.getByText('25 students shown')).toBeVisible();
+  await expect(page.getByText('25 of 25 students shown')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Users', exact: true })).toHaveCount(0);
   expect(errors).toEqual([]);
 });
@@ -277,9 +277,9 @@ test('filters student and company approval states with tabs', async ({ page }) =
   await loginAsCoordinator(page);
 
   await page.getByRole('link', { name: 'Students', exact: true }).click();
-  await expect(page.getByRole('tab', { name: 'All Students' })).toBeVisible();
-  await page.getByRole('tab', { name: 'Pending Requests' }).click();
-  await expect(page.getByText('pending.student@talentbridge.com')).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'All' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Pending' }).click();
+  await expect(page.getByText('pending.student@talentbridge.com').first()).toBeVisible();
   await expect(page.getByText('pending2.student@talentbridge.com')).toBeHidden();
 
   await page.getByRole('link', { name: 'Companies', exact: true }).click();
@@ -295,11 +295,11 @@ test('selects all filtered students and requires a bulk rejection reason', async
   await loginAsCoordinator(page);
   await page.getByRole('link', { name: 'Students', exact: true }).click();
 
-  await page.getByRole('checkbox', { name: 'Select all filtered students' }).check();
+  await page.getByRole('checkbox', { name: /Select all .* filtered students/ }).press('Space');
 
   await expect(page.getByText('25 selected')).toBeVisible();
   await expect(page.getByRole('button', { name: /Reject 25/ })).toBeDisabled();
-  await page.getByPlaceholder('Rejection reason').fill('Incomplete academic record');
+  await page.getByPlaceholder('Rejection reason required for reject').fill('Incomplete academic record');
   await expect(page.getByRole('button', { name: /Reject 25/ })).toBeEnabled();
 });
 
@@ -314,7 +314,7 @@ test('updates email notification preferences', async ({ page }) => {
     });
   });
   await loginAsCoordinator(page);
-  await page.getByRole('link', { name: 'Notification Settings' }).click();
+  await page.getByRole('link', { name: 'Settings', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Notification Settings' })).toBeVisible();
   await page.getByRole('switch', { name: 'Deadline Reminder email' }).uncheck();
@@ -407,12 +407,12 @@ test('keeps notifications visible and closes the mobile sidebar', async ({ page 
   await mockCoordinatorApi(page);
   await loginAsCoordinator(page);
 
-  await page.getByRole('button', { name: 'Open sidebar' }).click();
-  await expect(page.getByRole('button', { name: 'Close sidebar', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Open navigation' }).click();
+  await expect(page.getByRole('button', { name: 'Close navigation', exact: true }).last()).toBeVisible();
   await page.getByRole('button', { name: 'Notifications' }).click();
 
-  await expect(page.getByRole('button', { name: 'Close sidebar overlay' })).toBeHidden();
-  const box = await page.locator('#notification-panel').boundingBox();
+  await expect(page.getByTestId('navigation-overlay')).toHaveCount(0);
+  const box = await page.getByRole('dialog').boundingBox();
   expect(box).not.toBeNull();
   expect(box!.x).toBeGreaterThanOrEqual(0);
   expect(box!.x + box!.width).toBeLessThanOrEqual(800);
@@ -425,12 +425,12 @@ test('right-aligns header controls and anchors notifications below the bell', as
   await mockCoordinatorApi(page);
   await loginAsCoordinator(page);
 
-  const header = await page.locator('header').boundingBox();
+  const header = await page.getByRole('banner').boundingBox();
   const profile = await page.getByRole('button', { name: 'DC Demo', exact: true }).boundingBox();
   const bellButton = page.getByRole('button', { name: 'Notifications' });
   const bell = await bellButton.boundingBox();
   await bellButton.click();
-  const panel = await page.locator('#notification-panel').boundingBox();
+  const panel = await page.getByRole('dialog').boundingBox();
 
   expect(header).not.toBeNull();
   expect(profile).not.toBeNull();
@@ -457,7 +457,7 @@ test('shows the nearest deadline prominently with four upcoming deadlines', asyn
 
   await loginAsCoordinator(page);
 
-  await expect(page.getByRole('heading', { name: 'Upcoming Deadlines' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Upcoming deadlines' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Deadline project 1' })).toBeVisible();
   await expect(page.getByText('Deadline project 5').first()).toBeVisible();
   await expect(page.getByText('Due soon')).toBeVisible();
@@ -474,7 +474,7 @@ test('shows a safe backend chatbot failure', async ({ page }) => {
   await loginAsCoordinator(page);
 
   await page.getByRole('button', { name: 'Open AI assistant' }).click();
-  await page.getByPlaceholder('Ask about TalentBridge…').fill('Explain this project');
+  await page.getByPlaceholder('Ask about TalentBridge').fill('Explain this project');
   await page.getByRole('button', { name: 'Send message' }).click();
 
   await expect(page.getByText('AI service is temporarily unavailable')).toBeVisible();
@@ -491,12 +491,12 @@ test('uses a safe fallback for malformed chatbot errors', async ({ page }) => {
   await loginAsCoordinator(page);
 
   await page.getByRole('button', { name: 'Open AI assistant' }).click();
-  const panel = page.getByText('AI Assistant').locator('..').locator('..');
+  const panel = page.getByTestId('chat-panel');
   const bounds = await panel.boundingBox();
   expect(bounds).not.toBeNull();
   expect(bounds!.x).toBeGreaterThanOrEqual(0);
   expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
-  await page.getByPlaceholder('Ask about TalentBridge…').fill('Explain this project');
+  await page.getByPlaceholder('Ask about TalentBridge').fill('Explain this project');
   await page.getByRole('button', { name: 'Send message' }).click();
 
   await expect(page.getByText('Sorry, I ran into an error. Please try again.')).toBeVisible();

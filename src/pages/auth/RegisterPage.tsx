@@ -1,141 +1,154 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { authApi } from '../../api/services'
-import { Layers, GraduationCap, Building2, UserCog, ArrowRight } from 'lucide-react'
-import toast from 'react-hot-toast'
-import type { UserRole } from '../../types'
-import clsx from 'clsx'
-import { setAuthTokens } from '../../utils/authTokens'
-import { useAuth } from '../../contexts/AuthContext'
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowRight, Building2, GraduationCap, UserCog } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Button } from '@heroui/react/button';
+import { Input } from '@heroui/react/input';
+import { Label } from '@heroui/react/label';
+import { Spinner } from '@heroui/react/spinner';
+import { TextField } from '@heroui/react/textfield';
+import clsx from 'clsx';
+import { authApi } from '../../api/services';
+import { PublicShell } from '../../components/ui/TalentBridgeUI';
+import { useAuth } from '../../contexts/AuthContext';
+import type { UserRole } from '../../types';
+import { setAuthTokens } from '../../utils/authTokens';
 
-const ROLES: { value: UserRole; label: string; desc: string; icon: React.ElementType }[] = [
-  { value: 'STUDENT', label: 'Student', desc: 'Join teams & work on real projects', icon: GraduationCap },
-  { value: 'COMPANY', label: 'Company', desc: 'Post projects for student teams', icon: Building2 },
-  { value: 'PARTY_SUPERVISOR', label: 'Party Supervisor', desc: 'University mentor for student parties', icon: UserCog },
-]
+const ROLES: { value: UserRole; label: string; description: string; icon: React.ElementType }[] = [
+  { value: 'STUDENT', label: 'Student', description: 'Join a project party', icon: GraduationCap },
+  { value: 'COMPANY', label: 'Company', description: 'Post industry projects', icon: Building2 },
+  { value: 'PARTY_SUPERVISOR', label: 'Party supervisor', description: 'Supervise university teams', icon: UserCog },
+];
+
+const Field = ({
+  label,
+  value,
+  onChange,
+  type = 'text',
+  placeholder,
+  required = false,
+  autoComplete,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  placeholder?: string;
+  required?: boolean;
+  autoComplete?: string;
+}) => (
+  <TextField fullWidth isRequired={required}>
+    <Label>{label}</Label>
+    <Input
+      fullWidth
+      type={type}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+      autoComplete={autoComplete}
+    />
+  </TextField>
+);
 
 export default function RegisterPage() {
-  const navigate = useNavigate()
-  const { refreshUser } = useAuth()
-  const [role, setRole] = useState<UserRole>('STUDENT')
-  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate();
+  const { refreshUser } = useAuth();
+  const [role, setRole] = useState<UserRole>('STUDENT');
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    firstName: '', lastName: '', email: '', password: '',
-    phoneNumber: '', companyName: '', industry: '', companyDescription: '', website: '', registrationNumber: ''
-  })
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    phoneNumber: '',
+    companyName: '',
+    industry: '',
+    companyDescription: '',
+    website: '',
+    registrationNumber: '',
+  });
 
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
+  const set = (key: string, value: string) => setForm((current) => ({ ...current, [key]: value }));
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (form.password.length < 8) { toast.error('Password must be at least 8 characters'); return }
-    setLoading(true)
-    try {
-      const { data } = await authApi.register({ ...form, role })
-      setAuthTokens(data.accessToken, data.refreshToken)
-      await refreshUser()
-      if (data.user.status === 'PENDING') {
-        navigate('/pending')
-      } else if (role === 'STUDENT') {
-        navigate('/onboarding')
-      } else {
-        navigate('/dashboard')
-      }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Registration failed')
-    } finally {
-      setLoading(false)
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (form.password.length < 8) {
+      toast.error('Password must contain at least 8 characters');
+      return;
     }
-  }
+    setLoading(true);
+    try {
+      const { data } = await authApi.register({ ...form, role });
+      setAuthTokens(data.accessToken, data.refreshToken);
+      await refreshUser();
+      navigate(data.user.status === 'PENDING' ? '/pending' : role === 'STUDENT' ? '/onboarding' : '/dashboard');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-ink-950 mesh-bg flex items-center justify-center p-8">
-      <div className="w-full max-w-xl">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-9 h-9 rounded-xl bg-ember-500 flex items-center justify-center">
-            <Layers size={18} className="text-white" />
-          </div>
-          <span className="font-display font-bold text-white text-xl">TalentBridge</span>
-        </div>
-
-        <h1 className="font-display text-3xl font-bold text-white mb-1">Create your account</h1>
-        <p className="text-ink-400 text-sm mb-8">
-          Already have one? <Link to="/login" className="text-ember-400 hover:text-ember-300">Sign in</Link>
+    <PublicShell>
+      <div className='mb-7'>
+        <h1 className='text-3xl font-semibold tracking-tight'>Create an account</h1>
+        <p className='mt-2 text-sm text-muted'>
+          Already registered?{' '}
+          <Link to='/login' className='font-medium text-foreground underline decoration-accent decoration-2 underline-offset-4'>Sign in</Link>
         </p>
-
-        {/* Role selector */}
-        <div className="mb-6">
-          <label className="input-label mb-3">I am a…</label>
-          <div className="grid grid-cols-3 gap-3">
-            {ROLES.map(r => (
-              <button key={r.value} type="button" onClick={() => setRole(r.value)}
-                className={clsx(
-                  'flex flex-col items-center gap-2 p-4 rounded-2xl border text-center transition-all duration-200',
-                  role === r.value
-                    ? 'bg-ember-500/10 border-ember-500/50 text-ember-400'
-                    : 'bg-ink-900 border-ink-700/50 text-ink-400 hover:border-ink-600'
-                )}
-              >
-                <r.icon size={20} />
-                <span className="text-xs font-semibold">{r.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="input-label">First name</label>
-              <input className="input" value={form.firstName} onChange={e => set('firstName', e.target.value)} placeholder="Jane" required />
-            </div>
-            <div>
-              <label className="input-label">Last name</label>
-              <input className="input" value={form.lastName} onChange={e => set('lastName', e.target.value)} placeholder="Smith" required />
-            </div>
-          </div>
-
-          <div>
-            <label className="input-label">Email</label>
-            <input type="email" className="input" value={form.email} onChange={e => set('email', e.target.value)} placeholder="you@example.com" required />
-          </div>
-
-          <div>
-            <label className="input-label">Password</label>
-            <input type="password" className="input" value={form.password} onChange={e => set('password', e.target.value)} placeholder="Minimum 8 characters" required />
-          </div>
-
-          <div>
-            <label className="input-label">Phone (optional)</label>
-            <input className="input" value={form.phoneNumber} onChange={e => set('phoneNumber', e.target.value)} placeholder="+1 234 567 8900" />
-          </div>
-
-          {/* Company-only fields */}
-          {role === 'COMPANY' && (
-            <div className="space-y-4 pt-2 border-t border-ink-800">
-              <p className="text-xs font-semibold text-ink-300 uppercase tracking-wider">Company Details</p>
-              <div>
-                <label className="input-label">Company name *</label>
-                <input className="input" value={form.companyName} onChange={e => set('companyName', e.target.value)} placeholder="Acme Corp" required />
-              </div>
-              <div>
-                <label className="input-label">Industry</label>
-                <input className="input" value={form.industry} onChange={e => set('industry', e.target.value)} placeholder="Software / FinTech / Healthcare…" />
-              </div>
-              <div>
-                <label className="input-label">Company website</label>
-                <input className="input" value={form.website} onChange={e => set('website', e.target.value)} placeholder="https://example.com" />
-              </div>
-            </div>
-          )}
-
-          <button type="submit" disabled={loading} className="btn-primary w-full !mt-6">
-            {loading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : (
-              <><span>Create account</span><ArrowRight size={16} /></>
-            )}
-          </button>
-        </form>
       </div>
-    </div>
-  )
+
+      <div className='mb-6'>
+        <p className='mb-2 text-sm font-medium'>Account type</p>
+        <div className='grid gap-2 sm:grid-cols-3' role='group' aria-label='Account type'>
+          {ROLES.map((item) => (
+            <button
+              key={item.value}
+              type='button'
+              aria-pressed={role === item.value}
+              onClick={() => setRole(item.value)}
+              className={clsx(
+                'min-h-20 rounded-md border p-3 text-left transition-colors',
+                role === item.value
+                  ? 'border-accent bg-default text-foreground'
+                  : 'border-border bg-surface text-muted hover:bg-default hover:text-foreground',
+              )}
+            >
+              <item.icon size={18} aria-hidden='true' />
+              <span className='mt-2 block text-sm font-medium'>{item.label}</span>
+              <span className='mt-0.5 block text-xs text-muted'>{item.description}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className='space-y-5'>
+        <div className='grid gap-4 sm:grid-cols-2'>
+          <Field label='First name' value={form.firstName} onChange={(value) => set('firstName', value)} placeholder='Jane' required autoComplete='given-name' />
+          <Field label='Last name' value={form.lastName} onChange={(value) => set('lastName', value)} placeholder='Smith' required autoComplete='family-name' />
+        </div>
+        <Field label='Email address' value={form.email} onChange={(value) => set('email', value)} type='email' placeholder='name@example.com' required autoComplete='email' />
+        <Field label='Password' value={form.password} onChange={(value) => set('password', value)} type='password' placeholder='At least 8 characters' required autoComplete='new-password' />
+        <Field label='Phone number' value={form.phoneNumber} onChange={(value) => set('phoneNumber', value)} type='tel' placeholder='Optional' autoComplete='tel' />
+
+        {role === 'COMPANY' && (
+          <fieldset className='space-y-5 border-t border-separator pt-5'>
+            <legend className='px-1 text-sm font-semibold'>Company details</legend>
+            <Field label='Company name' value={form.companyName} onChange={(value) => set('companyName', value)} placeholder='Company name' required autoComplete='organization' />
+            <div className='grid gap-4 sm:grid-cols-2'>
+              <Field label='Industry' value={form.industry} onChange={(value) => set('industry', value)} placeholder='Software' />
+              <Field label='Website' value={form.website} onChange={(value) => set('website', value)} type='url' placeholder='https://example.com' autoComplete='url' />
+            </div>
+          </fieldset>
+        )}
+
+        <div className='sticky bottom-0 bg-background py-2'>
+          <Button type='submit' fullWidth size='lg' variant='primary' isDisabled={loading}>
+            {loading ? <Spinner size='sm' /> : <><span>Create account</span><ArrowRight size={17} /></>}
+          </Button>
+        </div>
+      </form>
+    </PublicShell>
+  );
 }

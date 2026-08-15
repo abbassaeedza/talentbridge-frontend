@@ -64,8 +64,8 @@ async function mockStudentApi(page: Page, party: object | null) {
 
 async function login(page: Page) {
   await page.goto('/login');
-  await page.getByPlaceholder('you@example.com').fill(student.email);
-  await page.getByPlaceholder('••••••••').fill('Student1234!');
+  await page.getByLabel('Email address').fill(student.email);
+  await page.getByRole('textbox', { name: /^Password/ }).fill('Student1234!');
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/student\/dashboard$/);
 }
@@ -150,13 +150,13 @@ test('opens the assigned project from the conditional student sidebar link', asy
 
   await login(page);
 
-  const myProjectLink = page.getByRole('link', { name: 'My Project', exact: true });
-  const browseProjectsLink = page.getByRole('link', { name: 'Browse Projects', exact: true });
+  const myProjectLink = page.getByRole('link', { name: 'My project', exact: true });
+  const browseProjectsLink = page.getByRole('link', { name: 'Projects', exact: true });
   await myProjectLink.click();
   await expect(page).toHaveURL(`/student/projects/${projectId}`);
   await expect(page.getByRole('heading', { name: 'Assigned Project' })).toBeVisible();
-  await expect(myProjectLink).toHaveClass(/nav-link-active/);
-  await expect(browseProjectsLink).not.toHaveClass(/nav-link-active/);
+  await expect(myProjectLink).toHaveAttribute('aria-current', 'page');
+  await expect(browseProjectsLink).not.toHaveAttribute('aria-current', 'page');
 });
 
 test('hides the student My Project link without an assignment', async ({ page }) => {
@@ -164,7 +164,7 @@ test('hides the student My Project link without an assignment', async ({ page })
 
   await login(page);
 
-  await expect(page.getByRole('link', { name: 'My Project', exact: true })).toBeHidden();
+  await expect(page.getByRole('link', { name: 'My project', exact: true })).toBeHidden();
 });
 
 test('shows the saved global deadline when the student has no assigned project', async ({ page }) => {
@@ -282,6 +282,6 @@ test('uses actual party size when deciding if a project application is allowed',
   await login(page);
   await page.goto(`/student/projects/${projectId}`);
 
-  await expect(page.getByText('Your party needs at least 2 members before applying.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Apply Now' })).toBeHidden();
+  await expect(page.getByText('Your party needs at least 2 members.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Apply', exact: true })).toBeHidden();
 });

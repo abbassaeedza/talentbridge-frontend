@@ -1,9 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
-import { userApi, projectApi, partyApi, coordinatorApi } from '../../api/services'
-import { Users, FolderKanban, UserCheck, Award, ArrowRight, Clock } from 'lucide-react'
-import { useAuth } from '../../contexts/AuthContext'
-import DeadlineCountdown from '../../components/shared/DeadlineCountdown'
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Award, FolderKanban, UserCheck, Users } from 'lucide-react';
 import {
   Bar,
   BarChart,
@@ -13,234 +10,237 @@ import {
   ResponsiveContainer,
   Tooltip,
   XAxis,
-} from 'recharts'
+  YAxis,
+} from 'recharts';
+import { coordinatorApi, partyApi, projectApi, userApi } from '../../api/services';
+import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
+import { PageHeader, StatCard, StatusBadge } from '../../components/ui/TalentBridgeUI';
 
-const CHART_COLORS = ['#f97316', '#10b981', '#8b5cf6', '#38bdf8', '#f59e0b', '#ef4444']
+const CHART_COLORS = [
+  'var(--accent)',
+  'var(--success)',
+  'var(--warning)',
+  'var(--danger)',
+  'var(--muted)',
+];
 
 function chartRows(values?: Record<string, number>) {
   return Object.entries(values ?? {})
     .filter(([, value]) => value > 0)
-    .map(([name, value]) => ({ name: name.replace(/_/g, ' '), value }))
+    .map(([name, value]) => ({ name: name.replace(/_/g, ' '), value }));
 }
 
-export default function CoordinatorDashboard() {
-  const { user } = useAuth()
+const tooltipStyle = {
+  background: 'var(--overlay)',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--field-radius)',
+  color: 'var(--overlay-foreground)',
+  fontSize: 12,
+};
 
+export default function CoordinatorDashboard() {
   const { data: pending } = useQuery({
     queryKey: ['pending-users'],
-    queryFn: () => userApi.getPending(0, 100).then(r => r.data)
-  })
+    queryFn: () => userApi.getPending(0, 100).then((response) => response.data),
+  });
   const { data: projects } = useQuery({
     queryKey: ['all-projects'],
-    queryFn: () => projectApi.getAllUnpaged()
-  })
+    queryFn: () => projectApi.getAllUnpaged(),
+  });
   const { data: parties } = useQuery({
     queryKey: ['all-parties'],
-    queryFn: () => partyApi.getAll().then(r => r.data)
-  })
+    queryFn: () => partyApi.getAll().then((response) => response.data),
+  });
   const { data: analytics } = useQuery({
     queryKey: ['coordinator-analytics'],
-    queryFn: () => coordinatorApi.getAnalytics().then(r => r.data)
-  })
+    queryFn: () => coordinatorApi.getAnalytics().then((response) => response.data),
+  });
 
-  const pendingProjects = projects?.filter(p => p.status === 'PENDING_REVIEW').length ?? 0
-  const assignedParties = parties?.filter(p => p.assignedProjectId).length ?? 0
-  const totalParties = parties?.length ?? 0
-  const assignmentPercent = totalParties > 0 ? Math.round((assignedParties / totalParties) * 100) : 0
+  const pendingProjects = projects?.filter((project) => project.status === 'PENDING_REVIEW').length ?? 0;
+  const assignedParties = parties?.filter((party) => party.assignedProjectId).length ?? 0;
+  const totalParties = parties?.length ?? 0;
+  const assignmentPercent = totalParties ? Math.round((assignedParties / totalParties) * 100) : 0;
   const upcomingDeadlines = (projects ?? [])
-    .filter(p => p.deadline
-      && !p.finished
-      && new Date(p.deadline).getTime() > Date.now()
-      && (p.status === 'OPEN' || p.status === 'ASSIGNED'))
+    .filter((project) => project.deadline
+      && !project.finished
+      && new Date(project.deadline).getTime() > Date.now()
+      && ['OPEN', 'ASSIGNED'].includes(project.status))
     .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())
-    .slice(0, 5)
-  const [nextDeadline, ...laterDeadlines] = upcomingDeadlines
+    .slice(0, 5);
+  const [nextDeadline, ...laterDeadlines] = upcomingDeadlines;
 
   const stats = [
-    { label: 'Pending approvals', value: pending?.totalElements ?? 0, icon: UserCheck, color: 'bg-amber-500/15 text-amber-400', to: '/coordinator/students' },
-    { label: 'Projects to review', value: pendingProjects, icon: FolderKanban, color: 'bg-ember-500/15 text-ember-400', to: '/coordinator/projects' },
-    { label: 'Total parties', value: parties?.length ?? 0, icon: Users, color: 'bg-violet-500/15 text-violet-400', to: '/coordinator/parties' },
-    { label: 'Assigned parties', value: assignedParties, icon: Award, color: 'bg-jade-500/15 text-jade-400', to: '/coordinator/evaluations' },
-  ]
-
-  const projectRows = chartRows(analytics?.projectsByStatus)
-  const userRows = chartRows(analytics?.usersByRole)
-  const submissionRows = chartRows(analytics?.submissionsByStatus)
+    { label: 'Pending approvals', value: pending?.totalElements ?? 0, icon: UserCheck, to: '/coordinator/students' },
+    { label: 'Projects to review', value: pendingProjects, icon: FolderKanban, to: '/coordinator/projects' },
+    { label: 'Total parties', value: totalParties, icon: Users, to: '/coordinator/parties' },
+    { label: 'Assigned parties', value: assignedParties, icon: Award, to: '/coordinator/evaluations' },
+  ];
+  const projectRows = chartRows(analytics?.projectsByStatus);
+  const userRows = chartRows(analytics?.usersByRole);
+  const submissionRows = chartRows(analytics?.submissionsByStatus);
 
   return (
-    <div className="animate-fade-up">
-      <div className="page-header">
-        <h1 className="page-title">Coordinator Dashboard</h1>
-        <p className="page-subtitle">Welcome back, {user?.firstName}. Here's today's overview.</p>
-      </div>
+    <div>
+      <PageHeader
+        title='Overview'
+        description='Approvals, assignments, deadlines, and platform activity.'
+      />
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map(s => (
-          <Link key={s.label} to={s.to} className="stat-card hover:border-ink-600/60 transition-colors">
-            <div className={`stat-icon ${s.color}`}><s.icon size={20} /></div>
-            <div>
-              <p className="text-2xl font-display font-bold text-white">{s.value}</p>
-              <p className="text-xs text-ink-400 mt-0.5">{s.label}</p>
-            </div>
+      <div className='mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4'>
+        {stats.map((stat) => (
+          <Link key={stat.label} to={stat.to} className='rounded-lg focus-visible:outline-offset-4'>
+            <StatCard {...stat} />
           </Link>
         ))}
       </div>
 
-      <section className="mb-6">
-        <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-semibold text-white">
-          <Clock size={18} className="text-ember-400" /> Upcoming Deadlines
-        </h2>
-        {nextDeadline ? (
-          <>
+      <div className='mb-8 grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.8fr)]'>
+        <section>
+          <div className='mb-3 flex items-center justify-between'>
+            <h2 className='text-base font-semibold'>Upcoming deadlines</h2>
+            <Link to='/coordinator/projects' className='flex items-center gap-1 text-sm font-medium text-muted hover:text-foreground'>
+              View projects <ArrowRight size={14} />
+            </Link>
+          </div>
+          {nextDeadline ? (
             <DeadlineCountdown
               deadline={nextDeadline.deadline}
-              label="Nearest project deadline"
+              label='Nearest project deadline'
               title={nextDeadline.title}
               hero
             />
-            {laterDeadlines.length > 0 && (
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {laterDeadlines.map(project => (
-                  <div key={project.id} className="card min-w-0 p-4">
-                    <p className="truncate text-sm font-semibold text-ink-100">{project.title}</p>
-                    <p className="mb-3 mt-1 truncate text-xs text-ink-500">{project.companyName}</p>
-                    <DeadlineCountdown deadline={project.deadline} compact />
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="card p-5">
-            <p className="text-sm text-ink-400">No active project deadlines set.</p>
+          ) : (
+            <div className='rounded-lg border border-border bg-surface px-5 py-10 text-center text-sm text-muted'>
+              No active project deadlines.
+            </div>
+          )}
+        </section>
+
+        <section>
+          <h2 className='mb-3 text-base font-semibold'>Following deadlines</h2>
+          <div className='overflow-hidden rounded-lg border border-border bg-surface'>
+            {laterDeadlines.length === 0 ? (
+              <p className='px-4 py-10 text-center text-sm text-muted'>No additional deadlines.</p>
+            ) : laterDeadlines.map((project) => (
+              <Link
+                key={project.id}
+                to={`/coordinator/projects/${project.id}`}
+                className='flex items-center justify-between gap-3 border-b border-separator px-4 py-3 last:border-0 hover:bg-default'
+              >
+                <span className='min-w-0'>
+                  <span className='block truncate text-sm font-medium'>{project.title}</span>
+                  <span className='block truncate text-xs text-muted'>{project.companyName}</span>
+                </span>
+                <DeadlineCountdown deadline={project.deadline} compact className='shrink-0' />
+              </Link>
+            ))}
           </div>
-        )}
+        </section>
+      </div>
+
+      <section className='mb-8 rounded-lg border border-border bg-surface p-5'>
+        <div className='flex items-end justify-between gap-4'>
+          <div>
+            <h2 className='text-base font-semibold'>Party assignment</h2>
+            <p className='mt-1 text-sm text-muted'>{assignedParties} of {totalParties} parties have a project.</p>
+          </div>
+          <p className='text-2xl font-semibold'>{assignmentPercent}%</p>
+        </div>
+        <div className='mt-4 h-2 overflow-hidden rounded-full bg-default' role='progressbar' aria-valuenow={assignmentPercent} aria-valuemin={0} aria-valuemax={100}>
+          <div className='h-full rounded-full bg-accent' style={{ width: `${assignmentPercent}%` }} />
+        </div>
       </section>
 
-      <div className="mb-6">
-        <div className="card p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="font-display font-semibold text-white">Assignment Progress</p>
-              <p className="text-xs text-ink-400">{assignedParties} of {totalParties} parties assigned</p>
-            </div>
-            <span className="font-display text-2xl font-bold text-white">{assignmentPercent}%</span>
-          </div>
-          <div className="h-2 rounded-full bg-ink-800 overflow-hidden">
-            <div className="h-full rounded-full bg-gradient-to-r from-jade-500 to-ember-400" style={{ width: `${assignmentPercent}%` }} />
-          </div>
-        </div>
+      <div className='mb-8 grid gap-4 lg:grid-cols-3'>
+        <ChartPanel title='Projects by status' empty={!projectRows.length}>
+          <ResponsiveContainer width='100%' height='100%'>
+            <PieChart>
+              <Pie data={projectRows} dataKey='value' nameKey='name' outerRadius={78} innerRadius={48} paddingAngle={2}>
+                {projectRows.map((row, index) => <Cell key={row.name} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
+              </Pie>
+              <Tooltip contentStyle={tooltipStyle} />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartPanel>
+        <ChartPanel title='Users by role' empty={!userRows.length}>
+          <ResponsiveContainer width='100%' height='100%'>
+            <BarChart data={userRows} margin={{ left: -25, right: 4 }}>
+              <XAxis dataKey='name' tick={{ fill: 'var(--muted)', fontSize: 10 }} interval={0} angle={-15} textAnchor='end' height={48} />
+              <YAxis tick={{ fill: 'var(--muted)', fontSize: 10 }} allowDecimals={false} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--default)' }} />
+              <Bar dataKey='value' fill='var(--accent)' radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartPanel>
+        <ChartPanel title='Submissions by status' empty={!submissionRows.length}>
+          <ResponsiveContainer width='100%' height='100%'>
+            <BarChart data={submissionRows} margin={{ left: -25, right: 4 }}>
+              <XAxis dataKey='name' tick={{ fill: 'var(--muted)', fontSize: 10 }} interval={0} angle={-15} textAnchor='end' height={48} />
+              <YAxis tick={{ fill: 'var(--muted)', fontSize: 10 }} allowDecimals={false} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--default)' }} />
+              <Bar dataKey='value' fill='var(--success)' radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartPanel>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6 mb-6">
-        <div className="card p-5">
-          <p className="font-display font-semibold text-white mb-4">Projects by Status</p>
-          <div className="h-56">
-            {projectRows.length === 0 ? (
-              <p className="text-sm text-ink-400 py-16 text-center">No project data yet.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={projectRows} dataKey="value" nameKey="name" outerRadius={82} innerRadius={46}>
-                    {projectRows.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
+      <div className='grid gap-6 lg:grid-cols-2'>
+        <RecordList title='Pending approvals' to='/coordinator/students'>
+          {!pending?.content.length ? (
+            <p className='px-4 py-8 text-sm text-muted'>No pending approvals.</p>
+          ) : pending.content.slice(0, 5).map((account) => (
+            <Link key={account.id} to={`/coordinator/students/${account.id}`} className='flex items-center gap-3 border-b border-separator px-4 py-3 last:border-0 hover:bg-default'>
+              <span className='flex size-8 shrink-0 items-center justify-center rounded-md bg-default text-xs font-semibold'>
+                {account.firstName[0]}{account.lastName[0]}
+              </span>
+              <span className='min-w-0 flex-1'>
+                <span className='block truncate text-sm font-medium'>{account.firstName} {account.lastName}</span>
+                <span className='block truncate text-xs text-muted'>{account.role} · {account.email}</span>
+              </span>
+              <StatusBadge status='PENDING' />
+            </Link>
+          ))}
+        </RecordList>
 
-        <div className="card p-5">
-          <p className="font-display font-semibold text-white mb-4">Users by Role</p>
-          <div className="h-56">
-            {userRows.length === 0 ? (
-              <p className="text-sm text-ink-400 py-16 text-center">No user data yet.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={userRows}>
-                  <XAxis dataKey="name" tick={{ fill: '#8b95b7', fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={55} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#f97316" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-
-        <div className="card p-5">
-          <p className="font-display font-semibold text-white mb-4">Submissions</p>
-          <div className="h-56">
-            {submissionRows.length === 0 ? (
-              <p className="text-sm text-ink-400 py-16 text-center">No submission data yet.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={submissionRows}>
-                  <XAxis dataKey="name" tick={{ fill: '#8b95b7', fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={55} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#10b981" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Pending users */}
-        <div className="card overflow-hidden">
-          <div className="px-5 py-4 border-b border-ink-700/50 flex items-center justify-between">
-            <h2 className="font-display font-semibold text-white">Pending Approvals</h2>
-            <Link to="/coordinator/students" className="text-xs text-ember-400 flex items-center gap-1">View all <ArrowRight size={12} /></Link>
-          </div>
-          {!pending || pending.content.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-ink-400">No pending approvals.</p>
-          ) : (
-            <div className="divide-y divide-ink-800/50">
-              {pending.content.slice(0, 5).map(u => (
-                <div key={u.id} className="px-5 py-3 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-ink-700 flex items-center justify-center text-xs font-bold text-ink-200">
-                    {u.firstName[0]}{u.lastName[0]}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-ink-100">{u.firstName} {u.lastName}</p>
-                    <p className="text-xs text-ink-500">{u.role} · {u.email}</p>
-                  </div>
-                  <span className="badge badge-pending text-[10px]">PENDING</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Recent projects */}
-        <div className="card overflow-hidden">
-          <div className="px-5 py-4 border-b border-ink-700/50 flex items-center justify-between">
-            <h2 className="font-display font-semibold text-white">Recent Projects</h2>
-            <Link to="/coordinator/projects" className="text-xs text-ember-400 flex items-center gap-1">View all <ArrowRight size={12} /></Link>
-          </div>
-          {!projects || projects.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-ink-400">No projects yet.</p>
-          ) : (
-            <div className="divide-y divide-ink-800/50">
-              {projects.slice(0, 5).map(p => (
-                <div key={p.id} className="px-5 py-3 flex items-center gap-3">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-ink-100 truncate">{p.title}</p>
-                    <p className="text-xs text-ink-500">{p.companyName}</p>
-                  </div>
-                  <span className={`badge text-[10px] ${
-                    p.status === 'OPEN' ? 'badge-open' :
-                    p.status === 'PENDING_REVIEW' ? 'badge-pending' :
-                    p.status === 'ASSIGNED' ? 'badge-assigned' : 'bg-ink-700/50 text-ink-400 border-ink-600/30'
-                  }`}>{p.status.replace('_',' ')}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <RecordList title='Recent projects' to='/coordinator/projects'>
+          {!projects?.length ? (
+            <p className='px-4 py-8 text-sm text-muted'>No projects available.</p>
+          ) : projects.slice(0, 5).map((project) => (
+            <Link key={project.id} to={`/coordinator/projects/${project.id}`} className='flex items-center gap-3 border-b border-separator px-4 py-3 last:border-0 hover:bg-default'>
+              <span className='min-w-0 flex-1'>
+                <span className='block truncate text-sm font-medium'>{project.title}</span>
+                <span className='block truncate text-xs text-muted'>{project.companyName}</span>
+              </span>
+              <StatusBadge status={project.status} />
+            </Link>
+          ))}
+        </RecordList>
       </div>
     </div>
-  )
+  );
+}
+
+function ChartPanel({ title, empty, children }: { title: string; empty: boolean; children: React.ReactNode }) {
+  return (
+    <section className='rounded-lg border border-border bg-surface p-4'>
+      <h2 className='text-sm font-semibold'>{title}</h2>
+      <div className='mt-3 h-56'>
+        {empty ? <p className='py-20 text-center text-sm text-muted'>No data available.</p> : children}
+      </div>
+    </section>
+  );
+}
+
+function RecordList({ title, to, children }: { title: string; to: string; children: React.ReactNode }) {
+  return (
+    <section className='overflow-hidden rounded-lg border border-border bg-surface'>
+      <div className='flex items-center justify-between border-b border-border px-4 py-3'>
+        <h2 className='text-sm font-semibold'>{title}</h2>
+        <Link to={to} className='flex items-center gap-1 text-xs font-medium text-muted hover:text-foreground'>
+          View all <ArrowRight size={13} />
+        </Link>
+      </div>
+      {children}
+    </section>
+  );
 }

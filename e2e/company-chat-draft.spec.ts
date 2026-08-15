@@ -51,14 +51,14 @@ test('fills and saves a project draft from the company chatbot', async ({ page }
   });
 
   await page.goto('/company/projects/new');
-  await expect(page.getByRole('heading', { name: 'Post a New Project' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Create project' })).toBeVisible();
   await page.getByRole('button', { name: 'Open AI assistant' }).click();
-  await page.getByPlaceholder('Ask about TalentBridge…').fill('Create an AI support portal using React and Spring Boot');
+  await page.getByPlaceholder('Ask about TalentBridge').fill('Create an AI support portal using React and Spring Boot');
   await page.getByRole('button', { name: 'Send message' }).click();
 
-  await expect(page.getByPlaceholder('e.g. AI-Powered Customer Support Chatbot')).toHaveValue('AI Customer Support Portal');
-  await expect(page.getByPlaceholder('What is the project about? What problem does it solve?')).toHaveValue(/support agents/);
-  await expect(page.getByRole('button', { name: 'Software' })).toHaveClass(/border-ember-500/);
+  await expect(page.getByLabel('Project title')).toHaveValue('AI Customer Support Portal');
+  await expect(page.getByLabel('Project description')).toHaveValue(/support agents/);
+  await expect(page.getByRole('button', { name: 'Software' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByText('Spring Boot', { exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open saved draft' })).toHaveAttribute('href', '/company/projects/draft-project-id');
 });

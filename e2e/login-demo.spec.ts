@@ -31,7 +31,7 @@ test('demo card logs in without exposing a password', async ({ page }) => {
   );
 
   await page.goto('/login');
-  await page.getByRole('button', { name: /Coordinator/ }).click();
+  await page.getByRole('button', { name: 'Open coordinator demo' }).click();
 
   expect((await demoRequest).postData()).toBeNull();
   await expect(page).toHaveURL(/\/coordinator\/dashboard$/);

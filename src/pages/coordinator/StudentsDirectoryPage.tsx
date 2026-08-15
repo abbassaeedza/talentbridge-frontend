@@ -1,39 +1,81 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { userApi } from '../../api/services';
-import { getUserName } from '../../types';
-import { CheckCircle, ChevronDown, ChevronUp, ExternalLink, Mail, PauseCircle, PlayCircle, Search, Trash2, XCircle } from 'lucide-react';
-import clsx from 'clsx';
-import useUserStatusMutation from '../../hooks/useUserStatusMutation';
-import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { Button, buttonVariants } from '@heroui/react/button';
+import { Checkbox } from '@heroui/react/checkbox';
+import { Input } from '@heroui/react/input';
+import { Spinner } from '@heroui/react/spinner';
+import { Table } from '@heroui/react/table';
+import { Tabs } from '@heroui/react/tabs';
+import {
+  CheckCircle,
+  ExternalLink,
+  Eye,
+  Mail,
+  PauseCircle,
+  PlayCircle,
+  Search,
+  Trash2,
+  XCircle,
+} from 'lucide-react';
+import { userApi } from '../../api/services';
 import BulkActionToolbar from '../../components/coordinator/BulkActionToolbar';
+import { PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
+import useUserStatusMutation from '../../hooks/useUserStatusMutation';
+import { getUserName } from '../../types';
+
+const STATUSES = [
+  ['ALL', 'All'],
+  ['PENDING', 'Pending'],
+  ['APPROVED', 'Approved'],
+  ['SUSPENDED', 'Suspended'],
+  ['REJECTED', 'Rejected'],
+] as const;
+
+function SelectCheckbox({
+  selected,
+  onChange,
+  label,
+}: {
+  selected: boolean;
+  onChange: (selected: boolean) => void;
+  label: string;
+}) {
+  return (
+    <Checkbox isSelected={selected} onChange={onChange} aria-label={label}>
+      <Checkbox.Content>
+        <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
+      </Checkbox.Content>
+    </Checkbox>
+  );
+}
 
 export default function StudentsDirectoryPage() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('ALL');
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [quickView, setQuickView] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [rejectReason, setRejectReason] = useState('');
   const [bulkAction, setBulkAction] = useState<'approve' | 'reject' | 'suspend' | null>(null);
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
 
   const { data: students, isLoading } = useQuery({
     queryKey: ['directory-students'],
-    queryFn: () => userApi.getStudents().then((r) => r.data),
+    queryFn: () => userApi.getStudents().then((response) => response.data),
   });
 
-  const statusMutation = useUserStatusMutation([['directory-students']], 'Student');
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ['directory-students'] });
-    qc.invalidateQueries({ queryKey: ['pending-users'] });
+    queryClient.invalidateQueries({ queryKey: ['directory-students'] });
+    queryClient.invalidateQueries({ queryKey: ['pending-users'] });
   };
+  const statusMutation = useUserStatusMutation([['directory-students']], 'Student');
   const approveMutation = useMutation({
     mutationFn: (id: string) => userApi.approve(id),
     onSuccess: () => { toast.success('Student approved'); invalidate(); },
   });
   const rejectMutation = useMutation({
-    mutationFn: (id: string) => userApi.reject(id, rejectReason),
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => userApi.reject(id, reason),
     onSuccess: () => { toast.success('Student rejected'); invalidate(); },
   });
   const deleteMutation = useMutation({
@@ -41,16 +83,39 @@ export default function StudentsDirectoryPage() {
     onSuccess: () => { toast.success('Rejected student deleted'); invalidate(); },
   });
 
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return (students ?? [])
+      .filter((student) => status === 'ALL' || student.status === status)
+      .filter((student) => !needle || [
+        getUserName(student),
+        student.email,
+        student.studentProfile?.university,
+        student.studentProfile?.major,
+        ...(student.studentProfile?.skills ?? []),
+      ].filter(Boolean).join(' ').toLowerCase().includes(needle))
+      .sort((a, b) => getUserName(a).localeCompare(getUserName(b)));
+  }, [query, status, students]);
+
+  const selectedStudents = (students ?? []).filter((student) => selected.includes(student.id));
+  const eligible = {
+    approve: selectedStudents.filter((student) => ['PENDING', 'REJECTED'].includes(student.status)).length,
+    reject: selectedStudents.filter((student) => student.status === 'PENDING').length,
+    suspend: selectedStudents.filter((student) => student.status === 'APPROVED').length,
+  };
+  const allFilteredSelected = filtered.length > 0 && filtered.every((student) => selected.includes(student.id));
+  const viewedStudent = students?.find((student) => student.id === quickView);
+
+  const toggleStudent = (id: string) => setSelected((current) =>
+    current.includes(id) ? current.filter((selectedId) => selectedId !== id) : [...current, id],
+  );
+
   const runBulk = async (action: 'approve' | 'reject' | 'suspend') => {
     setBulkAction(action);
-    const chosen = (students ?? []).filter((student) => selected.includes(student.id));
-    const requests = chosen.flatMap((student) => {
-      if (action === 'approve' && (student.status === 'PENDING' || student.status === 'REJECTED'))
-        return [userApi.approve(student.id)];
-      if (action === 'reject' && student.status === 'PENDING')
-        return [userApi.reject(student.id, rejectReason)];
-      if (action === 'suspend' && student.status === 'APPROVED')
-        return [userApi.suspend(student.id)];
+    const requests = selectedStudents.flatMap((student) => {
+      if (action === 'approve' && ['PENDING', 'REJECTED'].includes(student.status)) return [userApi.approve(student.id)];
+      if (action === 'reject' && student.status === 'PENDING') return [userApi.reject(student.id, rejectReason)];
+      if (action === 'suspend' && student.status === 'APPROVED') return [userApi.suspend(student.id)];
       return [];
     });
     try {
@@ -66,73 +131,46 @@ export default function StudentsDirectoryPage() {
     }
   };
 
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return (students ?? [])
-      .filter((s) => status === 'ALL' || s.status === status)
-      .filter((s) => {
-        if (!needle) return true;
-        return [
-          getUserName(s),
-          s.email,
-          s.studentProfile?.university,
-          s.studentProfile?.major,
-          ...(s.studentProfile?.skills ?? []),
-        ].filter(Boolean).join(' ').toLowerCase().includes(needle);
-      })
-      .sort((a, b) => getUserName(a).localeCompare(getUserName(b)));
-  }, [students, query, status]);
-  const selectedStudents = (students ?? []).filter((student) => selected.includes(student.id));
-  const eligible = {
-    approve: selectedStudents.filter((student) => student.status === 'PENDING' || student.status === 'REJECTED').length,
-    reject: selectedStudents.filter((student) => student.status === 'PENDING').length,
-    suspend: selectedStudents.filter((student) => student.status === 'APPROVED').length,
+  const rejectOne = (id: string) => {
+    const reason = prompt('Enter the reason for rejection:')?.trim();
+    if (reason) rejectMutation.mutate({ id, reason });
   };
-  const allFilteredSelected = filtered.length > 0 && filtered.every((student) => selected.includes(student.id));
 
   return (
-    <div className='animate-fade-up'>
-      <div className='page-header'>
-        <h1 className='page-title'>Students Directory</h1>
-        <p className='page-subtitle'>{filtered.length} student{filtered.length === 1 ? '' : 's'} shown</p>
-      </div>
+    <div>
+      <PageHeader title='Students' description={`${filtered.length} of ${students?.length ?? 0} students shown`} />
 
-      <div className='mb-4 flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl bg-ink-900 p-1' role='tablist' aria-label='Student approval status'>
-        {([
-          ['ALL', 'All Students'],
-          ['PENDING', 'Pending Requests'],
-          ['APPROVED', 'Approved'],
-          ['SUSPENDED', 'Suspended'],
-          ['REJECTED', 'Rejected'],
-        ] as const).map(([value, label]) => (
-          <button
-            key={value}
-            role='tab'
-            aria-selected={status === value}
-            onClick={() => { setStatus(value); setSelected([]); }}
-            className={clsx('whitespace-nowrap rounded-lg px-4 py-2 text-xs font-semibold transition',
-              status === value ? 'bg-ink-700 text-white' : 'text-ink-400 hover:text-white')}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs.Root
+        variant='secondary'
+        selectedKey={status}
+        onSelectionChange={(key) => { setStatus(String(key)); setSelected([]); }}
+        className='mb-4'
+      >
+        <Tabs.ListContainer>
+          <Tabs.List aria-label='Student status'>
+            {STATUSES.map(([value, label]) => <Tabs.Tab key={value} id={value}>{label}</Tabs.Tab>)}
+          </Tabs.List>
+        </Tabs.ListContainer>
+      </Tabs.Root>
 
-      <div className='card p-4 mb-5 grid gap-3'>
-        <div className='relative'>
-          <Search size={15} className='absolute left-3 top-1/2 -translate-y-1/2 text-ink-500' />
-          <input className='input pl-9' placeholder='Search by name, university, major, skill…' value={query} onChange={(e) => setQuery(e.target.value)} />
-        </div>
-        <label className='flex w-fit items-center gap-2 text-xs text-ink-300'>
-          <input
-            type='checkbox'
-            aria-label='Select all filtered students'
-            checked={allFilteredSelected}
-            onChange={() => setSelected(allFilteredSelected ? [] : filtered.map((student) => student.id))}
-            className='h-4 w-4 accent-orange-500'
+      <div className='mb-4 flex flex-col gap-3 rounded-lg border border-border bg-surface p-3 sm:flex-row sm:items-center'>
+        <div className='relative flex-1'>
+          <Search size={17} className='pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted' />
+          <Input
+            fullWidth
+            aria-label='Search students'
+            placeholder='Search name, university, major, or skill'
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className='pl-10'
           />
-          Select all {filtered.length} filtered students
-        </label>
+        </div>
+        <SelectCheckbox
+          selected={allFilteredSelected}
+          onChange={() => setSelected(allFilteredSelected ? [] : filtered.map((student) => student.id))}
+          label={`Select all ${filtered.length} filtered students`}
+        />
+        <span className='text-sm text-muted'>Select all filtered</span>
       </div>
 
       <BulkActionToolbar
@@ -145,119 +183,155 @@ export default function StudentsDirectoryPage() {
         onAction={runBulk}
       />
 
-      <div className='card overflow-hidden'>
-        {isLoading ? (
-          <div className='p-12 flex justify-center'><div className='w-5 h-5 border-2 border-ember-500 border-t-transparent rounded-full animate-spin' /></div>
-        ) : filtered.length === 0 ? (
-          <p className='p-12 text-center text-sm text-ink-400'>No students found.</p>
-        ) : (
-          <div className='divide-y divide-ink-800/50'>
-            {filtered.map((student) => {
-              const profile = student.studentProfile;
-              const isOpen = expanded === student.id;
-              return (
-                <div key={student.id} className='px-6 py-4'>
-                  <div className='flex flex-col items-start gap-3 sm:flex-row sm:gap-4'>
-                    <input
-                      type='checkbox'
-                      aria-label={`Select ${getUserName(student)}`}
-                      checked={selected.includes(student.id)}
-                      onChange={() => setSelected((current) => current.includes(student.id)
-                        ? current.filter((id) => id !== student.id)
-                        : [...current, student.id])}
-                      className='mt-3 h-4 w-4 accent-orange-500'
-                    />
-                    <div className='w-10 h-10 rounded-xl bg-ink-700 flex items-center justify-center text-xs font-bold text-ink-200'>
-                      {getUserName(student).split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className='flex-1 min-w-0'>
-                      <div className='flex flex-wrap gap-2 items-center'>
-                        <p className='text-sm font-semibold text-white'>{getUserName(student)}</p>
-                        <span className={clsx('badge text-[10px]',
-                          student.status === 'APPROVED' && 'badge-open',
-                          student.status === 'PENDING' && 'badge-pending',
-                          student.status === 'SUSPENDED' && 'bg-red-500/15 text-red-400 border-red-500/20',
-                        )}>{student.status}</span>
-                      </div>
-                      <a href={`mailto:${student.email}`} className='text-xs text-ink-400 hover:text-ember-400 flex items-center gap-1 mt-1'>
-                        <Mail size={11} /> {student.email}
-                      </a>
-                      <p className='text-xs text-ink-500 mt-1'>{profile?.university ?? 'No university'}{profile?.major ? ` · ${profile.major}` : ''}</p>
-                      <p className='mt-1 text-xs text-ink-500'>
-                        Party:{' '}
-                        {student.partyId ? (
-                          <Link to={`/coordinator/parties?party=${student.partyId}`} className='text-ember-400 hover:text-ember-300'>{student.partyName}</Link>
-                        ) : 'Not in a party'}
-                      </p>
-                    </div>
-                    <div className='flex flex-wrap gap-2'>
-                      {(student.status === 'PENDING' || student.status === 'REJECTED') && (
-                        <button onClick={() => approveMutation.mutate(student.id)} className='btn-primary text-xs px-3 py-1.5'><CheckCircle size={13} /> Approve</button>
-                      )}
-                      {student.status === 'PENDING' && (
-                        <button onClick={() => rejectMutation.mutate(student.id)} className='btn-secondary text-xs px-3 py-1.5 text-red-300'><XCircle size={13} /> Reject</button>
-                      )}
-                      {student.status === 'APPROVED' && (
-                        <button onClick={() => statusMutation.mutate({ id: student.id, suspended: true })} className='btn-secondary text-xs px-3 py-1.5'><PauseCircle size={13} /> Suspend</button>
-                      )}
-                      {student.status === 'SUSPENDED' && (
-                        <button onClick={() => statusMutation.mutate({ id: student.id, suspended: false })} className='btn-primary text-xs px-3 py-1.5'><PlayCircle size={13} /> Unsuspend</button>
-                      )}
-                      {student.status === 'REJECTED' && (
-                        <button
-                          onClick={() => confirm(`Delete ${getUserName(student)} so this email can register again?`) && deleteMutation.mutate(student.id)}
-                          className='btn-secondary text-xs px-3 py-1.5 text-red-300'
-                        >
-                          <Trash2 size={13} /> Delete
-                        </button>
-                      )}
-                      <button onClick={() => setExpanded(isOpen ? null : student.id)} className='btn-ghost text-xs'>
-                        {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />} Profile
-                      </button>
-                      <Link to={`/coordinator/students/${student.id}`} className='btn-ghost text-xs'>View full</Link>
-                    </div>
-                  </div>
-                  {isOpen && (
-                    <div className='mt-4 p-4 rounded-xl bg-ink-800/50 border border-ink-700/50 grid md:grid-cols-2 gap-4 text-xs sm:ml-14'>
-                      <div>
-                        <p className='text-ink-500 uppercase font-semibold mb-1'>Profile</p>
-                        <div className='space-y-1 text-ink-300'>
-                          <p>Age: {profile?.age ?? 'Not provided'}</p>
-                          <p>Year: {profile?.yearOfStudy ?? 'Not provided'}</p>
-                          <p>GPA: {profile?.gpa ?? 'Not provided'}</p>
-                          <p>Phone: {student.phoneNumber ?? 'Not provided'}</p>
-                          <p>GitHub: {student.githubUsername ?? 'Not connected'}</p>
-                        </div>
-                      </div>
-                      <div>
-                        <p className='text-ink-500 uppercase font-semibold mb-1'>Skills</p>
-                        <div className='flex flex-wrap gap-1.5'>
-                          {(profile?.skills ?? []).length > 0 ? profile!.skills.map((skill) => (
-                            <span key={skill} className='px-2 py-1 rounded-lg bg-ink-700 text-ink-300'>{skill}</span>
-                          )) : <span className='text-ink-400'>No skills listed.</span>}
-                        </div>
-                      </div>
-                      <div>
-                        <p className='text-ink-500 uppercase font-semibold mb-1'>Bio and experience</p>
-                        <p className='text-ink-300 leading-relaxed'>{profile?.bio || 'No bio provided.'}</p>
-                        <p className='mt-2 text-ink-300 leading-relaxed'>{profile?.pastExperience || 'No past experience provided.'}</p>
-                      </div>
-                      <div>
-                        <p className='text-ink-500 uppercase font-semibold mb-1'>Links and moderation</p>
-                        <div className='space-y-1 text-ink-300'>
-                          {profile?.linkedinUrl && <a href={profile.linkedinUrl} target='_blank' rel='noreferrer' className='flex items-center gap-1 text-ember-400'>LinkedIn <ExternalLink size={10} /></a>}
-                          {profile?.portfolioUrl && <a href={profile.portfolioUrl} target='_blank' rel='noreferrer' className='flex items-center gap-1 text-ember-400'>Portfolio <ExternalLink size={10} /></a>}
-                          <p>Moderation history is available in the full profile.</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+      {isLoading ? (
+        <div className='flex min-h-64 items-center justify-center rounded-lg border border-border bg-surface'><Spinner /></div>
+      ) : filtered.length === 0 ? (
+        <div className='rounded-lg border border-border bg-surface px-5 py-16 text-center text-sm text-muted'>No students match these filters.</div>
+      ) : (
+        <>
+          <div className='hidden md:block'>
+            <Table variant='secondary'>
+              <Table.ScrollContainer>
+                <Table.Content aria-label='Students'>
+                  <Table.Header>
+                    <Table.Column className='w-12'>Select</Table.Column>
+                    <Table.Column isRowHeader>Student</Table.Column>
+                    <Table.Column>Academic profile</Table.Column>
+                    <Table.Column>Party</Table.Column>
+                    <Table.Column>Status</Table.Column>
+                    <Table.Column className='text-right'>Actions</Table.Column>
+                  </Table.Header>
+                  <Table.Body>
+                    {filtered.map((student) => (
+                      <Table.Row key={student.id} id={student.id}>
+                        <Table.Cell>
+                          <SelectCheckbox selected={selected.includes(student.id)} onChange={() => toggleStudent(student.id)} label={`Select ${getUserName(student)}`} />
+                        </Table.Cell>
+                        <Table.Cell>
+                          <div className='flex items-center gap-3'>
+                            <span className='flex size-9 shrink-0 items-center justify-center rounded-md bg-default text-xs font-semibold'>
+                              {getUserName(student).split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()}
+                            </span>
+                            <span className='min-w-0'>
+                              <span className='block truncate text-sm font-medium'>{getUserName(student)}</span>
+                              <a href={`mailto:${student.email}`} className='block truncate text-xs text-muted hover:text-foreground'>{student.email}</a>
+                            </span>
+                          </div>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <p className='text-sm'>{student.studentProfile?.university ?? 'Not provided'}</p>
+                          <p className='text-xs text-muted'>{student.studentProfile?.major ?? 'No major'}</p>
+                        </Table.Cell>
+                        <Table.Cell>
+                          {student.partyId
+                            ? <Link to={`/coordinator/parties?party=${student.partyId}`} className='text-sm font-medium hover:underline'>{student.partyName}</Link>
+                            : <span className='text-sm text-muted'>No party</span>}
+                        </Table.Cell>
+                        <Table.Cell><StatusBadge status={student.status} /></Table.Cell>
+                        <Table.Cell>
+                          <div className='flex justify-end gap-1'>
+                            <RowActions
+                              student={student}
+                              onApprove={() => approveMutation.mutate(student.id)}
+                              onReject={() => rejectOne(student.id)}
+                              onSuspend={(suspended) => statusMutation.mutate({ id: student.id, suspended })}
+                              onDelete={() => confirm(`Delete ${getUserName(student)} so this email can register again?`) && deleteMutation.mutate(student.id)}
+                              onView={() => setQuickView(quickView === student.id ? null : student.id)}
+                            />
+                          </div>
+                        </Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table.Content>
+              </Table.ScrollContainer>
+            </Table>
           </div>
-        )}
-      </div>
+
+          <div className='space-y-3 md:hidden'>
+            {filtered.map((student) => (
+              <article key={student.id} className='rounded-lg border border-border bg-surface p-4'>
+                <div className='flex items-start gap-3'>
+                  <SelectCheckbox selected={selected.includes(student.id)} onChange={() => toggleStudent(student.id)} label={`Select ${getUserName(student)}`} />
+                  <div className='min-w-0 flex-1'>
+                    <div className='flex flex-wrap items-center gap-2'>
+                      <h2 className='font-medium'>{getUserName(student)}</h2>
+                      <StatusBadge status={student.status} />
+                    </div>
+                    <p className='mt-1 truncate text-sm text-muted'>{student.email}</p>
+                    <p className='mt-2 text-sm'>{student.studentProfile?.university ?? 'University not provided'}</p>
+                    <p className='text-xs text-muted'>{student.partyName ?? 'No party'}</p>
+                  </div>
+                </div>
+                <div className='mt-4 flex flex-wrap gap-2 border-t border-separator pt-3'>
+                  <RowActions
+                    student={student}
+                    onApprove={() => approveMutation.mutate(student.id)}
+                    onReject={() => rejectOne(student.id)}
+                    onSuspend={(suspended) => statusMutation.mutate({ id: student.id, suspended })}
+                    onDelete={() => confirm(`Delete ${getUserName(student)} so this email can register again?`) && deleteMutation.mutate(student.id)}
+                    onView={() => setQuickView(quickView === student.id ? null : student.id)}
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
+        </>
+      )}
+
+      {viewedStudent && <QuickView student={viewedStudent} />}
     </div>
+  );
+}
+
+function RowActions({
+  student,
+  onApprove,
+  onReject,
+  onSuspend,
+  onDelete,
+  onView,
+}: {
+  student: any;
+  onApprove: () => void;
+  onReject: () => void;
+  onSuspend: (suspended: boolean) => void;
+  onDelete: () => void;
+  onView: () => void;
+}) {
+  return (
+    <>
+      {['PENDING', 'REJECTED'].includes(student.status) && <Button size='sm' variant='primary' onPress={onApprove}><CheckCircle size={14} /> Approve</Button>}
+      {student.status === 'PENDING' && <Button size='sm' variant='danger-soft' onPress={onReject}><XCircle size={14} /> Reject</Button>}
+      {student.status === 'APPROVED' && <Button size='sm' variant='secondary' onPress={() => onSuspend(true)}><PauseCircle size={14} /> Suspend</Button>}
+      {student.status === 'SUSPENDED' && <Button size='sm' variant='primary' onPress={() => onSuspend(false)}><PlayCircle size={14} /> Restore</Button>}
+      {student.status === 'REJECTED' && <Button size='sm' variant='danger-soft' onPress={onDelete}><Trash2 size={14} /> Delete</Button>}
+      <Button size='sm' variant='ghost' onPress={onView}><Eye size={14} /> Quick view</Button>
+      <Link to={`/coordinator/students/${student.id}`} className={buttonVariants({ size: 'sm', variant: 'ghost' })}><ExternalLink size={14} /> Full profile</Link>
+    </>
+  );
+}
+
+function QuickView({ student }: { student: any }) {
+  const profile = student.studentProfile;
+  return (
+    <section className='mt-4 rounded-lg border border-border bg-surface p-5'>
+      <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
+        <div>
+          <h2 className='text-lg font-semibold'>{getUserName(student)}</h2>
+          <a href={`mailto:${student.email}`} className='mt-1 flex items-center gap-1.5 text-sm text-muted hover:text-foreground'><Mail size={14} /> {student.email}</a>
+        </div>
+        <Link to={`/coordinator/students/${student.id}`} className='text-sm font-medium hover:underline'>Open full profile</Link>
+      </div>
+      <dl className='mt-5 grid gap-4 border-t border-separator pt-5 text-sm sm:grid-cols-2 lg:grid-cols-4'>
+        <div><dt className='text-xs text-muted'>University</dt><dd className='mt-1'>{profile?.university ?? 'Not provided'}</dd></div>
+        <div><dt className='text-xs text-muted'>Major and year</dt><dd className='mt-1'>{profile?.major ?? 'Not provided'} · {profile?.yearOfStudy ?? 'N/A'}</dd></div>
+        <div><dt className='text-xs text-muted'>GitHub</dt><dd className='mt-1'>{student.githubUsername ?? 'Not connected'}</dd></div>
+        <div><dt className='text-xs text-muted'>Phone</dt><dd className='mt-1'>{student.phoneNumber ?? 'Not provided'}</dd></div>
+      </dl>
+      {(profile?.skills ?? []).length > 0 && (
+        <div className='mt-5 flex flex-wrap gap-2'>{profile.skills.map((skill: string) => <span key={skill} className='rounded-sm bg-default px-2 py-1 text-xs'>{skill}</span>)}</div>
+      )}
+    </section>
   );
 }
