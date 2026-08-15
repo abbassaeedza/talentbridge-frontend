@@ -1,6 +1,18 @@
 import { expect, test } from '@playwright/test';
 import type { Page, Route } from '@playwright/test';
 
+async function fillDateTime(page: Page, label: string, value: string) {
+  const date = new Date(value);
+  const group = page.getByRole('group', { name: label });
+  await group.locator('[data-type="month"]').fill(String(date.getMonth() + 1));
+  await group.locator('[data-type="day"]').fill(String(date.getDate()));
+  await group.locator('[data-type="year"]').fill(String(date.getFullYear()));
+  await group.locator('[data-type="hour"]').fill(String(date.getHours() % 12 || 12));
+  await group.locator('[data-type="minute"]').fill(String(date.getMinutes()).padStart(2, '0'));
+  const period = group.locator('[data-type="dayPeriod"]');
+  if (await period.count()) await period.press(date.getHours() >= 12 ? 'p' : 'a');
+}
+
 const coordinator = {
   id: '00000000-0000-0000-0000-000000000001',
   email: 'coordinator@talentbridge.com',
@@ -205,7 +217,7 @@ test('previews and shows a new global deadline without reloading', async ({ page
   const fetchesBeforeApply = projectFetches;
 
   await page.getByRole('switch', { name: 'Enable global deadline' }).press('Space');
-  await page.getByLabel('Global deadline date and time').fill('2031-01-02T10:00');
+  await fillDateTime(page, 'Global deadline date and time', '2031-01-02T10:00');
   await page.getByRole('button', { name: 'Preview changes' }).click();
 
   await expect(page.getByRole('dialog', { name: 'Confirm global deadline' })).toContainText('3 open');
@@ -242,7 +254,7 @@ test('keeps project deadlines when global mode is disabled', async ({ page }) =>
   await page.getByRole('link', { name: 'Projects', exact: true }).click();
 
   await page.getByRole('switch', { name: 'Enable global deadline' }).press('Space');
-  await page.getByLabel('Global deadline date and time').fill('2031-01-02T10:00');
+  await fillDateTime(page, 'Global deadline date and time', '2031-01-02T10:00');
   await page.getByRole('button', { name: 'Preview changes' }).click();
   await page.getByRole('button', { name: 'Confirm and apply' }).click();
   await expect(page.getByText(/02 Jan 2031/).first()).toBeVisible();
@@ -346,6 +358,39 @@ test('separates pending, party, and project supervisors', async ({ page }) => {
   await expect(page.getByText('Party Mentor')).toBeHidden();
 });
 
+test('keeps directory search, filters, and select-all controls aligned', async ({ page }) => {
+  const companies = [{
+    ...pendingStudents[0],
+    id: '10000000-0000-0000-0000-000000000001',
+    role: 'COMPANY',
+    companyProfile: { id: 'profile-1', companyName: 'Nexa Systems', industry: 'Software' },
+  }];
+  const supervisors = [{ ...pendingStudents[0], role: 'PARTY_SUPERVISOR' }];
+  await mockCoordinatorApi(page);
+  await page.unroute('**/api/users/companies');
+  await page.route('**/api/users/companies', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(companies) }));
+  await page.unroute('**/api/users/supervisors');
+  await page.route('**/api/users/supervisors', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(supervisors) }));
+  await loginAsCoordinator(page);
+
+  await page.getByRole('link', { name: 'Students', exact: true }).click();
+  const studentSearch = await page.getByRole('searchbox', { name: 'Search students' }).boundingBox();
+  const studentSelectAll = await page.getByRole('checkbox', { name: /Select all .* filtered students/ }).boundingBox();
+  expect(studentSelectAll!.y).toBeGreaterThanOrEqual(studentSearch!.y + studentSearch!.height);
+
+  await page.getByRole('link', { name: 'Companies', exact: true }).click();
+  const companySearch = await page.getByRole('searchbox', { name: 'Search companies' }).boundingBox();
+  const industry = await page.getByRole('button', { name: /Industry/ }).boundingBox();
+  const companySelectAll = await page.getByRole('checkbox', { name: /Select all filtered companies/ }).boundingBox();
+  expect(Math.abs(companySearch!.y - industry!.y)).toBeLessThanOrEqual(2);
+  expect(companySelectAll!.y).toBeGreaterThanOrEqual(companySearch!.y + companySearch!.height);
+
+  await page.getByRole('link', { name: 'Supervisors', exact: true }).click();
+  const supervisorSearch = await page.getByRole('searchbox', { name: 'Search supervisors' }).boundingBox();
+  const supervisorSelectAll = await page.getByRole('checkbox', { name: /Select all filtered supervisors/ }).boundingBox();
+  expect(supervisorSelectAll!.y).toBeGreaterThanOrEqual(supervisorSearch!.y + supervisorSearch!.height);
+});
+
 test('allows an assigned project deadline to be changed individually', async ({ page }) => {
   const assignedProject = {
     ...openProject,
@@ -366,7 +411,7 @@ test('allows an assigned project deadline to be changed individually', async ({ 
   await loginAsCoordinator(page);
   await page.getByRole('link', { name: 'Projects', exact: true }).click();
 
-  await page.getByLabel('Deadline for Assigned Deadline Project', { exact: true }).fill('2031-02-03T10:00');
+  await fillDateTime(page, 'Deadline for Assigned Deadline Project', '2031-02-03T10:00');
   await page.getByRole('button', { name: 'Set deadline for Assigned Deadline Project' }).click();
 
   await expect.poll(() => requestedDeadline).toContain('2031-02-03');
@@ -399,10 +444,42 @@ test('changes an assigned project deadline from the party view', async ({ page }
   await loginAsCoordinator(page);
   await page.getByRole('link', { name: 'Parties', exact: true }).click();
 
-  await page.getByLabel('Deadline for party Deadline Party', { exact: true }).fill('2031-03-04T10:00');
+  await fillDateTime(page, 'Deadline for party Deadline Party', '2031-03-04T10:00');
   await page.getByRole('button', { name: 'Update deadline for party Deadline Party' }).click();
 
   await expect.poll(() => requestedProject).toContain(openProject.id);
+});
+
+test('shows saved party deadlines and keeps party controls the same size', async ({ page }) => {
+  const parties = [
+    {
+      id: 'party-1', name: 'Team Orbit', status: 'ASSIGNED', semester: 'Fall', academicYear: 2026,
+      leader: pendingStudents[0], members: [pendingStudents[0]], assignedProjectId: openProject.id,
+      assignedProjectTitle: openProject.title, assignedProjectDeadline: openProject.deadline,
+    },
+    {
+      id: 'party-2', name: 'Team Northstar', status: 'ASSIGNED', semester: 'Fall', academicYear: 2026,
+      leader: pendingStudents[1], members: [pendingStudents[1]], assignedProjectId: 'project-2',
+      assignedProjectTitle: 'Second project', assignedProjectDeadline: '2030-02-02T11:30:00.000Z',
+    },
+    {
+      id: 'party-3', name: 'Team Launchpad', status: 'FORMING', semester: 'Fall', academicYear: 2026,
+      leader: pendingStudents[2], members: [pendingStudents[2]],
+    },
+  ];
+  await mockCoordinatorApi(page, {
+    onParties: route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(parties) }),
+  });
+  await loginAsCoordinator(page);
+  await page.getByRole('link', { name: 'Parties', exact: true }).click();
+
+  await expect(page.getByRole('group', { name: 'Deadline for party Team Orbit' }).locator('[data-type="year"]')).toHaveText('2030');
+  await page.getByRole('button', { name: 'Choose deadline for party team orbit' }).click();
+  await expect(page.getByRole('gridcell').filter({ hasText: /^\d{1,2}$/ }).first()).toBeVisible();
+
+  const renameInputs = page.getByPlaceholder('Rename party…');
+  const heights = await renameInputs.evaluateAll(inputs => inputs.map(input => input.getBoundingClientRect().height));
+  expect(new Set(heights.map(Math.round)).size).toBe(1);
 });
 
 test('keeps notifications visible and closes the mobile sidebar', async ({ page }) => {

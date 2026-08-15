@@ -38,6 +38,7 @@ const company = {
 async function setTheme(page: Page, theme: 'light' | 'dark') {
   await page.addInitScript((value) => localStorage.setItem('talentbridge-theme', value), theme);
   await page.clock.setFixedTime(fixedNow);
+  await page.route('https://heroui-assets.nyc3.cdn.digitaloceanspaces.com/avatars/**', route => route.abort());
 }
 
 async function authenticate(page: Page, user = company) {
@@ -117,6 +118,21 @@ test('registration mobile dark', async ({ page }) => {
   await page.goto('/register');
   await expect(page.getByRole('heading', { name: 'Create an account' })).toBeVisible();
   await expect(page).toHaveScreenshot('registration-mobile-dark.png', { animations: 'disabled' });
+});
+
+test('registration account types remain contained on desktop', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/register');
+  const group = page.getByRole('group', { name: 'Account type' });
+  const groupBox = await group.boundingBox();
+  const boxes = await group.getByRole('button').evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().toJSON()));
+  expect(groupBox).not.toBeNull();
+  expect(boxes).toHaveLength(3);
+  boxes.forEach((box, index) => {
+    expect(box.x).toBeGreaterThanOrEqual(groupBox!.x);
+    expect(box.x + box.width).toBeLessThanOrEqual(groupBox!.x + groupBox!.width + 1);
+    if (index) expect(box.x).toBeGreaterThanOrEqual(boxes[index - 1].x + boxes[index - 1].width);
+  });
 });
 
 test('coordinator dashboard desktop dark', async ({ page }) => {

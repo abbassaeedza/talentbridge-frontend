@@ -2,14 +2,13 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { userApi } from '../../api/services';
 import { getUserName } from '../../types';
-import { Mail, Search, UserCheck } from 'lucide-react';
+import { Mail, UserCheck } from 'lucide-react';
 import clsx from 'clsx';
-import { Input } from '@heroui/react/input';
 import { Label } from '@heroui/react/label';
 import { ListBox } from '@heroui/react/list-box';
 import { Select } from '@heroui/react/select';
 import { Skeleton } from '@heroui/react/skeleton';
-import { EmptyState, PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
+import { EmptyState, ListToolbar, PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
 
 export default function SupervisorsPage() {
   const [query, setQuery] = useState('');
@@ -32,13 +31,7 @@ export default function SupervisorsPage() {
     <div className=''>
       <PageHeader title='Supervisors' description='Find approved party and project supervisors.' />
 
-      <div className='rounded-lg border border-border bg-surface p-4 mb-5 grid md:grid-cols-[1fr_auto] gap-3'>
-        <div className='relative'>
-          <Search size={15} className='absolute left-3 top-1/2 -translate-y-1/2 text-muted' />
-          <Input fullWidth aria-label='Search supervisors' className='pl-9' placeholder='Search supervisors' value={query} onChange={(e) => setQuery(e.target.value)} />
-        </div>
-        <Select.Root aria-label='Supervisor role' selectedKey={role} onSelectionChange={(key) => setRole(String(key))}><Label>Role</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox><ListBox.Item id='ALL'>All supervisors</ListBox.Item><ListBox.Item id='PARTY_SUPERVISOR'>Party supervisors</ListBox.Item><ListBox.Item id='PROJECT_SUPERVISOR'>Project supervisors</ListBox.Item></ListBox></Select.Popover></Select.Root>
-      </div>
+      <ListToolbar searchLabel='Search supervisors' placeholder='Search supervisors' value={query} onChange={setQuery} filters={<Select.Root className='w-full sm:w-52' aria-label='Supervisor role' selectedKey={role} onSelectionChange={(key) => setRole(String(key))}><Label className='sr-only'>Supervisor role</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox><ListBox.Item id='ALL' textValue='All supervisors'>All supervisors</ListBox.Item><ListBox.Item id='PARTY_SUPERVISOR' textValue='Party supervisors'>Party supervisors</ListBox.Item><ListBox.Item id='PROJECT_SUPERVISOR' textValue='Project supervisors'>Project supervisors</ListBox.Item></ListBox></Select.Popover></Select.Root>} />
 
       {isLoading ? (
         <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-4'>

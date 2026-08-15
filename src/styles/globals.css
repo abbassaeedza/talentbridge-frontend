@@ -16,7 +16,8 @@
   --default: oklch(94.00% 0.0053 209.00);
   --default-foreground: oklch(21.03% 0.0059 209.00);
   --field-background: oklch(100.00% 0.0026 209.00);
-  --field-border: transparent;
+  --field-border: var(--border);
+  --field-border-width: 1px;
   --field-foreground: oklch(21.03% 0.0053 209.00);
   --field-placeholder: oklch(55.17% 0.0105 209.00);
   --focus: oklch(76.00% 0.1300 209.00);
@@ -41,7 +42,6 @@
   --radius: 0.5rem;
   --field-radius: 0.75rem;
   --font-sans: var(--font-inter);
-  --brand-mark: #f97316;
   --font-inter: "Inter Variable", Inter, system-ui, sans-serif;
   --sidebar-width: 15rem;
 }
@@ -58,7 +58,8 @@
   --default: oklch(27.40% 0.0053 209.00);
   --default-foreground: oklch(99.11% 0 0);
   --field-background: oklch(21.03% 0.0105 209.00);
-  --field-border: transparent;
+  --field-border: var(--border);
+  --field-border-width: 1px;
   --field-foreground: oklch(99.11% 0.0053 209.00);
   --field-placeholder: oklch(70.50% 0.0105 209.00);
   --focus: oklch(76.00% 0.1300 209.00);
@@ -112,7 +113,6 @@
   --color-surface-tertiary: var(--surface-tertiary);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
-  --color-brand-mark: var(--brand-mark);
 }
 
 @layer base {

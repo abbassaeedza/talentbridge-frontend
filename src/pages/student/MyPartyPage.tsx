@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { partyApi } from '../../api/services';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -148,7 +149,7 @@ export default function MyPartyPage() {
                 </div>
                 <div className='grid grid-cols-2 gap-3'>
                   <div>
-                    <Select.Root selectedKey={semester} onSelectionChange={(key) => setSemester(String(key))}><Label>Semester</Label><Select.Trigger aria-label='Semester'><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox><ListBox.Item id='Spring'>Spring</ListBox.Item><ListBox.Item id='Fall'>Fall</ListBox.Item></ListBox></Select.Popover></Select.Root>
+                    <Select.Root selectedKey={semester} onSelectionChange={(key) => setSemester(String(key))}><Label>Semester</Label><Select.Trigger aria-label='Semester'><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox><ListBox.Item id='Spring' textValue='Spring'>Spring</ListBox.Item><ListBox.Item id='Fall' textValue='Fall'>Fall</ListBox.Item></ListBox></Select.Popover></Select.Root>
                   </div>
                   <div>
                     <TextField fullWidth><Label>Academic year</Label><Input
@@ -293,11 +294,9 @@ export default function MyPartyPage() {
             )}
 
             {party.assignedProjectTitle && (
-              <div className='mb-4 p-3 rounded-lg bg-success border border-success'>
-                <p className='text-xs font-semibold text-success flex items-center gap-1.5'>
-                  <Briefcase size={12} /> Assigned: {party.assignedProjectTitle}
-                </p>
-              </div>
+              <Link to={`/student/projects/${party.assignedProjectId}`} className='mb-4 flex items-center gap-2 rounded-lg border border-success/40 bg-success/10 p-3 text-xs font-semibold text-foreground hover:border-success'>
+                <Briefcase size={14} className='text-success' /> Assigned: {party.assignedProjectTitle}
+              </Link>
             )}
 
             {/* Invite link */}

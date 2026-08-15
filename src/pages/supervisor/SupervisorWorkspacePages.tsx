@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Briefcase, ExternalLink, FileText, Search, Send, Users } from 'lucide-react';
+import { ArrowLeft, Briefcase, ExternalLink, FileText, Send, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { evaluationApi, partyApi, projectApi, submissionApi, userApi } from '../../api/services';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
@@ -10,12 +10,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import type { Application, Party, Project, Scorecard, Submission } from '../../types';
 import toast from 'react-hot-toast';
 import { Button, buttonVariants } from '@heroui/react/button';
-import { Input } from '@heroui/react/input';
 import { Label } from '@heroui/react/label';
 import { ListBox } from '@heroui/react/list-box';
 import { Select } from '@heroui/react/select';
+import { SearchField } from '@heroui/react/search-field';
 import { Skeleton } from '@heroui/react/skeleton';
-import { EmptyState as SharedEmptyState, PageHeader, StatCard, StatusBadge } from '../../components/ui/TalentBridgeUI';
+import { EmptyState as SharedEmptyState, ListToolbar, PageHeader, StatCard, StatusBadge } from '../../components/ui/TalentBridgeUI';
 
 type ItemKind = 'project' | 'party';
 type SortValue = 'deadline' | 'name' | 'status';
@@ -147,7 +147,7 @@ function Filters(props: {
 }) {
   return (
     <div className='rounded-lg border border-border bg-surface mb-5 grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-5'>
-      <label className='relative sm:col-span-2 xl:col-span-1'><Search size={14} className='absolute left-3 top-3 text-muted' /><Input fullWidth aria-label={props.searchPlaceholder} className='pl-9' placeholder={props.searchPlaceholder} value={props.search} onChange={(event) => props.setSearch(event.target.value)} /></label>
+      <SearchField fullWidth className='sm:col-span-2 xl:col-span-1' aria-label={props.searchPlaceholder} value={props.search} onChange={props.setSearch}><SearchField.Group><SearchField.SearchIcon /><SearchField.Input placeholder={props.searchPlaceholder} /><SearchField.ClearButton /></SearchField.Group></SearchField>
       <CompactSelect label='Status' value={props.status} onChange={props.setStatus} options={['ALL', 'DRAFT', 'PENDING_REVIEW', 'OPEN', 'ACTIVE', 'ASSIGNED', 'SUBMITTED', 'COMPLETED', 'CLOSED', 'ARCHIVED']} />
       <CompactSelect label='Assignment' value={props.assignment} onChange={props.setAssignment} options={['ALL', 'ASSIGNED', 'UNASSIGNED']} />
       <CompactSelect label='Submission' value={props.submission} onChange={props.setSubmission} options={['ALL', 'HAS_SUBMISSION', 'NO_SUBMISSION', 'DRAFT', 'SUBMITTED', 'EVALUATED']} />
@@ -215,7 +215,7 @@ export function BrowsePartiesPage() {
   return (
     <div className=''>
       <PageHeader title='Browse parties' description='Review available teams before choosing who to supervise.' />
-      <label className='relative mb-5 block max-w-md'><Search size={14} className='absolute left-3 top-3 text-muted' /><Input fullWidth aria-label='Search parties' className='pl-9' placeholder='Search parties' value={search} onChange={(event) => setSearch(event.target.value)} /></label>
+      <ListToolbar searchLabel='Search parties' placeholder='Search parties' value={search} onChange={setSearch} />
       {query.isLoading ? <LoadingCards /> : parties.length === 0 ? <EmptyState icon={Users}>No parties are available.</EmptyState> : <div className='grid gap-4 md:grid-cols-2'>{parties.map((party) => <PartyCard key={party.id} party={party} browse isMine={party.supervisorId === user?.id} />)}</div>}
     </div>
   );
@@ -366,5 +366,5 @@ function EvaluationPanel({ submissionId }: { submissionId: string }) {
 }
 
 function CompactSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
-  return <Select.Root selectedKey={value} onSelectionChange={(key) => onChange(String(key))}><Label>{label}</Label><Select.Trigger aria-label={label}><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{options.map((option) => <ListBox.Item key={option} id={option}>{option.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase())}</ListBox.Item>)}</ListBox></Select.Popover></Select.Root>;
+  return <Select.Root selectedKey={value} onSelectionChange={(key) => onChange(String(key))}><Label>{label}</Label><Select.Trigger aria-label={label}><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{options.map((option) => <ListBox.Item key={option} id={option} textValue={option.replace(/_/g, ' ')}>{option.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase())}</ListBox.Item>)}</ListBox></Select.Popover></Select.Root>;
 }

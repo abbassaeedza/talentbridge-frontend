@@ -2,20 +2,19 @@ import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { projectApi, userApi } from '../../api/services';
 import { getUserName } from '../../types';
-import { Building2, CheckCircle, ChevronDown, ChevronUp, ExternalLink, PauseCircle, PlayCircle, Search, Trash2, XCircle } from 'lucide-react';
+import { Building2, CheckCircle, ChevronDown, ChevronUp, ExternalLink, PauseCircle, PlayCircle, Trash2, XCircle } from 'lucide-react';
 import clsx from 'clsx';
 import useUserStatusMutation from '../../hooks/useUserStatusMutation';
 import toast from 'react-hot-toast';
 import BulkActionToolbar from '../../components/coordinator/BulkActionToolbar';
 import { Button } from '@heroui/react/button';
 import { Checkbox } from '@heroui/react/checkbox';
-import { Input } from '@heroui/react/input';
 import { Label } from '@heroui/react/label';
 import { ListBox } from '@heroui/react/list-box';
 import { Select } from '@heroui/react/select';
 import { Spinner } from '@heroui/react/spinner';
 import { Tabs } from '@heroui/react/tabs';
-import { PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
+import { ListToolbar, PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
 
 export default function CompaniesDirectoryPage() {
   const [query, setQuery] = useState('');
@@ -108,18 +107,18 @@ export default function CompaniesDirectoryPage() {
           ['SUSPENDED', 'Suspended'],
           ['REJECTED', 'Rejected'],
         ] as const).map(([value, label]) => (
-          <Tabs.Tab key={value} id={value}>{label}</Tabs.Tab>
+          <Tabs.Tab key={value} id={value}><Tabs.Indicator />{label}</Tabs.Tab>
         ))}
       </Tabs.List></Tabs.ListContainer></Tabs.Root>
 
-      <div className='rounded-lg border border-border bg-surface p-4 mb-5 grid md:grid-cols-[1fr_auto] gap-3'>
-        <div className='relative'>
-          <Search size={15} className='absolute left-3 top-1/2 -translate-y-1/2 text-muted' />
-          <Input fullWidth className='pl-9' aria-label='Search companies' placeholder='Search company, industry, or location' value={query} onChange={(e) => setQuery(e.target.value)} />
-        </div>
-        <Select.Root aria-label='Industry' selectedKey={industry} onSelectionChange={(key) => setIndustry(String(key))}><Label>Industry</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{industries.map((item) => <ListBox.Item key={item} id={item}>{item === 'ALL' ? 'All industries' : item}</ListBox.Item>)}</ListBox></Select.Popover></Select.Root>
-        <div className='md:col-span-2 flex w-fit items-center gap-2 text-xs'><SelectCheckbox selected={allFilteredSelected} onChange={() => setSelected(allFilteredSelected ? [] : filtered.map((company) => company.id))} label='Select all filtered companies' /> Select all {filtered.length} filtered companies</div>
-      </div>
+      <ListToolbar
+        searchLabel='Search companies'
+        placeholder='Search company, industry, or location'
+        value={query}
+        onChange={setQuery}
+        filters={<Select.Root className='w-full sm:w-48' aria-label='Industry' selectedKey={industry} onSelectionChange={(key) => setIndustry(String(key))}><Label className='sr-only'>Industry</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{industries.map((item) => <ListBox.Item key={item} id={item} textValue={item === 'ALL' ? 'All industries' : item}>{item === 'ALL' ? 'All industries' : item}</ListBox.Item>)}</ListBox></Select.Popover></Select.Root>}
+        selection={<><SelectCheckbox selected={allFilteredSelected} onChange={() => setSelected(allFilteredSelected ? [] : filtered.map((company) => company.id))} label='Select all filtered companies' /><span>Select all {filtered.length} filtered companies</span></>}
+      />
 
       <BulkActionToolbar noun='company' selectedCount={selected.length} eligible={eligible} rejectionReason={rejectReason} onRejectionReasonChange={setRejectReason} loadingAction={bulkAction} onAction={runBulk} />
 

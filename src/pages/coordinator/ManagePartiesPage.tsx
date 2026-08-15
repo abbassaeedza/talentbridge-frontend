@@ -9,7 +9,6 @@ import {
   Briefcase,
   Clock,
   Edit3,
-  Search,
   Trash2,
   UserCog,
   Users,
@@ -23,7 +22,8 @@ import { Input } from '@heroui/react/input';
 import { ListBox } from '@heroui/react/list-box';
 import { Select } from '@heroui/react/select';
 import { Spinner } from '@heroui/react/spinner';
-import { EmptyState, PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
+import { EmptyState, ListToolbar, PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
+import DateTimePicker from '../../components/ui/DateTimePicker';
 
 export default function ManagePartiesPage() {
   const qc = useQueryClient();
@@ -146,17 +146,7 @@ export default function ManagePartiesPage() {
     <div className=''>
       <PageHeader title='Parties' description={`${filteredParties.length} of ${parties?.length ?? 0} parties shown`} />
 
-      <div className='rounded-lg border border-border bg-surface p-4 mb-5'>
-        <div className='relative'>
-          <Search size={15} className='absolute left-3 top-1/2 -translate-y-1/2 text-muted' />
-          <Input fullWidth aria-label='Search parties'
-            className='pl-9'
-            placeholder='Search parties, members, supervisors, projects…'
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-      </div>
+      <ListToolbar searchLabel='Search parties' placeholder='Search parties, members, supervisors, or projects' value={query} onChange={setQuery} />
 
       <div className='space-y-3'>
         {isLoading ? (
@@ -206,8 +196,8 @@ export default function ManagePartiesPage() {
               </div>
             </div>
 
-            <div className='px-5 pb-4 grid lg:grid-cols-2 xl:grid-cols-4 gap-3 border-t border-border pt-3'>
-              <div className='flex gap-2'>
+            <div className='grid items-end gap-3 border-t border-border px-5 pb-4 pt-3 lg:grid-cols-2 xl:grid-cols-4'>
+              <div className='flex min-w-0 items-end gap-2'>
                 <Input fullWidth
                   className='flex-1 text-xs'
                   placeholder='Rename party…'
@@ -221,7 +211,7 @@ export default function ManagePartiesPage() {
               </div>
 
               {!party.assignedProjectId && party.status !== 'FORMING' && (
-                <div className='flex gap-2'>
+                <div className='flex min-w-0 items-end gap-2'>
                   <CompactSelect label='Assign project' value={assignProject[party.id] ?? ''} onChange={(value) => setAssignProject((draft) => ({ ...draft, [party.id]: value }))} options={(openProjects?.content ?? []).map((project) => ({ id: project.id, label: project.title }))} />
                   <Button size='sm' variant='primary' onPress={() => assignMutation.mutate({ projectId: assignProject[party.id], partyId: party.id })} isDisabled={!assignProject[party.id] || assignMutation.isPending}>
                     Assign
@@ -229,7 +219,7 @@ export default function ManagePartiesPage() {
                 </div>
               )}
 
-              <div className='flex gap-2'>
+              <div className='flex min-w-0 items-end gap-2'>
                 <CompactSelect label='Assign party supervisor' value={assignSup[party.id] ?? ''} onChange={(value) => setAssignSup((draft) => ({ ...draft, [party.id]: value }))} options={supervisorsFor(party).map((supervisor) => ({ id: supervisor.id, label: getUserName(supervisor) }))} />
                 <Button size='sm' variant='secondary' onPress={() => supMutation.mutate({ partyId: party.id, supervisorId: assignSup[party.id] })} isDisabled={!assignSup[party.id] || supMutation.isPending}>
                   <UserCog size={13} /> Assign
@@ -237,21 +227,15 @@ export default function ManagePartiesPage() {
               </div>
 
               {party.assignedProjectId && (
-                <div className='flex gap-2'>
-                  <Input fullWidth
-                    type='datetime-local'
-                    aria-label={`Deadline for party ${party.name}`}
-                    className='flex-1 text-xs'
-                    value={deadlineDraft[party.id] ?? ''}
-                    onChange={(e) => setDeadlineDraft((draft) => ({ ...draft, [party.id]: e.target.value }))}
-                  />
+                <div className='flex min-w-0 items-end gap-2'>
+                  <DateTimePicker label={`Deadline for party ${party.name}`} className='min-w-0 flex-1' value={deadlineDraft[party.id] ?? party.assignedProjectDeadline?.slice(0, 19) ?? ''} onChange={(value) => setDeadlineDraft((draft) => ({ ...draft, [party.id]: value }))} />
                   <Button size='sm' variant='secondary'
                     aria-label={`Update deadline for party ${party.name}`}
                     onPress={() => deadlineMutation.mutate({
                       projectId: party.assignedProjectId!,
-                      deadline: deadlineDraft[party.id],
+                      deadline: deadlineDraft[party.id] ?? party.assignedProjectDeadline?.slice(0, 19) ?? '',
                     })}
-                    isDisabled={!deadlineDraft[party.id] || deadlineMutation.isPending}
+                    isDisabled={!(deadlineDraft[party.id] ?? party.assignedProjectDeadline) || deadlineMutation.isPending}
                   >
                     <Clock size={13} /> Set
                   </Button>
@@ -330,5 +314,5 @@ export default function ManagePartiesPage() {
 }
 
 function CompactSelect({ label, value, options, onChange }: { label: string; value: string; options: { id: string; label: string }[]; onChange: (value: string) => void }) {
-  return <Select.Root className='min-w-0 flex-1' aria-label={label} selectedKey={value || null} onSelectionChange={(key) => onChange(String(key))}><Select.Trigger><Select.Value>{({ defaultChildren }) => defaultChildren || label}</Select.Value><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{options.map((option) => <ListBox.Item key={option.id} id={option.id}>{option.label}</ListBox.Item>)}</ListBox></Select.Popover></Select.Root>;
+  return <Select.Root className='min-w-0 flex-1' aria-label={label} selectedKey={value || null} onSelectionChange={(key) => onChange(String(key))}><Select.Trigger><Select.Value>{({ defaultChildren }) => defaultChildren || label}</Select.Value><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{options.map((option) => <ListBox.Item key={option.id} id={option.id} textValue={option.label}>{option.label}</ListBox.Item>)}</ListBox></Select.Popover></Select.Root>;
 }

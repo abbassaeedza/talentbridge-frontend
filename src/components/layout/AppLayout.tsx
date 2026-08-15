@@ -342,9 +342,9 @@ export default function AppLayout() {
               </Button>
               <Popover.Content
                 placement='bottom end'
-                className='w-[min(22rem,calc(100vw-1rem))] overflow-hidden p-0'
+                className='max-h-[calc(100dvh-5rem)] w-[min(22rem,calc(100vw-1rem))] overflow-hidden p-0'
               >
-                <Popover.Dialog className='outline-none'>
+                <Popover.Dialog className='flex max-h-[calc(100dvh-5rem)] flex-col outline-none'>
                   <div className='flex items-center justify-between border-b border-border px-4 py-3'>
                     <Popover.Heading className='text-sm font-semibold'>Notifications</Popover.Heading>
                     {notifications.length > 0 && (
@@ -358,7 +358,7 @@ export default function AppLayout() {
                       </Button>
                     )}
                   </div>
-                  <div className='max-h-[min(24rem,calc(100dvh-8rem))] overflow-y-auto'>
+                  <div className='min-h-0 flex-1 overflow-y-auto'>
                     {notifications.length === 0 ? (
                       <p className='px-4 py-10 text-center text-sm text-muted'>No new notifications.</p>
                     ) : notifications.map((notification: any) => (

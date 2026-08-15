@@ -129,7 +129,7 @@ export default function ProfilePage() {
                 <Field label='University' value={form.university} onChange={(value) => set('university', value)} maxLength={255} />
                 <Field label='Major' value={form.major} onChange={(value) => set('major', value)} maxLength={255} />
                 <Select.Root fullWidth aria-label='Year of study' selectedKey={form.yearOfStudy || null} onSelectionChange={(key) => set('yearOfStudy', String(key))}>
-                  <Label>Year of study</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{YEARS.map((year) => <ListBox.Item key={year} id={year}>{year}</ListBox.Item>)}</ListBox></Select.Popover>
+                  <Label>Year of study</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{YEARS.map((year) => <ListBox.Item key={year} id={year} textValue={year}>{year}</ListBox.Item>)}</ListBox></Select.Popover>
                 </Select.Root>
                 <Field label='GPA' value={form.gpa} onChange={(value) => set('gpa', value)} type='number' min='0' max='4' step='0.01' />
                 <Field label='LinkedIn URL' value={form.linkedinUrl} onChange={(value) => set('linkedinUrl', value)} type='url' maxLength={500} />

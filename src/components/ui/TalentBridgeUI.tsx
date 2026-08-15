@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Layers, Moon, Sun } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 import { Button } from '@heroui/react/button';
 import { Card } from '@heroui/react/card';
 import { Chip } from '@heroui/react/chip';
 import { Modal } from '@heroui/react/modal';
+import { SearchField } from '@heroui/react/search-field';
 import { Spinner } from '@heroui/react/spinner';
 import clsx from 'clsx';
 import { useTheme } from '../../hooks/useTheme';
@@ -12,9 +13,7 @@ import { useTheme } from '../../hooks/useTheme';
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <div className='flex items-center gap-3' aria-label='TalentBridge'>
-      <span className='flex size-9 items-center justify-center rounded-md bg-brand-mark text-white'>
-        <Layers size={18} aria-hidden='true' />
-      </span>
+      <img src='/talentbridge-mark.png' alt='' className='size-9 object-contain dark:invert' aria-hidden='true' />
       {!compact && <span className='text-lg font-semibold tracking-tight'>TalentBridge</span>}
     </div>
   );
@@ -74,6 +73,40 @@ export function PageHeader({
       </div>
       {action && <div className='flex shrink-0 items-center gap-2'>{action}</div>}
     </header>
+  );
+}
+
+export function ListToolbar({
+  searchLabel,
+  placeholder,
+  value,
+  onChange,
+  onSubmit,
+  filters,
+  selection,
+}: {
+  searchLabel: string;
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit?: (value: string) => void;
+  filters?: ReactNode;
+  selection?: ReactNode;
+}) {
+  return (
+    <div className='mb-5 rounded-lg border border-border bg-surface p-4'>
+      <div className='flex flex-col gap-3 sm:flex-row sm:items-end'>
+        <SearchField fullWidth className='min-w-0 flex-1' aria-label={searchLabel} value={value} onChange={onChange} onSubmit={onSubmit}>
+          <SearchField.Group>
+            <SearchField.SearchIcon />
+            <SearchField.Input placeholder={placeholder} />
+            <SearchField.ClearButton />
+          </SearchField.Group>
+        </SearchField>
+        {filters && <div className='flex w-full shrink-0 flex-wrap items-end gap-3 sm:w-auto'>{filters}</div>}
+      </div>
+      {selection && <div className='mt-3 flex min-h-8 items-center gap-2 text-sm text-muted'>{selection}</div>}
+    </div>
   );
 }
 

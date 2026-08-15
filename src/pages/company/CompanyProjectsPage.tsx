@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Eye, FolderKanban, Pencil, Plus, Search, Tag, Trash2, Users, X } from 'lucide-react';
+import { Check, Eye, FolderKanban, Pencil, Plus, Tag, Trash2, Users, X } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { Button, buttonVariants } from '@heroui/react/button';
@@ -14,7 +14,7 @@ import { Table } from '@heroui/react/table';
 import { Tabs } from '@heroui/react/tabs';
 import { projectApi } from '../../api/services';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
-import { ConfirmationDialog, EmptyState, PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
+import { ConfirmationDialog, EmptyState, ListToolbar, PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
 
 const TABS = [
   ['ALL', 'All'], ['DRAFT', 'Drafts'], ['ASSIGNED', 'Assigned'], ['OPEN', 'Open'], ['PENDING_REVIEW', 'Pending review'], ['ARCHIVED', 'Rejected'],
@@ -79,14 +79,11 @@ export default function CompanyProjectsPage() {
     <div>
       <PageHeader title='Projects' description={`${filtered.length} of ${projects.length} projects shown`} action={<Link to='/company/projects/new' className={buttonVariants({ variant: 'primary' })}><Plus size={16} /> Post New Project</Link>} />
       <Tabs.Root variant='secondary' selectedKey={tab} onSelectionChange={(key) => setTab(String(key))} className='mb-4'>
-        <Tabs.ListContainer><Tabs.List aria-label='Project status'>{TABS.map(([key, label]) => <Tabs.Tab key={key} id={key}>{label}{(key === 'ALL' ? projects.length : counts[key] ?? 0) > 0 && <span className='ml-1 text-xs text-muted'>{key === 'ALL' ? projects.length : counts[key]}</span>}</Tabs.Tab>)}</Tabs.List></Tabs.ListContainer>
+        <Tabs.ListContainer><Tabs.List aria-label='Project status'>{TABS.map(([key, label]) => <Tabs.Tab key={key} id={key}><Tabs.Indicator />{label}{(key === 'ALL' ? projects.length : counts[key] ?? 0) > 0 && <span className='ml-1 text-xs text-muted'>{key === 'ALL' ? projects.length : counts[key]}</span>}</Tabs.Tab>)}</Tabs.List></Tabs.ListContainer>
       </Tabs.Root>
-      <div className='mb-4 flex flex-col gap-3 rounded-lg border border-border bg-surface p-3 sm:flex-row'>
-        <div className='relative flex-1'><Search size={17} className='pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted' /><Input fullWidth aria-label='Search projects' className='pl-10' placeholder='Search title, description, or reference' value={search} onChange={(event) => setSearch(event.target.value)} /></div>
-        <Select.Root aria-label='Sort projects' selectedKey={sort} onSelectionChange={(key) => setSort(String(key))} className='sm:w-44'>
-          <Label className='sr-only'>Sort projects</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{SORTS.map(([key, label]) => <ListBox.Item key={key} id={key}>{label}</ListBox.Item>)}</ListBox></Select.Popover>
-        </Select.Root>
-      </div>
+      <ListToolbar searchLabel='Search projects' placeholder='Search title, description, or reference' value={search} onChange={setSearch} filters={<Select.Root aria-label='Sort projects' selectedKey={sort} onSelectionChange={(key) => setSort(String(key))} className='w-full sm:w-44'>
+          <Label className='sr-only'>Sort projects</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{SORTS.map(([key, label]) => <ListBox.Item key={key} id={key} textValue={label}>{label}</ListBox.Item>)}</ListBox></Select.Popover>
+        </Select.Root>} />
 
       {isLoading ? <div className='flex min-h-64 items-center justify-center'><Spinner /></div> : filtered.length === 0 ? <EmptyState icon={FolderKanban} title='No projects match these filters' description={projects.length ? 'Change the status or search query.' : 'Create a project brief for student parties.'} action={!projects.length ? <Link to='/company/projects/new' className={buttonVariants({ variant: 'primary' })}>Create project</Link> : undefined} /> : <>
         <div className='hidden md:block'>

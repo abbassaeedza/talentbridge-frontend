@@ -73,7 +73,7 @@ function StudentOnboarding() {
             <Select.Root fullWidth aria-label='Year of study' selectedKey={form.yearOfStudy || null} onSelectionChange={(key) => set('yearOfStudy', String(key))}>
               <Label>Year of study</Label>
               <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
-              <Select.Popover><ListBox>{YEARS.map((year) => <ListBox.Item key={year} id={year}>{year}</ListBox.Item>)}</ListBox></Select.Popover>
+              <Select.Popover><ListBox>{YEARS.map((year) => <ListBox.Item key={year} id={year} textValue={year}>{year}</ListBox.Item>)}</ListBox></Select.Popover>
             </Select.Root>
             <Field label='Major or field of study' value={form.major} onChange={(value) => set('major', value)} maxLength={255} placeholder='Computer science' />
             <Field label='GPA (optional)' value={form.gpa} onChange={(value) => set('gpa', value)} type='number' min='0' max='4' step='0.01' placeholder='3.80' />

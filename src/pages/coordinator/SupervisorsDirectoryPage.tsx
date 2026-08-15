@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle, Mail, PauseCircle, PlayCircle, Search, Trash2, UserCheck, XCircle } from 'lucide-react';
+import { CheckCircle, Mail, PauseCircle, PlayCircle, Trash2, UserCheck, XCircle } from 'lucide-react';
 import { userApi } from '../../api/services';
 import { getUserName } from '../../types';
 import useUserStatusMutation from '../../hooks/useUserStatusMutation';
@@ -10,10 +10,9 @@ import BulkActionToolbar from '../../components/coordinator/BulkActionToolbar';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@heroui/react/button';
 import { Checkbox } from '@heroui/react/checkbox';
-import { Input } from '@heroui/react/input';
 import { Spinner } from '@heroui/react/spinner';
 import { Tabs } from '@heroui/react/tabs';
-import { PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
+import { ListToolbar, PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
 
 type SupervisorSection = 'PENDING' | 'PARTY_SUPERVISOR' | 'PROJECT_SUPERVISOR';
 
@@ -91,22 +90,17 @@ export default function SupervisorsDirectoryPage() {
           ['PARTY_SUPERVISOR', 'Party Supervisors'],
           ['PROJECT_SUPERVISOR', 'Project Supervisors'],
         ] as const).map(([value, label]) => (
-          <Tabs.Tab key={value} id={value}>{label}</Tabs.Tab>
+          <Tabs.Tab key={value} id={value}><Tabs.Indicator />{label}</Tabs.Tab>
         ))}
       </Tabs.List></Tabs.ListContainer></Tabs.Root>
 
-      <div className='rounded-lg border border-border bg-surface p-4 mb-5'>
-        <div className='relative'>
-          <Search size={15} className='absolute left-3 top-1/2 -translate-y-1/2 text-muted' />
-          <Input fullWidth
-            className='pl-9'
-            placeholder='Search supervisors…'
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </div>
-        <div className='mt-3 flex items-center gap-2 text-xs'><SelectCheckbox selected={allFilteredSelected} onChange={() => setSelected(allFilteredSelected ? [] : filtered.map((supervisor) => supervisor.id))} label='Select all filtered supervisors' /> Select all {filtered.length} filtered supervisors</div>
-      </div>
+      <ListToolbar
+        searchLabel='Search supervisors'
+        placeholder='Search supervisors'
+        value={query}
+        onChange={setQuery}
+        selection={<><SelectCheckbox selected={allFilteredSelected} onChange={() => setSelected(allFilteredSelected ? [] : filtered.map((supervisor) => supervisor.id))} label='Select all filtered supervisors' /><span>Select all {filtered.length} filtered supervisors</span></>}
+      />
 
       <BulkActionToolbar noun='supervisor' selectedCount={selected.length} eligible={eligible} rejectionReason={rejectReason} onRejectionReasonChange={setRejectReason} loadingAction={bulkAction} onAction={runBulk} />
 

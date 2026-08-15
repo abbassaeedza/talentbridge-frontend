@@ -6,15 +6,15 @@ import { PROJECT_FIELDS } from '../../types';
 import { Search, Users, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
-import clsx from 'clsx';
 import { Button } from '@heroui/react/button';
-import { Input } from '@heroui/react/input';
+import { ButtonGroup } from '@heroui/react/button-group';
 import { Label } from '@heroui/react/label';
 import { ListBox } from '@heroui/react/list-box';
 import { Select } from '@heroui/react/select';
 import { Skeleton } from '@heroui/react/skeleton';
+import { Table } from '@heroui/react/table';
 import { ToggleButton } from '@heroui/react/toggle-button';
-import { EmptyState, PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
+import { EmptyState, ListToolbar, PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
 
 const SORT_OPTIONS = [
   { value: 'createdAt', label: 'Newest' },
@@ -36,12 +36,6 @@ export default function ProjectsListPage() {
     queryFn: () =>
       projectApi.getOpen({ search: query || undefined, sortBy, page, size: 12 }).then((r) => r.data),
   });
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setQuery(search);
-    setPage(0);
-  };
 
   // Collect all tools across current page for filter pills
   const allTools = useMemo(() => {
@@ -71,26 +65,12 @@ export default function ProjectsListPage() {
     <div className=''>
       <PageHeader title='Projects' description={`${data?.totalElements ?? 0} open projects available`} />
 
-      {/* Search + sort + filter toggle */}
-      <div className='flex gap-3 mb-4 flex-wrap'>
-        <form onSubmit={handleSearch} className='flex-1 min-w-48 relative'>
-          <Search size={16} className='absolute left-3.5 top-1/2 -translate-y-1/2 text-muted' />
-          <Input fullWidth aria-label='Search projects' className='pl-10' value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder='Search by title, description, tools…' />
-        </form>
-
-        <Select.Root aria-label='Sort projects' selectedKey={sortBy} onSelectionChange={(key) => { setSortBy(String(key)); setPage(0); }}><Label>Sort</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{SORT_OPTIONS.map((option) => <ListBox.Item key={option.value} id={option.value}>{option.label}</ListBox.Item>)}</ListBox></Select.Popover></Select.Root>
-
-        <Button variant={filterOpen || activeFilters > 0 ? 'primary' : 'secondary'} onPress={() => setFilterOpen((v) => !v)}>
-          Filters
-          {activeFilters > 0 && (
-            <span className='w-5 h-5 rounded-full bg-accent text-foreground text-[10px] font-bold flex items-center justify-center'>
-              {activeFilters}
-            </span>
-          )}
-          {filterOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-        </Button>
-      </div>
+      <ListToolbar searchLabel='Search projects' placeholder='Search by title, description, or tools' value={search} onChange={setSearch} onSubmit={(value) => { setQuery(value); setPage(0); }} filters={<><Select.Root className='w-44' aria-label='Sort projects' selectedKey={sortBy} onSelectionChange={(key) => { setSortBy(String(key)); setPage(0); }}><Label className='sr-only'>Sort projects</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{SORT_OPTIONS.map((option) => <ListBox.Item key={option.value} id={option.value} textValue={option.label}>{option.label}</ListBox.Item>)}</ListBox></Select.Popover></Select.Root><ButtonGroup variant='secondary'>
+          <Button variant={filterOpen || activeFilters > 0 ? 'primary' : 'secondary'} onPress={() => setFilterOpen((value) => !value)}>
+            Filters {activeFilters > 0 && `(${activeFilters})`} {filterOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </Button>
+          {activeFilters > 0 && <><ButtonGroup.Separator /><Button isIconOnly variant='secondary' aria-label='Clear project filters' onPress={() => { setSelectedFields([]); setSelectedTools([]); }}><X size={14} /></Button></>}
+        </ButtonGroup></>} />
 
       {/* Filter panel */}
       {filterOpen && (
@@ -111,7 +91,7 @@ export default function ProjectsListPage() {
               <p className='text-xs font-semibold text-muted uppercase tracking-wider mb-2'>Tools / Technologies</p>
               <div className='flex flex-wrap gap-2'>
                 {allTools.slice(0, 16).map((t) => (
-                  <ToggleButton key={t} size='sm' className='font-mono' isSelected={selectedTools.includes(t)} onChange={() => toggleTool(t)}>
+                  <ToggleButton key={t} size='sm' isSelected={selectedTools.includes(t)} onChange={() => toggleTool(t)}>
                     {t}
                   </ToggleButton>
                 ))}
@@ -141,7 +121,20 @@ export default function ProjectsListPage() {
             </p>
           )}
 
-          <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-4'>
+          <Table variant='secondary' className='hidden md:block'>
+            <Table.ScrollContainer><Table.Content aria-label='Open projects'>
+              <Table.Header><Table.Column isRowHeader>Project</Table.Column><Table.Column>Company</Table.Column><Table.Column>Field and tools</Table.Column><Table.Column>Applications</Table.Column><Table.Column>Deadline</Table.Column></Table.Header>
+              <Table.Body>{displayed.map((project) => <Table.Row key={project.id} id={project.id}>
+                <Table.Cell><Link to={`/student/projects/${project.id}`} className='font-medium text-foreground hover:text-accent'>{project.title}</Link><p className='mt-1 max-w-md line-clamp-1 text-xs text-muted'>{project.description}</p></Table.Cell>
+                <Table.Cell>{project.companyName}</Table.Cell>
+                <Table.Cell><StatusBadge status='OPEN' /><p className='mt-1 text-xs text-muted'>{[project.projectField, ...project.tools.slice(0, 3)].filter(Boolean).join(' · ') || 'Not specified'}</p></Table.Cell>
+                <Table.Cell><span className='flex items-center gap-1.5'><Users size={14} className='text-muted' />{project.partyApplicationCount}</span></Table.Cell>
+                <Table.Cell><DeadlineCountdown deadline={project.deadline ?? null} compact /></Table.Cell>
+              </Table.Row>)}</Table.Body>
+            </Table.Content></Table.ScrollContainer>
+          </Table>
+
+          <div className='grid gap-4 md:hidden'>
             {displayed.map((p) => (
               <Link key={p.id} to={`/student/projects/${p.id}`}
                 className='rounded-lg border border-border bg-surface p-5 hover:border-accent hover:bg-surface-secondary transition-all duration-200 group flex flex-col'>
@@ -172,7 +165,7 @@ export default function ProjectsListPage() {
                 {p.tools.length > 0 && (
                   <div className='flex flex-wrap gap-1 mb-3'>
                     {p.tools.slice(0, 4).map((t) => (
-                      <span key={t} className='px-2 py-0.5 rounded-md bg-default text-muted text-[10px] font-mono'>{t}</span>
+                      <span key={t} className='px-2 py-0.5 rounded-md bg-default text-muted text-[10px]'>{t}</span>
                     ))}
                     {p.tools.length > 4 && <span className='text-[10px] text-muted'>+{p.tools.length - 4}</span>}
                   </div>

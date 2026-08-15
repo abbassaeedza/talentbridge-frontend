@@ -90,6 +90,58 @@ test('prioritises the assigned project deadline in the large countdown', async (
   await expect(page.getByText('Global application deadline')).toBeHidden();
 });
 
+test('shows the assigned project clearly in the party view', async ({ page }) => {
+  const projectId = '00000000-0000-0000-0000-000000000103';
+  await mockStudentApi(page, {
+    id: '00000000-0000-0000-0000-000000000102',
+    name: 'Demo Party',
+    status: 'ASSIGNED',
+    leader: student,
+    members: [student],
+    assignedProjectId: projectId,
+    assignedProjectTitle: 'Assigned Project',
+    assignedProjectDeadline: new Date(Date.now() + 36 * 3_600_000).toISOString(),
+  });
+  await page.route('**/api/parties/rules', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ minSize: 1, maxSize: 4, supervisorMaxParties: 2 }) }));
+  await page.route('**/api/applications/party/**', route => route.fulfill({ contentType: 'application/json', body: '[]' }));
+  await login(page);
+  await page.goto('/student/party');
+
+  const assignment = page.getByRole('link', { name: 'Assigned: Assigned Project' });
+  await expect(assignment).toBeVisible();
+  await expect(assignment).toHaveAttribute('href', `/student/projects/${projectId}`);
+  const colors = await assignment.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return [style.color, style.backgroundColor];
+  });
+  expect(colors[0]).not.toBe(colors[1]);
+});
+
+test('uses accessible project search, filters, sort, and table controls', async ({ page }) => {
+  const warnings: string[] = [];
+  page.on('console', message => {
+    if (message.type() === 'warning' || message.type() === 'error') warnings.push(message.text());
+  });
+  await mockStudentApi(page, null);
+  await page.route('**/api/projects**', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify(pageResponse([{
+      id: 'project-1', title: 'Accessible Project', description: 'A project students can browse.',
+      tools: ['React'], projectField: 'Software Development', status: 'OPEN', companyName: 'Demo Company',
+      partyApplicationCount: 2, deadline: new Date(Date.now() + 10 * 86_400_000).toISOString(),
+    }])),
+  }));
+  await login(page);
+  await page.getByRole('link', { name: 'Projects', exact: true }).click();
+
+  await expect(page.getByRole('searchbox', { name: 'Search projects' })).toBeVisible();
+  await expect(page.getByRole('grid', { name: 'Open projects' })).toBeVisible();
+  await page.getByRole('button', { name: 'Newest' }).click();
+  await page.getByRole('option', { name: 'Deadline' }).click();
+  await page.getByRole('button', { name: /^Filters/ }).click();
+  expect(warnings.filter((message) => message.includes('textValue'))).toEqual([]);
+});
+
 test('shows the connected GitHub username and profile link', async ({ page }) => {
   await mockStudentApi(page, null);
 

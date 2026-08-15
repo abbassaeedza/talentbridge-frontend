@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Button, buttonVariants } from '@heroui/react/button';
 import { Checkbox } from '@heroui/react/checkbox';
-import { Input } from '@heroui/react/input';
 import { Spinner } from '@heroui/react/spinner';
 import { Table } from '@heroui/react/table';
 import { Tabs } from '@heroui/react/tabs';
@@ -15,13 +14,12 @@ import {
   Mail,
   PauseCircle,
   PlayCircle,
-  Search,
   Trash2,
   XCircle,
 } from 'lucide-react';
 import { userApi } from '../../api/services';
 import BulkActionToolbar from '../../components/coordinator/BulkActionToolbar';
-import { PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
+import { ListToolbar, PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
 import useUserStatusMutation from '../../hooks/useUserStatusMutation';
 import { getUserName } from '../../types';
 
@@ -148,30 +146,18 @@ export default function StudentsDirectoryPage() {
       >
         <Tabs.ListContainer>
           <Tabs.List aria-label='Student status'>
-            {STATUSES.map(([value, label]) => <Tabs.Tab key={value} id={value}>{label}</Tabs.Tab>)}
+            {STATUSES.map(([value, label]) => <Tabs.Tab key={value} id={value}><Tabs.Indicator />{label}</Tabs.Tab>)}
           </Tabs.List>
         </Tabs.ListContainer>
       </Tabs.Root>
 
-      <div className='mb-4 flex flex-col gap-3 rounded-lg border border-border bg-surface p-3 sm:flex-row sm:items-center'>
-        <div className='relative flex-1'>
-          <Search size={17} className='pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted' />
-          <Input
-            fullWidth
-            aria-label='Search students'
-            placeholder='Search name, university, major, or skill'
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className='pl-10'
-          />
-        </div>
-        <SelectCheckbox
-          selected={allFilteredSelected}
-          onChange={() => setSelected(allFilteredSelected ? [] : filtered.map((student) => student.id))}
-          label={`Select all ${filtered.length} filtered students`}
-        />
-        <span className='text-sm text-muted'>Select all filtered</span>
-      </div>
+      <ListToolbar
+        searchLabel='Search students'
+        placeholder='Search name, university, major, or skill'
+        value={query}
+        onChange={setQuery}
+        selection={<><SelectCheckbox selected={allFilteredSelected} onChange={() => setSelected(allFilteredSelected ? [] : filtered.map((student) => student.id))} label={`Select all ${filtered.length} filtered students`} /><span>Select all {filtered.length} filtered students</span></>}
+      />
 
       <BulkActionToolbar
         noun='student'

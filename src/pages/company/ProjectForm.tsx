@@ -12,6 +12,7 @@ import { TextArea } from '@heroui/react/textarea';
 import { TextField } from '@heroui/react/textfield';
 import { ToggleButton } from '@heroui/react/toggle-button';
 import { projectSupervisorInvitationApi } from '../../api/services';
+import DateTimePicker from '../../components/ui/DateTimePicker';
 import { PROJECT_FIELDS, type Project, type ProjectDraft } from '../../types';
 
 const TOOL_SUGGESTIONS = [
@@ -270,7 +271,7 @@ export default function ProjectForm({
       <section className='border-t border-separator pt-7'>
         <h2 className='text-base font-semibold'>Assignment</h2>
         <div className='mt-5 grid gap-5 sm:grid-cols-2'>
-          <TextInput label='Application deadline' value={form.deadline} onChange={(value) => set('deadline', value)} type='datetime-local' />
+          <DateTimePicker label='Application deadline' value={form.deadline} onChange={(value) => set('deadline', value)} />
           <SupervisorSelect value={form.projectSupervisorId} onChange={(value) => set('projectSupervisorId', value)} />
         </div>
       </section>
@@ -308,7 +309,7 @@ function SupervisorSelect({ value, onChange }: { value: string; onChange: (value
       <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
       <Select.Popover>
         <ListBox>
-          <ListBox.Item id='none'>No project supervisor</ListBox.Item>
+          <ListBox.Item id='none' textValue='No project supervisor'>No project supervisor</ListBox.Item>
           {approved.map((supervisor) => (
             <ListBox.Item key={supervisor.id} id={supervisor.id} textValue={`${supervisor.firstName} ${supervisor.lastName}`}>
               <span className='block text-sm'>{supervisor.firstName} {supervisor.lastName}</span>

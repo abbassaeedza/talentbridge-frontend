@@ -261,7 +261,7 @@ test('company manages supervisor invitations and assigns an accepted supervisor 
   await page.getByRole('link', { name: 'Post New Project' }).click();
   await page.getByLabel('Project title').fill('Operations Dashboard');
   await page.getByLabel('Project description').fill('Build an operations dashboard.');
-  await page.getByLabel('Project supervisor').click();
+  await page.getByRole('button', { name: /No project supervisor/ }).click();
   await page.getByRole('option', { name: /Sara Khan/ }).click();
   await page.getByRole('button', { name: 'Submit for review' }).click();
 

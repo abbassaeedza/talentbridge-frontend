@@ -14,6 +14,7 @@ import { Spinner } from '@heroui/react/spinner';
 import { Switch } from '@heroui/react/switch';
 import { Tabs } from '@heroui/react/tabs';
 import { PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
+import DateTimePicker from '../../components/ui/DateTimePicker';
 
 type TabStatus = 'ALL' | 'PENDING_REVIEW' | 'OPEN' | 'ARCHIVED' | 'ASSIGNED';
 
@@ -151,16 +152,7 @@ export default function ManageProjectsPage() {
                 : 'No deadline configured'}
             </p>
           </div>
-          <label className='block text-xs font-medium text-foreground'>
-            Global deadline date and time
-            <Input
-              type='datetime-local'
-              className='mt-2 w-full text-xs'
-              value={globalDeadline}
-              disabled={!globalEnabled}
-              onChange={(event) => setGlobalDeadline(event.target.value)}
-            />
-          </label>
+          <DateTimePicker label='Global deadline date and time' value={globalDeadline} onChange={setGlobalDeadline} isDisabled={!globalEnabled} />
           <Button variant='primary' onPress={reviewGlobalChange} isDisabled={(globalEnabled && !globalDeadline) || previewMutation.isPending} className='lg:min-w-40'>
             {previewMutation.isPending ? 'Loading preview...' : 'Preview changes'}
           </Button>
@@ -192,7 +184,7 @@ export default function ManageProjectsPage() {
       </Modal.Dialog></Modal.Container></Modal.Backdrop></Modal>
 
       {/* Filter tabs */}
-      <Tabs.Root variant='secondary' selectedKey={tab} onSelectionChange={(key) => { setTab(String(key) as TabStatus); setPage(0); }} className='mb-4'><Tabs.ListContainer><Tabs.List aria-label='Project status'>{TABS.map((item) => <Tabs.Tab key={item.value} id={item.value}>{item.label}</Tabs.Tab>)}</Tabs.List></Tabs.ListContainer></Tabs.Root>
+      <Tabs.Root variant='secondary' selectedKey={tab} onSelectionChange={(key) => { setTab(String(key) as TabStatus); setPage(0); }} className='mb-4'><Tabs.ListContainer><Tabs.List aria-label='Project status'>{TABS.map((item) => <Tabs.Tab key={item.value} id={item.value}><Tabs.Indicator />{item.label}</Tabs.Tab>)}</Tabs.List></Tabs.ListContainer></Tabs.Root>
 
       <div className='rounded-lg border border-border bg-surface overflow-hidden'>
         {isLoading ? (
@@ -267,17 +259,12 @@ export default function ManageProjectsPage() {
 
                       {/* Open and assigned projects keep independent deadlines */}
                       {(p.status === 'OPEN' || p.status === 'ASSIGNED') && (
-                        <div className='flex items-center gap-2'>
-                          <Input
-                            type='datetime-local'
-                            aria-label={`Deadline for ${p.title}`}
-                            className='w-48 text-xs'
-                            value={deadlines[p.id] ?? ''}
-                            onChange={(e) => setDeadlines((d) => ({ ...d, [p.id]: e.target.value }))} />
+                        <div className='flex items-end gap-2'>
+                          <DateTimePicker label={`Deadline for ${p.title}`} className='w-56' value={deadlines[p.id] ?? p.deadline?.slice(0, 19) ?? ''} onChange={(value) => setDeadlines((d) => ({ ...d, [p.id]: value }))} />
                           <Button size='sm' variant='secondary'
                             aria-label={`Set deadline for ${p.title}`}
-                            onPress={() => deadlineMutation.mutate({ id: p.id, deadline: deadlines[p.id] })}
-                            isDisabled={!deadlines[p.id] || deadlineMutation.isPending}>
+                            onPress={() => deadlineMutation.mutate({ id: p.id, deadline: deadlines[p.id] ?? p.deadline?.slice(0, 19) ?? '' })}
+                            isDisabled={!(deadlines[p.id] ?? p.deadline) || deadlineMutation.isPending}>
                             <Clock size={12} /> Set
                           </Button>
                           {p.status === 'OPEN' && (

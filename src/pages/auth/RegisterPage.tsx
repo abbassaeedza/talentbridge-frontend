@@ -109,15 +109,15 @@ export default function RegisterPage() {
               isSelected={role === item.value}
               onChange={() => setRole(item.value)}
               className={clsx(
-                'min-h-20 rounded-md border p-3 text-left transition-colors',
+                'min-h-24 min-w-0 flex-col items-start justify-center overflow-hidden whitespace-normal rounded-md border p-3 text-left transition-colors',
                 role === item.value
                   ? 'border-accent bg-default text-foreground'
                   : 'border-border bg-surface text-muted hover:bg-default hover:text-foreground',
               )}
             >
               <item.icon size={18} aria-hidden='true' />
-              <span className='mt-2 block text-sm font-medium'>{item.label}</span>
-              <span className='mt-0.5 block text-xs text-muted'>{item.description}</span>
+              <span className='mt-2 block w-full text-sm font-medium'>{item.label}</span>
+              <span className='mt-0.5 block w-full text-xs leading-4 text-muted'>{item.description}</span>
             </ToggleButton>
           ))}
         </div>
