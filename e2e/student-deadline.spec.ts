@@ -206,7 +206,8 @@ test('creates a party with a validated semester and academic year', async ({ pag
   await page.getByRole('button', { name: 'Create Party' }).click();
 
   await page.getByPlaceholder('Team Phoenix').fill('Team Guardrail');
-  await page.getByRole('combobox', { name: 'Semester' }).selectOption('Spring');
+  await page.getByRole('button', { name: 'Semester' }).click();
+  await page.getByRole('option', { name: 'Spring' }).click();
   await page.getByRole('spinbutton', { name: 'Academic year' }).fill('2027');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
 

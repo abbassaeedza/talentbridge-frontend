@@ -204,7 +204,7 @@ test('previews and shows a new global deadline without reloading', async ({ page
   await expect(page.getByRole('heading', { name: 'Manage Projects' })).toBeVisible();
   const fetchesBeforeApply = projectFetches;
 
-  await page.getByRole('switch', { name: 'Enable global deadline' }).check();
+  await page.getByRole('switch', { name: 'Enable global deadline' }).press('Space');
   await page.getByLabel('Global deadline date and time').fill('2031-01-02T10:00');
   await page.getByRole('button', { name: 'Preview changes' }).click();
 
@@ -241,13 +241,13 @@ test('keeps project deadlines when global mode is disabled', async ({ page }) =>
   await loginAsCoordinator(page);
   await page.getByRole('link', { name: 'Projects', exact: true }).click();
 
-  await page.getByRole('switch', { name: 'Enable global deadline' }).check();
+  await page.getByRole('switch', { name: 'Enable global deadline' }).press('Space');
   await page.getByLabel('Global deadline date and time').fill('2031-01-02T10:00');
   await page.getByRole('button', { name: 'Preview changes' }).click();
   await page.getByRole('button', { name: 'Confirm and apply' }).click();
   await expect(page.getByText(/02 Jan 2031/).first()).toBeVisible();
 
-  await page.getByRole('switch', { name: 'Enable global deadline' }).uncheck();
+  await page.getByRole('switch', { name: 'Enable global deadline' }).press('Space');
   await page.getByRole('button', { name: 'Preview changes' }).click();
   await page.getByRole('button', { name: 'Confirm and apply' }).click();
 
@@ -317,7 +317,7 @@ test('updates email notification preferences', async ({ page }) => {
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Notification Settings' })).toBeVisible();
-  await page.getByRole('switch', { name: 'Deadline Reminder email' }).uncheck();
+  await page.getByRole('switch', { name: 'Deadline Reminder email' }).press('Space');
   await expect.poll(() => updated).toBe(true);
 });
 

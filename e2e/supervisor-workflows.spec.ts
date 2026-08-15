@@ -284,9 +284,11 @@ test('project supervisor navigates projects and reads assigned party evaluation'
   await expect(page.getByRole('heading', { name: 'Project Supervisor Overview' })).toBeVisible();
   await expect(page.getByText('AI Support Copilot')).toBeVisible();
   await page.getByRole('link', { name: 'Projects', exact: true }).click();
-  await page.getByLabel('Filter by submission').selectOption('EVALUATED');
+  await page.getByRole('button', { name: /Submission/ }).click();
+  await page.getByRole('option', { name: 'Evaluated' }).click();
   await expect(page.getByText('Unsubmitted Portal')).toHaveCount(0);
-  await page.getByLabel('Filter by submission').selectOption('ALL');
+  await page.getByRole('button', { name: /Submission/ }).click();
+  await page.getByRole('option', { name: 'All' }).click();
   await page.getByPlaceholder('Search projects').fill('support');
   await page.getByRole('link', { name: /AI Support Copilot/ }).click();
 
