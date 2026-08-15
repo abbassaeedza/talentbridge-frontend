@@ -18,7 +18,10 @@ export function useTheme() {
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const syncSystemTheme = (event: MediaQueryListEvent) => {
-      if (localStorage.getItem('talentbridge-theme')) return;
+      try {
+        const saved = localStorage.getItem('talentbridge-theme');
+        if (saved === 'dark' || saved === 'light') return;
+      } catch {}
       const next = event.matches ? 'dark' : 'light';
       setTheme(next);
       applyTheme(next);
@@ -31,7 +34,7 @@ export function useTheme() {
     setTheme((current) => {
       const next = current === 'dark' ? 'light' : 'dark';
       applyTheme(next);
-      localStorage.setItem('talentbridge-theme', next);
+      try { localStorage.setItem('talentbridge-theme', next); } catch {}
       return next;
     });
   }, []);

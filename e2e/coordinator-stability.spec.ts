@@ -277,8 +277,11 @@ test('filters student and company approval states with tabs', async ({ page }) =
   await loginAsCoordinator(page);
 
   await page.getByRole('link', { name: 'Students', exact: true }).click();
-  await expect(page.getByRole('tab', { name: 'All' })).toBeVisible();
-  await page.getByRole('tab', { name: 'Pending' }).click();
+  const allStudents = page.getByRole('tab', { name: 'All' });
+  await expect(allStudents).toBeVisible();
+  await allStudents.focus();
+  await allStudents.press('ArrowRight');
+  await expect(page.getByRole('tab', { name: 'Pending' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByText('pending.student@talentbridge.com').first()).toBeVisible();
   await expect(page.getByText('pending2.student@talentbridge.com')).toBeHidden();
 
@@ -426,7 +429,7 @@ test('right-aligns header controls and anchors notifications below the bell', as
   await loginAsCoordinator(page);
 
   const header = await page.getByRole('banner').boundingBox();
-  const profile = await page.getByRole('button', { name: 'DC Demo', exact: true }).boundingBox();
+  const profile = await page.getByRole('button', { name: 'Open Demo Coordinator profile menu' }).boundingBox();
   const bellButton = page.getByRole('button', { name: 'Notifications' });
   const bell = await bellButton.boundingBox();
   await bellButton.click();

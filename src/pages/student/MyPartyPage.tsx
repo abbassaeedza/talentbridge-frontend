@@ -236,7 +236,7 @@ export default function MyPartyPage() {
                       <p className='text-sm font-medium text-foreground flex items-center gap-1.5'>
                         {m.firstName} {m.lastName}
                         {m.id === party.leader?.id && (
-                          <Crown size={11} className='text-amber-400' />
+                          <Crown size={11} className='text-accent' />
                         )}
                       </p>
                       <p className='text-xs text-muted'>{m.email}</p>
@@ -354,7 +354,7 @@ export default function MyPartyPage() {
                       className={clsx(
                         'w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0',
                         app.rankPosition === 1 &&
-                          'bg-amber-500/20 text-amber-400',
+                          'bg-default text-accent',
                         app.rankPosition === 2 && 'bg-default text-foreground',
                         app.rankPosition === 3 && 'bg-default text-muted',
                         app.rankPosition > 3 && 'bg-default text-muted',

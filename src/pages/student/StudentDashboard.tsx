@@ -21,6 +21,7 @@ import { Card } from '@heroui/react/card';
 import { ProgressBar } from '@heroui/react/progress-bar';
 import { Skeleton } from '@heroui/react/skeleton';
 import { PageHeader, StatCard, StatusBadge } from '../../components/ui/TalentBridgeUI';
+import { defaultAvatarUrl } from '../../utils/avatar';
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -131,7 +132,7 @@ export default function StudentDashboard() {
           </div>
         </div>
       ) : (
-        <div className='mb-6 flex items-center gap-4 rounded-lg border border-amber-500/30 bg-surface p-4'>
+        <div className='mb-6 flex items-center gap-4 rounded-lg border border-border bg-surface p-4'>
           <div className='flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-default'>
             <Github size={20} className='text-warning' />
           </div>
@@ -193,6 +194,7 @@ export default function StudentDashboard() {
                       title={`${m.firstName} ${m.lastName}`}
                       size='sm'
                     >
+                      <Avatar.Image src={defaultAvatarUrl(m.id || m.email)} alt={`${m.firstName} ${m.lastName}`} />
                       <Avatar.Fallback>{m.firstName?.[0]}{m.lastName?.[0]}</Avatar.Fallback>
                     </Avatar>
                   ))}

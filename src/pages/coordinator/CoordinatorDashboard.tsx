@@ -2,8 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Award, FolderKanban, UserCheck, Users } from 'lucide-react';
 import {
-  Area,
-  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
   Cell,
   Pie,
   PieChart,
@@ -12,6 +13,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { Card } from '@heroui/react/card';
 import { coordinatorApi, partyApi, projectApi, userApi } from '../../api/services';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
 import { PageHeader, StatCard, StatusBadge } from '../../components/ui/TalentBridgeUI';
@@ -94,6 +96,41 @@ export default function CoordinatorDashboard() {
         ))}
       </div>
 
+      <div className='mb-8 grid gap-4 lg:grid-cols-3'>
+        <ChartPanel title='Projects by status' empty={!projectRows.length}>
+          <ResponsiveContainer width='100%' height='100%'>
+            <PieChart>
+              <Pie data={projectRows} dataKey='value' nameKey='name' outerRadius={72} innerRadius={60} paddingAngle={4} stroke='none'>
+                {projectRows.map((row, index) => <Cell key={row.name} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
+              </Pie>
+              <Tooltip contentStyle={tooltipStyle} />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartPanel>
+        <ChartPanel title='Users by role' empty={!userRows.length}>
+          <ResponsiveContainer width='100%' height='100%'>
+            <BarChart data={userRows} margin={{ left: -25, right: 4, top: 8 }} barCategoryGap='32%'>
+              <CartesianGrid vertical={false} stroke='var(--separator)' />
+              <XAxis dataKey='name' tick={{ fill: 'var(--muted)', fontSize: 10 }} interval={0} angle={-15} textAnchor='end' height={48} />
+              <YAxis tick={{ fill: 'var(--muted)', fontSize: 10 }} allowDecimals={false} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--surface-secondary)' }} />
+              <Bar dataKey='value' name='users' fill='var(--accent)' radius={[999, 999, 999, 999]} maxBarSize={30} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartPanel>
+        <ChartPanel title='Submissions by status' empty={!submissionRows.length}>
+          <ResponsiveContainer width='100%' height='100%'>
+            <BarChart data={submissionRows} margin={{ left: -25, right: 4, top: 8 }} barCategoryGap='32%'>
+              <CartesianGrid vertical={false} stroke='var(--separator)' />
+              <XAxis dataKey='name' tick={{ fill: 'var(--muted)', fontSize: 10 }} interval={0} angle={-15} textAnchor='end' height={48} />
+              <YAxis tick={{ fill: 'var(--muted)', fontSize: 10 }} allowDecimals={false} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--surface-secondary)' }} />
+              <Bar dataKey='value' name='submissions' fill='var(--accent)' radius={[999, 999, 999, 999]} maxBarSize={30} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartPanel>
+      </div>
+
       <div className='mb-8 grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.8fr)]'>
         <section>
           <div className='mb-3 flex items-center justify-between'>
@@ -151,39 +188,6 @@ export default function CoordinatorDashboard() {
         </div>
       </section>
 
-      <div className='mb-8 grid gap-4 lg:grid-cols-3'>
-        <ChartPanel title='Projects by status' empty={!projectRows.length}>
-          <ResponsiveContainer width='100%' height='100%'>
-            <PieChart>
-              <Pie data={projectRows} dataKey='value' nameKey='name' outerRadius={72} innerRadius={60} paddingAngle={4} stroke='none'>
-                {projectRows.map((row, index) => <Cell key={row.name} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
-              </Pie>
-              <Tooltip contentStyle={tooltipStyle} />
-            </PieChart>
-          </ResponsiveContainer>
-        </ChartPanel>
-        <ChartPanel title='Users by role' empty={!userRows.length}>
-          <ResponsiveContainer width='100%' height='100%'>
-            <AreaChart data={userRows} margin={{ left: -25, right: 4 }}>
-              <XAxis dataKey='name' tick={{ fill: 'var(--muted)', fontSize: 10 }} interval={0} angle={-15} textAnchor='end' height={48} />
-              <YAxis tick={{ fill: 'var(--muted)', fontSize: 10 }} allowDecimals={false} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: 'var(--separator)' }} />
-              <Area dataKey='value' type='monotone' stroke='var(--accent)' strokeWidth={2} fill='color-mix(in oklch, var(--accent) 12%, transparent)' />
-            </AreaChart>
-          </ResponsiveContainer>
-        </ChartPanel>
-        <ChartPanel title='Submissions by status' empty={!submissionRows.length}>
-          <ResponsiveContainer width='100%' height='100%'>
-            <AreaChart data={submissionRows} margin={{ left: -25, right: 4 }}>
-              <XAxis dataKey='name' tick={{ fill: 'var(--muted)', fontSize: 10 }} interval={0} angle={-15} textAnchor='end' height={48} />
-              <YAxis tick={{ fill: 'var(--muted)', fontSize: 10 }} allowDecimals={false} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: 'var(--separator)' }} />
-              <Area dataKey='value' type='monotone' stroke='var(--success)' strokeWidth={2} fill='color-mix(in oklch, var(--success) 10%, transparent)' />
-            </AreaChart>
-          </ResponsiveContainer>
-        </ChartPanel>
-      </div>
-
       <div className='grid gap-6 lg:grid-cols-2'>
         <RecordList title='Pending approvals' to='/coordinator/students'>
           {!pending?.content.length ? (
@@ -222,25 +226,27 @@ export default function CoordinatorDashboard() {
 
 function ChartPanel({ title, empty, children }: { title: string; empty: boolean; children: React.ReactNode }) {
   return (
-    <section className='rounded-lg border border-border bg-surface p-4'>
-      <h2 className='text-sm font-semibold'>{title}</h2>
-      <div className='mt-3 h-56'>
-        {empty ? <p className='py-20 text-center text-sm text-muted'>No data available.</p> : children}
-      </div>
-    </section>
+    <Card>
+      <Card.Header><Card.Title className='text-sm'>{title}</Card.Title></Card.Header>
+      <Card.Content className='pt-0'>
+        <div className='h-56 w-full'>
+          {empty ? <p className='py-20 text-center text-sm text-muted'>No data available.</p> : children}
+        </div>
+      </Card.Content>
+    </Card>
   );
 }
 
 function RecordList({ title, to, children }: { title: string; to: string; children: React.ReactNode }) {
   return (
-    <section className='overflow-hidden rounded-lg border border-border bg-surface'>
-      <div className='flex items-center justify-between border-b border-border px-4 py-3'>
-        <h2 className='text-sm font-semibold'>{title}</h2>
+    <Card className='overflow-hidden'>
+      <Card.Header className='flex items-center justify-between border-b border-border'>
+        <Card.Title className='text-sm'>{title}</Card.Title>
         <Link to={to} className='flex items-center gap-1 text-xs font-medium text-muted hover:text-foreground'>
           View all <ArrowRight size={13} />
         </Link>
-      </div>
-      {children}
-    </section>
+      </Card.Header>
+      <Card.Content className='p-0'>{children}</Card.Content>
+    </Card>
   );
 }

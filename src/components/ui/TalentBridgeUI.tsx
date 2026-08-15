@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Layers, Moon, Sun } from 'lucide-react';
 import { Button } from '@heroui/react/button';
+import { Card } from '@heroui/react/card';
 import { Chip } from '@heroui/react/chip';
 import { Modal } from '@heroui/react/modal';
 import { Spinner } from '@heroui/react/spinner';
@@ -88,14 +89,16 @@ export function StatCard({
   icon: LucideIcon;
 }) {
   return (
-    <section className='rounded-lg border border-border bg-surface p-4'>
-      <div className='flex items-start justify-between gap-4'>
-        <p className='text-sm text-muted'>{label}</p>
-        <Icon size={18} className='text-muted' aria-hidden='true' />
-      </div>
-      <p className='mt-4 text-2xl font-semibold tracking-tight'>{value}</p>
-      {detail && <div className='mt-1 text-xs text-muted'>{detail}</div>}
-    </section>
+    <Card>
+      <Card.Content className='p-4'>
+        <div className='flex items-start justify-between gap-4'>
+          <p className='text-sm text-muted'>{label}</p>
+          <Icon size={18} className='text-muted' aria-hidden='true' />
+        </div>
+        <p className='mt-4 text-2xl font-semibold tracking-tight'>{value}</p>
+        {detail && <div className='mt-1 text-xs text-muted'>{detail}</div>}
+      </Card.Content>
+    </Card>
   );
 }
 

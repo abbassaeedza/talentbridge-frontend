@@ -7,6 +7,7 @@ import { Skeleton } from '@heroui/react/skeleton';
 import { userApi } from '../../api/services';
 import { getUserName } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
+import { defaultAvatarUrl } from '../../utils/avatar';
 
 export default function StudentProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -22,7 +23,7 @@ export default function StudentProfilePage() {
       <Button variant='ghost' size='sm' className='mb-5' onPress={() => navigate(-1)}><ArrowLeft size={15} /> Back</Button>
       <header className='border-b border-separator pb-6'>
         <div className='flex flex-col gap-4 sm:flex-row sm:items-center'>
-          <Avatar size='lg'><Avatar.Fallback>{student.firstName[0]}{student.lastName[0]}</Avatar.Fallback></Avatar>
+          <Avatar size='lg'><Avatar.Image src={defaultAvatarUrl(student.id || student.email)} alt={`${student.firstName} ${student.lastName}`} /><Avatar.Fallback>{student.firstName[0]}{student.lastName[0]}</Avatar.Fallback></Avatar>
           <div className='min-w-0 flex-1'>
             <h1 className='text-2xl font-semibold tracking-tight'>{getUserName(student)}</h1>
             <p className='mt-1 text-sm text-muted'>{profile?.major ?? 'Major not provided'}{profile?.university ? ` · ${profile.university}` : ''}</p>

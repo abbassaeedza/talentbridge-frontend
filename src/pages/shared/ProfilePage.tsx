@@ -14,6 +14,7 @@ import { TextField } from '@heroui/react/textfield';
 import { useAuth } from '../../contexts/AuthContext';
 import { userApi } from '../../api/services';
 import { PageHeader } from '../../components/ui/TalentBridgeUI';
+import { defaultAvatarUrl } from '../../utils/avatar';
 
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Postgraduate'];
 
@@ -100,7 +101,7 @@ export default function ProfilePage() {
 
       <section className='border-b border-separator pb-6'>
         <div className='flex flex-col gap-4 sm:flex-row sm:items-center'>
-          <Avatar size='lg'>{photo && <Avatar.Image src={photo} alt='' />}<Avatar.Fallback>{initials}</Avatar.Fallback></Avatar>
+          <Avatar size='lg'><Avatar.Image src={photo || defaultAvatarUrl(user.id || user.email)} alt={`${user.firstName} ${user.lastName}`} /><Avatar.Fallback>{initials}</Avatar.Fallback></Avatar>
           <div className='min-w-0 flex-1'>
             <h2 className='text-xl font-semibold'>{user.firstName} {user.lastName}</h2>
             <p className='mt-1 text-sm text-muted'>{subtitle || user.email}</p>
@@ -168,6 +169,7 @@ export default function ProfilePage() {
             <InfoRow icon={GraduationCap} label='University' value={student?.university} />
             <InfoRow icon={GraduationCap} label='Major' value={student?.major} />
             <InfoRow icon={GraduationCap} label='Year of study' value={student?.yearOfStudy} />
+            <InfoRow icon={GraduationCap} label='GPA' value={student?.gpa != null ? String(student.gpa) : null} />
             <InfoRow icon={Linkedin} label='LinkedIn' value={student?.linkedinUrl} href={student?.linkedinUrl} />
             <InfoRow icon={Globe} label='Portfolio' value={student?.portfolioUrl} href={student?.portfolioUrl} />
           </>}

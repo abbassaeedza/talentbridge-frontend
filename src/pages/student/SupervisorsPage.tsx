@@ -51,7 +51,7 @@ export default function SupervisorsPage() {
           {filtered.map((supervisor) => (
             <div key={supervisor.id} className='rounded-lg border border-border bg-surface p-5'>
               <div className='flex items-start gap-3'>
-                <div className='w-11 h-11 rounded-lg bg-violet-500/15 border border-violet-500/20 flex items-center justify-center text-violet-400'>
+                <div className='flex size-11 items-center justify-center rounded-lg border border-border bg-default text-accent'>
                   <UserCheck size={20} />
                 </div>
                 <div className='flex-1 min-w-0'>

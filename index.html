@@ -7,19 +7,15 @@
     <title>TalentBridge - Project collaboration</title>
     <script>
       (() => {
+        let theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         try {
           const saved = localStorage.getItem('talentbridge-theme');
-          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          const theme = saved || (prefersDark ? 'dark' : 'light');
-          document.documentElement.classList.toggle('dark', theme === 'dark');
-          document.documentElement.classList.toggle('light', theme === 'light');
-          document.documentElement.dataset.theme = theme;
-          document.documentElement.style.colorScheme = theme;
-        } catch {
-          document.documentElement.classList.add('dark');
-          document.documentElement.dataset.theme = 'dark';
-          document.documentElement.style.colorScheme = 'dark';
-        }
+          if (saved === 'dark' || saved === 'light') theme = saved;
+        } catch {}
+        document.documentElement.classList.toggle('dark', theme === 'dark');
+        document.documentElement.classList.toggle('light', theme === 'light');
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
       })();
     </script>
   </head>

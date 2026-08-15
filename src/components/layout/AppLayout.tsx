@@ -35,6 +35,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../hooks/useTheme';
 import ChatBot from '../chat/ChatBot';
 import { Brand } from '../ui/TalentBridgeUI';
+import { defaultAvatarUrl } from '../../utils/avatar';
 
 type NavItem = {
   to: string;
@@ -283,6 +284,7 @@ export default function AppLayout() {
         <div className='border-t border-border p-4'>
           <div className='flex items-center gap-3'>
             <Avatar size='sm'>
+              <Avatar.Image src={defaultAvatarUrl(user.id || user.email)} alt={`${user.firstName} ${user.lastName}`} />
               <Avatar.Fallback>{initials}</Avatar.Fallback>
             </Avatar>
             <div className='min-w-0'>
@@ -384,8 +386,8 @@ export default function AppLayout() {
             </Popover.Root>
 
             <Dropdown.Root>
-              <Dropdown.Trigger className='flex min-h-11 items-center gap-2 rounded-md px-2 hover:bg-default'>
-                <Avatar size='sm'><Avatar.Fallback>{initials}</Avatar.Fallback></Avatar>
+              <Dropdown.Trigger aria-label={`Open ${user.firstName} ${user.lastName} profile menu`} className='flex min-h-11 items-center gap-2 rounded-md px-2 hover:bg-default'>
+                <Avatar size='sm'><Avatar.Image src={defaultAvatarUrl(user.id || user.email)} alt={`${user.firstName} ${user.lastName}`} /><Avatar.Fallback>{initials}</Avatar.Fallback></Avatar>
                 <span className='hidden text-sm font-medium sm:inline'>{user.firstName}</span>
                 <ChevronDown size={14} className='hidden text-muted sm:block' />
               </Dropdown.Trigger>

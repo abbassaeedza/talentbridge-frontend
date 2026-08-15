@@ -10,6 +10,7 @@ import { Spinner } from '@heroui/react/spinner';
 import { partyApi } from '../../api/services';
 import { useAuth } from '../../contexts/AuthContext';
 import { PublicShell, StatusBadge } from '../../components/ui/TalentBridgeUI';
+import { defaultAvatarUrl } from '../../utils/avatar';
 
 export default function JoinPartyPage() {
   const { partyId } = useParams<{ partyId: string }>();
@@ -31,7 +32,7 @@ export default function JoinPartyPage() {
     <p className='mt-5 text-xs font-medium uppercase tracking-wider text-muted'>Party invitation</p>
     <h1 className='mt-2 text-2xl font-semibold'>{party.name}</h1>
     <div className='mt-3 flex items-center justify-center gap-3'><StatusBadge status={party.status} />{party.semester && <span className='text-xs text-muted'>{party.semester}</span>}<span className='text-xs text-muted'>{memberCount} member{memberCount === 1 ? '' : 's'}</span></div>
-    {party.members?.length > 0 && <div className='mt-6 flex justify-center -space-x-2'>{party.members.slice(0, 5).map((member: any) => <Avatar key={member.id} size='sm' title={`${member.firstName} ${member.lastName}`}><Avatar.Fallback>{member.firstName?.[0]}{member.lastName?.[0]}</Avatar.Fallback></Avatar>)}</div>}
+    {party.members?.length > 0 && <div className='mt-6 flex justify-center -space-x-2'>{party.members.slice(0, 5).map((member: any) => <Avatar key={member.id} size='sm' title={`${member.firstName} ${member.lastName}`}><Avatar.Image src={defaultAvatarUrl(member.id || member.email)} alt={`${member.firstName} ${member.lastName}`} /><Avatar.Fallback>{member.firstName?.[0]}{member.lastName?.[0]}</Avatar.Fallback></Avatar>)}</div>}
     {!joinable && <p className='mt-6 rounded-lg bg-warning/15 p-3 text-sm text-warning'>This party is not accepting new members.</p>}
     <Button fullWidth className='mt-6' variant='primary' onPress={() => join.mutate()} isDisabled={join.isPending || !joinable}>{join.isPending && <Spinner size='sm' />}{join.isPending ? 'Joining' : 'Join party'}</Button>
     <Link to='/student/party' className='mt-3 block text-sm text-muted hover:text-foreground'>Go to my party instead</Link>
