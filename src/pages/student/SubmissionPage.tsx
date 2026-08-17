@@ -85,13 +85,9 @@ export default function SubmissionPage() {
 
       {/* Status banner */}
       {submission && (
-        <div className={clsx('mb-6 p-4 rounded-lg flex items-center gap-3 border',
-          isSubmitted
-            ? 'bg-success border-success'
-            : 'bg-surface border-border'
-        )}>
+        <div className='mb-6 p-4 rounded-lg flex items-center gap-3 border border-border bg-surface'>
           {isSubmitted
-            ? <CheckCircle2 size={20} className="text-success flex-shrink-0" />
+            ? <CheckCircle2 size={20} className="text-foreground flex-shrink-0" />
             : <Save size={20} className="text-muted flex-shrink-0" />
           }
           <div>
@@ -155,7 +151,7 @@ export default function SubmissionPage() {
             <div className="mt-2 space-y-1">
               {files.map((f, i) => (
                 <p key={i} className="text-xs text-muted flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-success" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-foreground" />
                   {f.name} <span className="text-muted">({(f.size / 1024).toFixed(0)}KB)</span>
                 </p>
               ))}

@@ -140,11 +140,8 @@ test('coordinator dashboard desktop dark', async ({ page }) => {
   await setTheme(page, 'dark');
   await mockCoordinatorApi(page);
   await loginAsCoordinator(page);
-  const bars = page.locator('.recharts-bar-rectangle');
-  await expect(bars).toHaveCount(7);
-  await bars.first().hover();
-  await expect(page.locator('.recharts-tooltip-wrapper').filter({ hasText: 'users' })).toBeVisible();
-  await page.mouse.move(800, 100);
+  await expect(page.getByText('Student', { exact: true })).toBeVisible();
+  await expect(page.getByText('Evaluated', { exact: true })).toBeVisible();
   await expect(page).toHaveScreenshot('coordinator-dashboard-desktop-dark.png', { animations: 'disabled' });
 });
 

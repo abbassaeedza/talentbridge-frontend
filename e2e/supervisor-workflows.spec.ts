@@ -250,8 +250,8 @@ test('company manages supervisor invitations and assigns an accepted supervisor 
   await page.goto('/company/dashboard');
   await page.getByRole('link', { name: 'Project Supervisors' }).click();
   await expect(page.getByRole('heading', { name: 'Project Supervisors' })).toBeVisible();
-  await expect(page.getByText('PENDING', { exact: true })).toBeVisible();
-  await expect(page.getByText('ACCEPTED', { exact: true })).toBeVisible();
+  await expect(page.getByText('Pending', { exact: true })).toBeVisible();
+  await expect(page.getByText('Accepted', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Invite supervisor' }).click();
   await page.getByLabel('Work email').fill('new.supervisor@nexa.example');
   await page.getByRole('button', { name: 'Send invitation', exact: true }).click();

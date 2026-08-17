@@ -227,10 +227,7 @@ test('shows the saved global deadline when the student has no assigned project',
 
   await expect(page.getByText('Global application deadline')).toBeVisible();
   await expect(page.getByText('On track')).toBeVisible();
-  await expect(page.getByText('Days')).toBeVisible();
-  await expect(page.getByText('Hours')).toBeVisible();
-  await expect(page.getByText('Minutes')).toBeVisible();
-  await expect(page.getByText('Seconds')).toBeVisible();
+  await expect(page.getByText(/d \d{2}:\d{2}:\d{2}/)).toBeVisible();
 });
 
 test('creates a party with a validated semester and academic year', async ({ page }) => {

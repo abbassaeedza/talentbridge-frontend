@@ -138,8 +138,8 @@ function SidebarLink({ item, close }: { item: NavItem; close: () => void }) {
       end={item.end}
       onClick={close}
       className={({ isActive }) => clsx(
-        'flex min-h-11 items-center gap-3 rounded-md border-l-2 border-transparent px-3 text-sm font-medium text-muted transition-colors hover:bg-default hover:text-foreground',
-        isActive && 'border-l-accent bg-default text-foreground [&_svg]:text-accent',
+        'flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted transition-colors hover:bg-default hover:text-foreground',
+        isActive && 'bg-default text-foreground',
       )}
     >
       <Icon size={18} strokeWidth={1.8} aria-hidden='true' />
@@ -261,7 +261,7 @@ export default function AppLayout() {
         </div>
 
         <div className='px-4 pb-4'>
-          <Chip size='sm' variant='soft' color='accent'>{ROLE_LABELS[user.role]}</Chip>
+          <Chip size='sm' variant='primary' color='accent' className='px-2 py-0.5'>{ROLE_LABELS[user.role]}</Chip>
         </div>
 
         <nav className='flex-1 overflow-y-auto px-3 pb-4'>

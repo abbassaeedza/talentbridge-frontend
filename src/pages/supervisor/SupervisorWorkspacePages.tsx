@@ -65,14 +65,14 @@ export function SupervisorOverviewPage({ kind }: { kind: ItemKind }) {
     <div className=''>
       <PageHeader title={title} description={`Welcome back, ${user?.firstName}. Review the work that needs attention next.`} />
       {loading ? <LoadingCards /> : !items?.length ? <EmptyState icon={kind === 'project' ? Briefcase : Users}>No supervised {kind === 'project' ? 'projects' : 'parties'} yet.</EmptyState> : (
-        <div className='grid gap-5 lg:grid-cols-[1.3fr_.7fr]'>
-          <div className='rounded-lg border border-border bg-surface p-6'>
-            <p className='mb-3 text-xs font-semibold uppercase tracking-wider text-muted'>Nearest deadline</p>
+        <div className='grid gap-3 lg:grid-cols-[1.3fr_.7fr]'>
+          <div className='panel p-4'>
+            <p className='mb-2 text-xs text-muted'>Nearest deadline</p>
             {nearest ? (
               <>
-                <Link to={kind === 'project' ? `/project-supervisor/projects/${project!.id}` : `/party-supervisor/parties/${party!.id}`} className=' text-xl font-bold text-foreground hover:text-accent'>{kind === 'project' ? project!.title : party!.name}</Link>
-                <p className='mt-1 text-sm text-muted'>{kind === 'project' ? project!.assignedPartyName || 'Awaiting party assignment' : party!.assignedProjectTitle}</p>
-                <div className='mt-5'><DeadlineCountdown deadline={(kind === 'project' ? project!.deadline : party!.assignedProjectDeadline) ?? null} submitted={kind === 'party' && submitted(party!.status)} /></div>
+                <Link to={kind === 'project' ? `/project-supervisor/projects/${project!.id}` : `/party-supervisor/parties/${party!.id}`} className='text-sm font-medium text-foreground hover:text-accent'>{kind === 'project' ? project!.title : party!.name}</Link>
+                <p className='mt-1 text-xs text-muted'>{kind === 'project' ? project!.assignedPartyName || 'Awaiting party assignment' : party!.assignedProjectTitle}</p>
+                <div className='mt-3'><DeadlineCountdown deadline={(kind === 'project' ? project!.deadline : party!.assignedProjectDeadline) ?? null} submitted={kind === 'party' && submitted(party!.status)} compact /></div>
               </>
             ) : <p className='text-sm text-muted'>No upcoming deadlines.</p>}
           </div>

@@ -30,7 +30,7 @@ export default function BulkActionToolbar({
   };
 
   return (
-    <div className='sticky bottom-3 z-20 mb-4 flex flex-col gap-3 rounded-lg border border-border bg-overlay p-3 shadow-xl md:flex-row md:items-center'>
+    <div className='sticky bottom-3 z-20 mb-4 flex flex-col gap-3 rounded-lg border border-border bg-overlay p-3 md:flex-row md:items-center'>
       <p className='shrink-0 text-sm font-semibold'>{selectedCount} selected</p>
       <Input
         fullWidth

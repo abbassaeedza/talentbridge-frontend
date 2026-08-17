@@ -102,9 +102,9 @@ export default function ProjectDetailPage() {
               {!party ? (
                 <p className='mt-2 text-sm text-muted'>Join a party before applying.</p>
               ) : (party.members?.length ?? 0) < (rules?.minSize ?? 2) ? (
-                <p className='mt-2 text-sm text-warning'>Your party needs at least {rules?.minSize ?? 2} members.</p>
+                <p className='mt-2 text-sm text-muted'>Your party needs at least {rules?.minSize ?? 2} members.</p>
               ) : party.assignedProjectId ? (
-                <p className='mt-2 text-sm text-success'>Your party already has a project.</p>
+                <p className='mt-2 text-sm text-muted'>Your party already has a project.</p>
               ) : !applyOpen ? (
                 <Button fullWidth className='mt-4' variant='primary' onPress={() => setApplyOpen(true)}>
                   <SendHorizonal size={16} /> Apply

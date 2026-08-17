@@ -98,9 +98,9 @@ export default function StudentDashboard() {
     <div className=''>
       <PageHeader title={`Overview${currentUser?.firstName ? ` for ${currentUser.firstName}` : ''}`} description='Your party, project deadline, GitHub connection, and results.' />
 
-      <div className='mb-8'>
+      <div className='mb-5'>
         {partyPending ? (
-          <Skeleton className='h-52 rounded-lg' />
+          <Skeleton className='h-24 rounded-lg' />
         ) : (
           <DeadlineCountdown
             deadline={dashboardDeadline}
@@ -114,9 +114,9 @@ export default function StudentDashboard() {
 
       {/* GitHub connection */}
       {hasGithub ? (
-        <div className='mb-6 flex flex-wrap items-center gap-4 rounded-lg border border-success bg-surface p-4'>
+        <div className='mb-6 flex flex-wrap items-center gap-4 panel p-4'>
           <div className='flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-default'>
-            <Github size={20} className='text-success' />
+            <Github size={20} className='text-foreground' />
           </div>
           <div className='flex-1'>
             <p className='text-sm font-semibold text-foreground'>GitHub connected</p>
@@ -125,16 +125,16 @@ export default function StudentDashboard() {
               target='_blank'
               rel='noreferrer'
               aria-label={`@${currentUser!.githubUsername}`}
-              className='mt-0.5 inline-flex items-center gap-1 text-xs text-success hover:text-success'
+              className='mt-0.5 inline-flex items-center gap-1 text-xs text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground'
             >
               @{currentUser!.githubUsername} <ExternalLink size={11} />
             </a>
           </div>
         </div>
       ) : (
-        <div className='mb-6 flex items-center gap-4 rounded-lg border border-border bg-surface p-4'>
+        <div className='mb-6 flex items-center gap-4 panel p-4'>
           <div className='flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-default'>
-            <Github size={20} className='text-warning' />
+            <Github size={20} className='text-muted' />
           </div>
           <div className='flex-1'>
             <p className='text-sm font-semibold text-foreground'>Connect your GitHub account</p>
@@ -152,14 +152,14 @@ export default function StudentDashboard() {
       )}
 
       {/* Stats */}
-      <div className='grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8'>
+      <div className='grid grid-cols-2 lg:grid-cols-4 gap-2 mb-5'>
         <Link to='/student/party'><StatCard icon={Users} label='Party status' value={party ? party.status : 'No party'} /></Link>
         <Link to='/student/projects'><StatCard icon={FolderKanban} label='Open projects' value={projects?.totalElements ?? '-'} /></Link>
         <Link to='/student/scorecard'><StatCard icon={Star} label='Average score' value={scorecard ? `${scorecard.averageScore}/100` : '-'} /></Link>
         <StatCard icon={Briefcase} label='Projects completed' value={scorecard?.totalProjects ?? 0} />
       </div>
 
-      <div className='grid lg:grid-cols-2 gap-6 mb-8'>
+      <div className='grid lg:grid-cols-2 gap-3 mb-5'>
         {/* Party card */}
         <Card><Card.Content className='p-5'>
           <div className='flex items-center justify-between mb-4'>
@@ -203,7 +203,7 @@ export default function StudentDashboard() {
 
               {party.assignedProjectTitle && (
                 <div className='mt-3 space-y-2'>
-                  <p className='text-xs text-success flex items-center gap-1.5'>
+                  <p className='text-xs text-foreground flex items-center gap-1.5'>
                     <Briefcase size={11} /> Assigned: {party.assignedProjectTitle}
                   </p>
                   <DeadlineCountdown

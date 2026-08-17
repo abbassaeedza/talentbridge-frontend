@@ -11,7 +11,6 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return
-          if (id.includes('/recharts/') || id.includes('/d3-')) return 'charts'
           if (id.includes('/react-markdown/') || id.includes('/remark-') || id.includes('/rehype-')) return 'markdown'
           if (id.includes('/@tanstack/') || id.includes('/axios/')) return 'data'
           return 'vendor'

@@ -294,8 +294,8 @@ export default function MyPartyPage() {
             )}
 
             {party.assignedProjectTitle && (
-              <Link to={`/student/projects/${party.assignedProjectId}`} className='mb-4 flex items-center gap-2 rounded-lg border border-success/40 bg-success/10 p-3 text-xs font-semibold text-foreground hover:border-success'>
-                <Briefcase size={14} className='text-success' /> Assigned: {party.assignedProjectTitle}
+              <Link to={`/student/projects/${party.assignedProjectId}`} className='mb-4 flex items-center gap-2 rounded-lg border border-border bg-surface-secondary p-3 text-xs font-medium text-foreground hover:border-foreground'>
+                <Briefcase size={14} /> Assigned: {party.assignedProjectTitle}
               </Link>
             )}
 
@@ -310,7 +310,7 @@ export default function MyPartyPage() {
                 </code>
                 <Button isIconOnly variant='secondary' onPress={copyLink} aria-label='Copy party join link'>
                   {copied ? (
-                    <Check size={15} className='text-success' />
+                    <Check size={15} />
                   ) : (
                     <Copy size={15} />
                   )}

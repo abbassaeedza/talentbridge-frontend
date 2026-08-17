@@ -2,8 +2,6 @@ import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Moon, Sun } from 'lucide-react';
 import { Button } from '@heroui/react/button';
-import { Card } from '@heroui/react/card';
-import { Chip } from '@heroui/react/chip';
 import { Modal } from '@heroui/react/modal';
 import { SearchField } from '@heroui/react/search-field';
 import { Spinner } from '@heroui/react/spinner';
@@ -13,8 +11,8 @@ import { useTheme } from '../../hooks/useTheme';
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <div className='flex items-center gap-3' aria-label='TalentBridge'>
-      <img src='/talentbridge-mark.png' alt='' className='size-9 object-contain dark:invert' aria-hidden='true' />
-      {!compact && <span className='text-lg font-semibold tracking-tight'>TalentBridge</span>}
+      <img src='/talentbridge-mark.png' alt='' className='size-9 object-contain dark:invert dark:opacity-90' aria-hidden='true' />
+      {!compact && <span className='text-lg font-medium tracking-tight'>TalentBridge</span>}
     </div>
   );
 }
@@ -26,7 +24,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
       <section className='hidden border-r border-border bg-surface p-10 lg:flex lg:flex-col lg:justify-between'>
         <Brand />
         <div className='max-w-md'>
-          <p className='text-3xl font-semibold leading-tight tracking-tight'>
+          <p className='text-3xl font-medium leading-tight tracking-tight'>
             Academic project collaboration, kept accountable.
           </p>
           <p className='mt-4 text-sm leading-6 text-muted'>
@@ -68,7 +66,7 @@ export function PageHeader({
   return (
     <header className='mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between'>
       <div>
-        <h1 className='text-2xl font-semibold tracking-tight sm:text-3xl'>{title}</h1>
+        <h1 className='text-2xl font-medium tracking-tight sm:text-3xl'>{title}</h1>
         {description && <p className='mt-1 text-sm text-muted'>{description}</p>}
       </div>
       {action && <div className='flex shrink-0 items-center gap-2'>{action}</div>}
@@ -94,7 +92,7 @@ export function ListToolbar({
   selection?: ReactNode;
 }) {
   return (
-    <div className='mb-5 rounded-lg border border-border bg-surface p-4'>
+    <div className='mb-5 panel p-4'>
       <div className='flex flex-col gap-3 sm:flex-row sm:items-end'>
         <SearchField fullWidth className='min-w-0 flex-1' aria-label={searchLabel} value={value} onChange={onChange} onSubmit={onSubmit}>
           <SearchField.Group>
@@ -113,51 +111,64 @@ export function ListToolbar({
 export function StatCard({
   label,
   value,
-  detail,
   icon: Icon,
 }: {
   label: string;
   value: ReactNode;
-  detail?: ReactNode;
   icon: LucideIcon;
 }) {
   return (
-    <Card>
-      <Card.Content className='p-4'>
-        <div className='flex items-start justify-between gap-4'>
-          <p className='text-sm text-muted'>{label}</p>
-          <Icon size={18} className='text-muted' aria-hidden='true' />
-        </div>
-        <p className='mt-4 text-2xl font-semibold tracking-tight'>{value}</p>
-        {detail && <div className='mt-1 text-xs text-muted'>{detail}</div>}
-      </Card.Content>
-    </Card>
+    <div className='panel flex items-center justify-between gap-3 px-3 py-2.5'>
+      <p className='flex min-w-0 items-center gap-1.5 text-xs text-muted'>
+        <Icon size={13} aria-hidden='true' />
+        {label}
+      </p>
+      <p className='text-lg font-semibold tabular-nums tracking-tight'>{value}</p>
+    </div>
   );
 }
 
-const STATUS_COLOR: Record<string, 'success' | 'warning' | 'danger' | 'default' | 'accent'> = {
-  APPROVED: 'success',
-  ACTIVE: 'success',
-  OPEN: 'success',
-  EVALUATED: 'success',
-  PENDING: 'warning',
-  PENDING_REVIEW: 'warning',
-  REJECTED: 'danger',
-  SUSPENDED: 'danger',
-  CLOSED: 'default',
-  ASSIGNED: 'accent',
-};
+function formatStatus(value: string) {
+  const text = value.replace(/_/g, ' ').toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function statusTone(status: string) {
+  switch (status) {
+    case 'APPROVED':
+    case 'ACCEPTED':
+    case 'OPEN':
+    case 'ACTIVE':
+    case 'ASSIGNED':
+    case 'COMPLETED':
+    case 'EVALUATED':
+      return 'text-success';
+    case 'PENDING':
+    case 'PENDING_REVIEW':
+    case 'FORMING':
+    case 'DRAFT':
+    case 'SUBMITTED':
+    case 'UNDER_EVALUATION':
+    case 'REASSIGNED':
+      return 'text-warning';
+    case 'REJECTED':
+    case 'SUSPENDED':
+    case 'ARCHIVED':
+    case 'REVOKED':
+    case 'EXPIRED':
+    case 'WITHDRAWN':
+      return 'text-danger';
+    default:
+      return 'text-muted';
+  }
+}
 
 export function StatusBadge({ status, label, className }: { status: string; label?: string; className?: string }) {
   return (
-    <Chip
-      size='sm'
-      variant='soft'
-      color={STATUS_COLOR[status] ?? 'default'}
-      className={clsx('uppercase', className)}
-    >
-      {label ?? status.replace(/_/g, ' ')}
-    </Chip>
+    <span className={clsx('inline-flex items-center gap-1.5 text-xs', statusTone(status), className)}>
+      <span className='size-1.5 shrink-0 rounded-full bg-current' aria-hidden='true' />
+      {formatStatus(label ?? status)}
+    </span>
   );
 }
 

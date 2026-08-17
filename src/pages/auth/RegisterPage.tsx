@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Building2, GraduationCap, UserCog } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@heroui/react/button';
 import { Input } from '@heroui/react/input';
 import { Label } from '@heroui/react/label';
 import { Spinner } from '@heroui/react/spinner';
 import { TextField } from '@heroui/react/textfield';
-import { ToggleButton } from '@heroui/react/toggle-button';
 import clsx from 'clsx';
 import { authApi } from '../../api/services';
 import { PublicShell } from '../../components/ui/TalentBridgeUI';
@@ -15,10 +14,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import type { UserRole } from '../../types';
 import { setAuthTokens } from '../../utils/authTokens';
 
-const ROLES: { value: UserRole; label: string; description: string; icon: React.ElementType }[] = [
-  { value: 'STUDENT', label: 'Student', description: 'Join a project party', icon: GraduationCap },
-  { value: 'COMPANY', label: 'Company', description: 'Post industry projects', icon: Building2 },
-  { value: 'PARTY_SUPERVISOR', label: 'Party supervisor', description: 'Supervise university teams', icon: UserCog },
+const ROLES: { value: UserRole; label: string; description: string }[] = [
+  { value: 'STUDENT', label: 'Student', description: 'Join a project party' },
+  { value: 'COMPANY', label: 'Company', description: 'Post industry projects' },
+  { value: 'PARTY_SUPERVISOR', label: 'Supervisor', description: 'Supervise university teams' },
 ];
 
 const Field = ({
@@ -93,7 +92,7 @@ export default function RegisterPage() {
   return (
     <PublicShell>
       <div className='mb-7'>
-        <h1 className='text-3xl font-semibold tracking-tight'>Create an account</h1>
+        <h1 className='text-3xl font-medium tracking-tight'>Create an account</h1>
         <p className='mt-2 text-sm text-muted'>
           Already registered?{' '}
           <Link to='/login' className='font-medium text-foreground underline decoration-accent decoration-2 underline-offset-4'>Sign in</Link>
@@ -102,25 +101,23 @@ export default function RegisterPage() {
 
       <div className='mb-6'>
         <p className='mb-2 text-sm font-medium'>Account type</p>
-        <div className='grid gap-2 sm:grid-cols-3' role='group' aria-label='Account type'>
+        <div className='panel grid grid-cols-3 gap-1 p-1' role='group' aria-label='Account type'>
           {ROLES.map((item) => (
-            <ToggleButton
+            <button
               key={item.value}
-              isSelected={role === item.value}
-              onChange={() => setRole(item.value)}
+              type='button'
+              aria-pressed={role === item.value}
+              onClick={() => setRole(item.value)}
               className={clsx(
-                'min-h-24 min-w-0 flex-col items-start justify-center overflow-hidden whitespace-normal rounded-md border p-3 text-left transition-colors',
-                role === item.value
-                  ? 'border-accent bg-default text-foreground'
-                  : 'border-border bg-surface text-muted hover:bg-default hover:text-foreground',
+                'rounded-md px-2 py-2 text-center text-sm leading-5',
+                role === item.value ? 'bg-foreground text-background' : 'text-muted hover:text-foreground',
               )}
             >
-              <item.icon size={18} aria-hidden='true' />
-              <span className='mt-2 block w-full text-sm font-medium'>{item.label}</span>
-              <span className='mt-0.5 block w-full text-xs leading-4 text-muted'>{item.description}</span>
-            </ToggleButton>
+              {item.label}
+            </button>
           ))}
         </div>
+        <p className='mt-2 text-xs text-muted'>{ROLES.find((item) => item.value === role)?.description}</p>
       </div>
 
       <form onSubmit={handleSubmit} className='space-y-5'>
@@ -145,7 +142,7 @@ export default function RegisterPage() {
 
         <div className='py-2'>
           <Button type='submit' fullWidth size='lg' variant='primary' isDisabled={loading}>
-            {loading ? <Spinner size='sm' /> : <><span>Create account</span><ArrowRight size={17} /></>}
+            {loading ? <><Spinner size='sm' /> Creating account...</> : <><span>Create account</span><ArrowRight size={17} /></>}
           </Button>
         </div>
       </form>

@@ -154,7 +154,7 @@ export default function ManagePartiesPage() {
         ) : filteredParties.length === 0 ? (
           <EmptyState icon={Users} title='No parties match your search' />
         ) : filteredParties.map((party) => (
-          <div key={party.id} id={`party-${party.id}`} className={clsx('rounded-lg border border-border bg-surface overflow-hidden', linkedPartyId === party.id && 'ring-1 ring-accent')}>
+          <div key={party.id} id={`party-${party.id}`} className={clsx('rounded-lg border border-border bg-surface overflow-hidden', linkedPartyId === party.id && 'ring-1 ring-foreground')}>
             <div className='px-5 py-4 flex items-start gap-4'>
               <div className='w-10 h-10 rounded-lg bg-default flex items-center justify-center  font-bold text-foreground flex-shrink-0'>
                 {party.name[0]}
@@ -171,7 +171,7 @@ export default function ManagePartiesPage() {
                 </p>
                 {party.assignedProjectTitle && (
                   <div className='mt-2 flex flex-wrap items-center gap-2'>
-                    <p className='text-xs text-success flex items-center gap-1'>
+                    <p className='text-xs text-foreground flex items-center gap-1'>
                       <Briefcase size={10} /> {party.assignedProjectTitle}
                     </p>
                     <DeadlineCountdown deadline={party.assignedProjectDeadline ?? null} compact />
@@ -295,7 +295,7 @@ export default function ManagePartiesPage() {
                           </div>
                           <StatusBadge status={app.status} />
                           {app.status === 'PENDING' && !party.assignedProjectId && (
-                            <Button size='sm' variant='secondary' className='text-success' onPress={() => assignMutation.mutate({ projectId: app.projectId, partyId: party.id })}>
+                            <Button size='sm' variant='secondary' onPress={() => assignMutation.mutate({ projectId: app.projectId, partyId: party.id })}>
                               <ArrowRight size={10} /> Assign this
                             </Button>
                           )}

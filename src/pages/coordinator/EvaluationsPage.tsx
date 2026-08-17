@@ -36,16 +36,16 @@ function EvaluationProgress({ currentStep }: { currentStep: number }) {
               aria-label={`${step.label} ${state}`}
               className={clsx(
                 'rounded-lg border p-3 transition-colors',
-                complete && 'border-success bg-success',
-                active && 'border-accent bg-accent',
+                complete && 'border-border bg-default',
+                active && 'border-foreground bg-default',
                 !complete && !active && 'border-border bg-surface/60',
               )}
             >
               <div className='mb-2 flex items-center justify-between'>
                 {complete ? (
-                  <Check size={15} className='text-success' />
+                  <Check size={15} className='text-foreground' />
                 ) : active ? (
-                  <LoaderCircle size={15} className='animate-spin text-accent' />
+                  <LoaderCircle size={15} className='animate-spin text-foreground' />
                 ) : (
                   <span className='h-3.5 w-3.5 rounded-full border border-border' />
                 )}

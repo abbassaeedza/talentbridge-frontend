@@ -30,7 +30,7 @@ export default function CompanyProjectEditPage() {
     <div className='max-w-3xl'>
       <Button variant='ghost' size='sm' className='mb-5' onPress={() => navigate(`/company/projects/${id}`)}><ArrowLeft size={15} /> Back to project</Button>
       <PageHeader title={resubmit ? 'Edit and resubmit' : 'Edit project'} description={resubmit ? 'Saving sends this project back for coordinator review.' : 'Update the project brief and assignment.'} />
-      {resubmit && <div className='mb-6 flex items-start gap-3 rounded-lg border border-border bg-surface-secondary p-4'><Lightbulb size={18} className='mt-0.5 shrink-0 text-warning' /><p className='text-sm text-muted'>Saving this project will resubmit it for coordinator review.</p></div>}
+      {resubmit && <div className='mb-6 flex items-start gap-3 rounded-lg border border-border bg-surface-secondary p-4'><Lightbulb size={18} className='mt-0.5 shrink-0 text-foreground' /><p className='text-sm text-muted'>Saving this project will resubmit it for coordinator review.</p></div>}
       <ProjectForm initial={project} pending={mutation.isPending} submitLabel={resubmit ? 'Save and resubmit' : 'Save changes'} pendingLabel='Saving' internalNameHelp='Only your company can see this reference.' onSubmit={mutation.mutate} onCancel={() => navigate(`/company/projects/${id}`)} />
     </div>
   );

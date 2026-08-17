@@ -241,7 +241,7 @@ export default function ManageProjectsPage() {
                       {/* Pending → approve or reject */}
                       {p.status === 'PENDING_REVIEW' && (
                         <>
-                          <Button size='sm' variant='secondary' className='text-success' onPress={() => approveMutation.mutate(p.id)} isDisabled={approveMutation.isPending}>
+                          <Button size='sm' variant='secondary' onPress={() => approveMutation.mutate(p.id)} isDisabled={approveMutation.isPending}>
                             <CheckCircle size={13} /> Approve
                           </Button>
                           <Button size='sm' variant='danger-soft' onPress={() => disapproveMutation.mutate(p.id)} isDisabled={disapproveMutation.isPending}>
@@ -252,7 +252,7 @@ export default function ManageProjectsPage() {
 
                       {/* Rejected → reinstate */}
                       {p.status === 'ARCHIVED' && (
-                        <Button size='sm' variant='secondary' className='text-success' onPress={() => approveMutation.mutate(p.id)} isDisabled={approveMutation.isPending}>
+                        <Button size='sm' variant='secondary' onPress={() => approveMutation.mutate(p.id)} isDisabled={approveMutation.isPending}>
                           <RefreshCw size={13} /> Reinstate
                         </Button>
                       )}

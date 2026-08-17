@@ -12,9 +12,25 @@ const dimensions = [
   { key: 'teamCollaboration', label: 'Team collaboration', weight: 10 },
 ] as const;
 
+function scoreTone(score: number) {
+  return score >= 80 ? 'success' : score >= 60 ? 'warning' : 'danger';
+}
+
+const SCORE_TEXT = {
+  success: 'text-success',
+  warning: 'text-warning',
+  danger: 'text-danger',
+} as const;
+
+const SCORE_FILL = {
+  success: 'bg-success',
+  warning: 'bg-warning',
+  danger: 'bg-danger',
+} as const;
+
 function ScoreDimension({ label, weight, score, notes }: { label: string; weight: number; score: number; notes: string }) {
   const [open, setOpen] = useState(false);
-  const color = score >= 80 ? 'bg-success' : score >= 60 ? 'bg-warning' : 'bg-danger';
+  const tone = scoreTone(score);
   return (
     <div>
       <div className='mb-1.5 flex items-center justify-between gap-3'>
@@ -23,10 +39,10 @@ function ScoreDimension({ label, weight, score, notes }: { label: string; weight
           <span className='rounded-sm bg-default px-1.5 py-0.5 text-[10px] text-muted'>{weight}%</span>
           {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
         </Button>
-        <span className='text-sm font-semibold'>{score.toFixed(0)}</span>
+        <span className={clsx('text-sm font-semibold', SCORE_TEXT[tone])}>{score.toFixed(0)}</span>
       </div>
-      <div className='h-1.5 overflow-hidden rounded-full bg-surface-tertiary' aria-label={`${label}: ${score.toFixed(0)} out of 100`}>
-        <div className={clsx('h-full rounded-full', color)} style={{ width: `${Math.max(0, Math.min(100, score))}%` }} />
+      <div className='h-1.5 overflow-hidden rounded-sm bg-surface-tertiary' aria-label={`${label}: ${score.toFixed(0)} out of 100`}>
+        <div className={clsx('h-full rounded-sm', SCORE_FILL[tone])} style={{ width: `${Math.max(0, Math.min(100, score))}%` }} />
       </div>
       {open && <p className='mt-2 text-xs leading-5 text-muted'>{notes}</p>}
     </div>
@@ -42,7 +58,7 @@ export default function EvaluationReportPanel({ report, children, className }: {
           <p className='mt-1 max-w-3xl text-sm leading-6 text-muted'>{report.overallSummary}</p>
         </div>
         <div className='shrink-0 sm:text-right'>
-          <p className='font-mono text-3xl font-semibold'>{report.totalScore.toFixed(0)}</p>
+          <p className={clsx('font-mono text-3xl font-semibold', SCORE_TEXT[scoreTone(report.totalScore)])}>{report.totalScore.toFixed(0)}</p>
           <p className='text-xs text-muted'>Team project score /100</p>
         </div>
       </div>
@@ -66,7 +82,7 @@ export default function EvaluationReportPanel({ report, children, className }: {
                   )}
                 </span>
                 <span className='text-xs text-muted'>{score.totalCommits} commits ({score.contributionPercentage}%)</span>
-                <span className='font-mono font-semibold'>{score.individualScore.toFixed(0)}</span>
+                <span className={clsx('font-mono font-semibold', SCORE_TEXT[scoreTone(score.individualScore)])}>{score.individualScore.toFixed(0)}</span>
               </div>
             ))}
           </div>

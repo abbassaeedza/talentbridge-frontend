@@ -1,44 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Award, FolderKanban, UserCheck, Users } from 'lucide-react';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import { Card } from '@heroui/react/card';
+import clsx from 'clsx';
 import { coordinatorApi, partyApi, projectApi, userApi } from '../../api/services';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
 import { PageHeader, StatCard, StatusBadge } from '../../components/ui/TalentBridgeUI';
 
-const CHART_COLORS = [
-  'var(--accent)',
-  'var(--success)',
-  'var(--warning)',
-  'var(--danger)',
-  'var(--muted)',
-];
-
 function chartRows(values?: Record<string, number>) {
   return Object.entries(values ?? {})
     .filter(([, value]) => value > 0)
-    .map(([name, value]) => ({ name: name.replace(/_/g, ' '), value }));
+    .map(([name, value]) => {
+      const text = name.replace(/_/g, ' ').toLowerCase();
+      return { name: text.charAt(0).toUpperCase() + text.slice(1), value };
+    })
+    .sort((a, b) => b.value - a.value);
 }
-
-const tooltipStyle = {
-  background: 'var(--overlay)',
-  border: '1px solid var(--border)',
-  borderRadius: 'var(--field-radius)',
-  color: 'var(--overlay-foreground)',
-  fontSize: 12,
-};
 
 export default function CoordinatorDashboard() {
   const { data: pending } = useQuery({
@@ -61,7 +37,6 @@ export default function CoordinatorDashboard() {
   const pendingProjects = projects?.filter((project) => project.status === 'PENDING_REVIEW').length ?? 0;
   const assignedParties = parties?.filter((party) => party.assignedProjectId).length ?? 0;
   const totalParties = parties?.length ?? 0;
-  const assignmentPercent = totalParties ? Math.round((assignedParties / totalParties) * 100) : 0;
   const upcomingDeadlines = (projects ?? [])
     .filter((project) => project.deadline
       && !project.finished
@@ -88,7 +63,7 @@ export default function CoordinatorDashboard() {
         description='Approvals, assignments, deadlines, and platform activity.'
       />
 
-      <div className='mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4'>
+      <div className='mb-5 grid grid-cols-2 gap-2 lg:grid-cols-4'>
         {stats.map((stat) => (
           <Link key={stat.label} to={stat.to} className='rounded-lg focus-visible:outline-offset-4'>
             <StatCard {...stat} />
@@ -96,47 +71,18 @@ export default function CoordinatorDashboard() {
         ))}
       </div>
 
-      <div className='mb-8 grid gap-4 lg:grid-cols-3'>
-        <ChartPanel title='Projects by status' empty={!projectRows.length}>
-          <ResponsiveContainer width='100%' height='100%'>
-            <PieChart>
-              <Pie data={projectRows} dataKey='value' nameKey='name' outerRadius={72} innerRadius={60} paddingAngle={4} stroke='none'>
-                {projectRows.map((row, index) => <Cell key={row.name} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
-              </Pie>
-              <Tooltip contentStyle={tooltipStyle} />
-            </PieChart>
-          </ResponsiveContainer>
-        </ChartPanel>
-        <ChartPanel title='Users by role' empty={!userRows.length}>
-          <ResponsiveContainer width='100%' height='100%'>
-            <BarChart data={userRows} margin={{ left: -25, right: 4, top: 8 }} barCategoryGap='32%'>
-              <CartesianGrid vertical={false} stroke='var(--separator)' />
-              <XAxis dataKey='name' tick={{ fill: 'var(--muted)', fontSize: 10 }} interval={0} angle={-15} textAnchor='end' height={48} />
-              <YAxis tick={{ fill: 'var(--muted)', fontSize: 10 }} allowDecimals={false} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--surface-secondary)' }} />
-              <Bar dataKey='value' name='users' fill='var(--accent)' radius={[999, 999, 999, 999]} maxBarSize={30} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartPanel>
-        <ChartPanel title='Submissions by status' empty={!submissionRows.length}>
-          <ResponsiveContainer width='100%' height='100%'>
-            <BarChart data={submissionRows} margin={{ left: -25, right: 4, top: 8 }} barCategoryGap='32%'>
-              <CartesianGrid vertical={false} stroke='var(--separator)' />
-              <XAxis dataKey='name' tick={{ fill: 'var(--muted)', fontSize: 10 }} interval={0} angle={-15} textAnchor='end' height={48} />
-              <YAxis tick={{ fill: 'var(--muted)', fontSize: 10 }} allowDecimals={false} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--surface-secondary)' }} />
-              <Bar dataKey='value' name='submissions' fill='var(--accent)' radius={[999, 999, 999, 999]} maxBarSize={30} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartPanel>
+      <div className='mb-5 grid gap-2 lg:grid-cols-3'>
+        <MeterList title='Projects by status' rows={projectRows} />
+        <MeterList title='Users by role' rows={userRows} />
+        <MeterList title='Submissions by status' rows={submissionRows} />
       </div>
 
-      <div className='mb-8 grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.8fr)]'>
-        <section>
-          <div className='mb-3 flex items-center justify-between'>
-            <h2 className='text-base font-semibold'>Upcoming deadlines</h2>
-            <Link to='/coordinator/projects' className='flex items-center gap-1 text-sm font-medium text-muted hover:text-foreground'>
-              View projects <ArrowRight size={14} />
+      <section className={clsx('mb-5 grid gap-3', laterDeadlines.length > 0 && 'xl:grid-cols-[minmax(0,1.6fr)_minmax(16rem,0.8fr)]')}>
+        <div>
+          <div className='mb-2 flex items-center justify-between'>
+            <h2 className='text-sm font-medium'>Upcoming deadlines</h2>
+            <Link to='/coordinator/projects' className='flex items-center gap-1 text-xs font-medium text-muted hover:text-foreground'>
+              View projects <ArrowRight size={13} />
             </Link>
           </div>
           {nextDeadline ? (
@@ -147,54 +93,38 @@ export default function CoordinatorDashboard() {
               hero
             />
           ) : (
-            <div className='rounded-lg border border-border bg-surface px-5 py-10 text-center text-sm text-muted'>
-              No active project deadlines.
-            </div>
+            <p className='panel px-4 py-8 text-sm text-muted'>No active project deadlines.</p>
           )}
-        </section>
-
-        <section>
-          <h2 className='mb-3 text-base font-semibold'>Following deadlines</h2>
-          <div className='overflow-hidden rounded-lg border border-border bg-surface'>
-            {laterDeadlines.length === 0 ? (
-              <p className='px-4 py-10 text-center text-sm text-muted'>No additional deadlines.</p>
-            ) : laterDeadlines.map((project) => (
-              <Link
-                key={project.id}
-                to={`/coordinator/projects/${project.id}`}
-                className='flex items-center justify-between gap-3 border-b border-separator px-4 py-3 last:border-0 hover:bg-default'
-              >
-                <span className='min-w-0'>
-                  <span className='block truncate text-sm font-medium'>{project.title}</span>
-                  <span className='block truncate text-xs text-muted'>{project.companyName}</span>
-                </span>
-                <DeadlineCountdown deadline={project.deadline} compact className='shrink-0' />
-              </Link>
-            ))}
-          </div>
-        </section>
-      </div>
-
-      <section className='mb-8 rounded-lg border border-border bg-surface p-5'>
-        <div className='flex items-end justify-between gap-4'>
+        </div>
+        {laterDeadlines.length > 0 && (
           <div>
-            <h2 className='text-base font-semibold'>Party assignment</h2>
-            <p className='mt-1 text-sm text-muted'>{assignedParties} of {totalParties} parties have a project.</p>
+            <h2 className='mb-2 text-sm font-medium'>Following</h2>
+            <div className='panel overflow-hidden'>
+              {laterDeadlines.map((project) => (
+                <Link
+                  key={project.id}
+                  to={`/coordinator/projects/${project.id}`}
+                  className='flex items-center justify-between gap-3 border-b border-separator px-3 py-2 last:border-0 hover:bg-default'
+                >
+                  <span className='min-w-0'>
+                    <span className='block truncate text-sm font-medium'>{project.title}</span>
+                    <span className='block truncate text-xs text-muted'>{project.companyName}</span>
+                  </span>
+                  <DeadlineCountdown deadline={project.deadline} compact className='shrink-0' />
+                </Link>
+              ))}
+            </div>
           </div>
-          <p className='text-2xl font-semibold'>{assignmentPercent}%</p>
-        </div>
-        <div className='mt-4 h-2 overflow-hidden rounded-full bg-default' role='progressbar' aria-valuenow={assignmentPercent} aria-valuemin={0} aria-valuemax={100}>
-          <div className='h-full rounded-full bg-accent' style={{ width: `${assignmentPercent}%` }} />
-        </div>
+        )}
       </section>
 
-      <div className='grid gap-6 lg:grid-cols-2'>
+      <div className='grid gap-2 lg:grid-cols-2'>
         <RecordList title='Pending approvals' to='/coordinator/students'>
           {!pending?.content.length ? (
-            <p className='px-4 py-8 text-sm text-muted'>No pending approvals.</p>
+            <p className='px-3 py-5 text-sm text-muted'>No pending approvals.</p>
           ) : pending.content.slice(0, 5).map((account) => (
-            <Link key={account.id} to={`/coordinator/students/${account.id}`} className='flex items-center gap-3 border-b border-separator px-4 py-3 last:border-0 hover:bg-default'>
-              <span className='flex size-8 shrink-0 items-center justify-center rounded-md bg-default text-xs font-semibold'>
+            <Link key={account.id} to={`/coordinator/students/${account.id}`} className='flex items-center gap-3 border-b border-separator px-3 py-2 last:border-0 hover:bg-default'>
+              <span className='flex size-7 shrink-0 items-center justify-center rounded-md bg-default text-xs font-semibold'>
                 {account.firstName[0]}{account.lastName[0]}
               </span>
               <span className='min-w-0 flex-1'>
@@ -208,9 +138,9 @@ export default function CoordinatorDashboard() {
 
         <RecordList title='Recent projects' to='/coordinator/projects'>
           {!projects?.length ? (
-            <p className='px-4 py-8 text-sm text-muted'>No projects available.</p>
+            <p className='px-3 py-5 text-sm text-muted'>No projects available.</p>
           ) : projects.slice(0, 5).map((project) => (
-            <Link key={project.id} to={`/coordinator/projects/${project.id}`} className='flex items-center gap-3 border-b border-separator px-4 py-3 last:border-0 hover:bg-default'>
+            <Link key={project.id} to={`/coordinator/projects/${project.id}`} className='flex items-center gap-3 border-b border-separator px-3 py-2 last:border-0 hover:bg-default'>
               <span className='min-w-0 flex-1'>
                 <span className='block truncate text-sm font-medium'>{project.title}</span>
                 <span className='block truncate text-xs text-muted'>{project.companyName}</span>
@@ -224,29 +154,42 @@ export default function CoordinatorDashboard() {
   );
 }
 
-function ChartPanel({ title, empty, children }: { title: string; empty: boolean; children: React.ReactNode }) {
+function MeterList({ title, rows }: { title: string; rows: { name: string; value: number }[] }) {
+  const max = Math.max(0, ...rows.map((row) => row.value));
   return (
-    <Card>
-      <Card.Header><Card.Title className='text-sm'>{title}</Card.Title></Card.Header>
-      <Card.Content className='pt-0'>
-        <div className='h-56 w-full'>
-          {empty ? <p className='py-20 text-center text-sm text-muted'>No data available.</p> : children}
-        </div>
-      </Card.Content>
-    </Card>
+    <section className='panel p-3'>
+      <h2 className='mb-2 text-xs text-muted'>{title}</h2>
+      {rows.length === 0 ? (
+        <p className='py-4 text-sm text-muted'>No data available.</p>
+      ) : (
+        <ul className='space-y-2'>
+          {rows.map((row) => (
+            <li key={row.name}>
+              <div className='mb-0.5 flex items-baseline justify-between gap-3'>
+                <span className='truncate text-xs text-muted'>{row.name}</span>
+                <span className='font-mono text-xs tabular-nums'>{row.value}</span>
+              </div>
+              <div className='h-1 overflow-hidden rounded-sm bg-default' role='meter' aria-label={row.name} aria-valuenow={row.value} aria-valuemin={0} aria-valuemax={max}>
+                <div className='h-full bg-foreground' style={{ width: `${max ? (row.value / max) * 100 : 0}%` }} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
 function RecordList({ title, to, children }: { title: string; to: string; children: React.ReactNode }) {
   return (
-    <Card className='overflow-hidden'>
-      <Card.Header className='flex items-center justify-between border-b border-border'>
-        <Card.Title className='text-sm'>{title}</Card.Title>
+    <section className='panel overflow-hidden'>
+      <div className='flex items-center justify-between border-b border-border px-3 py-2'>
+        <h2 className='text-sm font-medium'>{title}</h2>
         <Link to={to} className='flex items-center gap-1 text-xs font-medium text-muted hover:text-foreground'>
           View all <ArrowRight size={13} />
         </Link>
-      </Card.Header>
-      <Card.Content className='p-0'>{children}</Card.Content>
-    </Card>
+      </div>
+      <div>{children}</div>
+    </section>
   );
 }

@@ -117,7 +117,7 @@ export default function SupervisorsDirectoryPage() {
         ) : (
           <div className='divide-y divide-separator'>
             {filtered.map((supervisor) => (
-              <div key={supervisor.id} className={clsx('flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center', linkedSupervisorId === supervisor.id && 'bg-accent ring-1 ring-inset ring-accent')}>
+              <div key={supervisor.id} className={clsx('flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center', linkedSupervisorId === supervisor.id && 'bg-surface-secondary ring-1 ring-inset ring-border')}>
                 <SelectCheckbox label={`Select ${getUserName(supervisor)}`} selected={selected.includes(supervisor.id)} onChange={() => setSelected((current) => current.includes(supervisor.id)
                     ? current.filter((id) => id !== supervisor.id)
                     : [...current, supervisor.id])} />
