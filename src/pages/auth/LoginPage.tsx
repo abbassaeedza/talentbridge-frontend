@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Eye, EyeOff, FlaskConical } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@heroui/react/button';
 import { Input } from '@heroui/react/input';
@@ -10,40 +10,25 @@ import { TextField } from '@heroui/react/textfield';
 import { useAuth } from '../../contexts/AuthContext';
 import { PublicShell } from '../../components/ui/TalentBridgeUI';
 
-type PendingAction = 'sign-in' | 'demo' | null;
-
 export default function LoginPage() {
-  const { login, demoLogin } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [pending, setPending] = useState<PendingAction>(null);
+  const [pending, setPending] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!email || !password || pending) return;
-    setPending('sign-in');
+    setPending(true);
     try {
       await login(email, password);
       navigate('/dashboard');
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Email or password is incorrect');
     } finally {
-      setPending(null);
-    }
-  };
-
-  const handleDemoLogin = async () => {
-    if (pending) return;
-    setPending('demo');
-    try {
-      await demoLogin();
-      navigate('/dashboard');
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Demo login is unavailable');
-    } finally {
-      setPending(null);
+      setPending(false);
     }
   };
 
@@ -94,7 +79,7 @@ export default function LoginPage() {
         </TextField>
 
         <Button type='submit' fullWidth size='lg' variant='primary' isDisabled={!!pending}>
-          {pending === 'sign-in' ? (
+          {pending ? (
             <><Spinner size='sm' /> Signing in...</>
           ) : (
             <><span>Sign in</span><ArrowRight size={17} /></>
@@ -109,26 +94,6 @@ export default function LoginPage() {
         </Link>
       </p>
 
-      <div className='my-7 flex items-center gap-3 text-xs text-muted'>
-        <span className='h-px flex-1 bg-separator' />
-        <span>Demo environment</span>
-        <span className='h-px flex-1 bg-separator' />
-      </div>
-
-      <Button
-        type='button'
-        fullWidth
-        size='lg'
-        variant='secondary'
-        isDisabled={!!pending}
-        onPress={handleDemoLogin}
-      >
-        {pending === 'demo' ? (
-          <><Spinner size='sm' /> Opening demo...</>
-        ) : (
-          <><FlaskConical size={17} /> Open coordinator demo</>
-        )}
-      </Button>
     </PublicShell>
   );
 }

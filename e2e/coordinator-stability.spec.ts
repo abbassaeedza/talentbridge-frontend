@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page, Route } from '@playwright/test';
+import { mockCredentialLogin, signIn } from './helpers/auth';
 
 async function fillDateTime(page: Page, label: string, value: string) {
   const date = new Date(value);
@@ -15,7 +16,7 @@ async function fillDateTime(page: Page, label: string, value: string) {
 
 const coordinator = {
   id: '00000000-0000-0000-0000-000000000001',
-  email: 'coordinator@talentbridge.com',
+  email: 'coordinator@example.test',
   firstName: 'Demo',
   lastName: 'Coordinator',
   role: 'COORDINATOR',
@@ -77,26 +78,13 @@ type CoordinatorApiOptions = {
 };
 
 async function loginAsCoordinator(page: Page) {
-  await page.goto('/login');
-  await page.getByRole('button', { name: 'Open coordinator demo' }).click();
+  await signIn(page, coordinator.email);
   await expect(page).toHaveURL(/\/coordinator\/dashboard$/);
   await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
 }
 
 async function mockCoordinatorApi(page: Page, options: CoordinatorApiOptions = {}) {
-  await page.route('**/api/auth/demo-login', route => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify({
-      accessToken: 'demo-access-token',
-      refreshToken: 'demo-refresh-token',
-      tokenType: 'Bearer',
-      user: coordinator,
-    }),
-  }));
-  await page.route('**/api/users/me', route => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify(coordinator),
-  }));
+  await mockCredentialLogin(page, coordinator);
   await page.route('**/api/users/notifications**', route => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify({ notifications: demoNotifications, unreadCount: 0 }),

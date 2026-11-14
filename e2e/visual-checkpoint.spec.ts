@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { mockCredentialLogin, signIn } from './helpers/auth';
 
 const fixedNow = new Date('2026-08-15T10:00:00.000Z');
 const coordinator = {
@@ -60,11 +61,7 @@ async function mockCoordinatorApi(page: Page) {
     status: index < 4 ? 'PENDING' : index < 10 ? 'APPROVED' : 'SUSPENDED',
     createdAt: '2026-08-01T10:00:00.000Z',
   }));
-  await page.route('**/api/auth/demo-login', route => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify({ accessToken: 'demo-token', refreshToken: 'refresh-token', tokenType: 'Bearer', user: coordinator }),
-  }));
-  await page.route('**/api/users/me', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(coordinator) }));
+  await mockCredentialLogin(page, coordinator);
   await page.route('**/api/users/notifications**', route => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify({
@@ -100,8 +97,7 @@ async function mockCoordinatorApi(page: Page) {
 }
 
 async function loginAsCoordinator(page: Page) {
-  await page.goto('/login');
-  await page.getByRole('button', { name: 'Open coordinator demo' }).click();
+  await signIn(page, coordinator.email);
   await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
 }
 

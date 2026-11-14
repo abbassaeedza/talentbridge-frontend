@@ -10,7 +10,7 @@ This repository contains its React single-page application.
 - Coordinator workflows for user approval, project management, assignments, and evaluations
 - GitHub account integration and AI-assisted project evaluation
 - Responsive interface built with a shared Tailwind CSS design system
-- Backend-controlled public demo login without a browser-visible password
+- Credential-based sign-in for all accounts, including demo accounts
 
 ## Technology
 
@@ -49,8 +49,8 @@ Vite proxies local `/api` requests to `http://localhost:8080`.
 
 Only variables prefixed with `VITE_` are exposed to browser code.
 Never place private keys or client secrets in frontend environment variables.
-The demo coordinator password belongs only in the backend's `APP_SEED_COORDINATOR_PASSWORD` value.
-The frontend demo card calls the backend demo-login endpoint and does not need another variable.
+All accounts sign in with an email address and password through `POST /api/auth/login`.
+Demo account passwords are configured by the backend operator and must not be embedded in the frontend.
 
 ## Commands
 
@@ -58,11 +58,12 @@ The frontend demo card calls the backend demo-login endpoint and does not need a
 npm run dev      # Start development server
 npm run build    # Type-check and create production build
 npm test         # Run lightweight unit tests
-npm run test:e2e # Run the Chromium demo-login test
+npm run test:e2e # Run the Chromium end-to-end suite
 npm run preview  # Preview production build locally
 ```
 
 Production files are written to `dist/`.
+Login tests intercept API requests and use synthetic `example.test` credentials, not production accounts or backend seed passwords.
 
 ## Deployment
 

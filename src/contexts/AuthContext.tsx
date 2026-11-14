@@ -25,7 +25,6 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  demoLogin: () => Promise<void>;
   completeExternalLogin: (data: AuthResponse) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -180,11 +179,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await completeLogin(data);
   };
 
-  const demoLogin = async () => {
-    const { data } = await authApi.demoLogin();
-    await completeLogin(data);
-  };
-
   const completeExternalLogin = async (data: AuthResponse) => completeLogin(data);
 
   const stayLoggedIn = async () => {
@@ -222,7 +216,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         loading,
         login,
-        demoLogin,
         completeExternalLogin,
         logout,
         refreshUser,
