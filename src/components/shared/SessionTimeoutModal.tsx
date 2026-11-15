@@ -2,16 +2,18 @@ import { Clock, ShieldCheck } from 'lucide-react';
 import { Button } from '@heroui/react/button';
 import { Modal } from '@heroui/react/modal';
 import { Spinner } from '@heroui/react/spinner';
+import ServerStartingFeedback from './ServerStartingFeedback';
 
 type Props = {
   open: boolean;
   secondsRemaining: number;
   refreshing: boolean;
+  error: string | null;
   onStayLoggedIn: () => void;
   onSignOut: () => void;
 };
 
-export default function SessionTimeoutModal({ open, secondsRemaining, refreshing, onStayLoggedIn, onSignOut }: Props) {
+export default function SessionTimeoutModal({ open, secondsRemaining, refreshing, error, onStayLoggedIn, onSignOut }: Props) {
   return (
     <Modal isOpen={open}>
       <Modal.Backdrop isDismissable={false}>
@@ -26,10 +28,12 @@ export default function SessionTimeoutModal({ open, secondsRemaining, refreshing
                 Your session expires in <strong className='text-foreground'>{Math.max(0, secondsRemaining)} seconds</strong>.
                 Refresh it to continue working.
               </p>
+              <ServerStartingFeedback pending={refreshing} />
+              {error && <p role='alert' className='mt-2 text-sm leading-6 text-muted'>{error}</p>}
             </Modal.Body>
             <Modal.Footer>
-              <Button variant='ghost' onPress={onSignOut}>Sign out</Button>
-              <Button variant='primary' isDisabled={refreshing} onPress={onStayLoggedIn}>
+              <Button className='min-h-11' variant='ghost' onPress={onSignOut}>Sign out</Button>
+              <Button className='min-h-11' variant='primary' isDisabled={refreshing} onPress={onStayLoggedIn}>
                 {refreshing ? <Spinner size='sm' /> : <ShieldCheck size={16} />}
                 {refreshing ? 'Refreshing' : 'Stay logged in'}
               </Button>

@@ -95,3 +95,27 @@ Changing a Vercel environment variable requires a new deployment before browser 
 Vercel hosting remains free within Hobby limits.
 The Cloud Run backend scales to zero and may take time to answer its first request after idle.
 Custom domains are optional and domain registration is not included.
+
+## Cold-start and session recovery
+
+The shared API client allows 90 seconds per request, including the single shared refresh operation.
+This is not a guarantee about total startup or sign-in time: sign-in and identity loading are separate requests.
+Sign-in, identity bootstrap, and manual session renewal show server-starting feedback after five seconds.
+The normal screens and their screenshot baselines are unchanged outside these feedback states.
+
+Network errors, timeouts, and server failures preserve stored credentials and the current user and query cache.
+If initial identity loading fails, the route stays behind a retry screen instead of redirecting to sign-in or claiming an account state.
+Retry repeats only `GET /api/users/me`, not the credential submission.
+An unavailable manual renewal permits another attempt while access remains valid; the actual access expiry still signs out.
+Definitive authentication rejection, revoked credentials, suspension, explicit sign-out, and session expiry still invalidate the session.
+Generation, session-key, token, and cache guards prevent old requests or timers from changing a replacement session.
+
+Only GET and HEAD requests can replay once after a 401 and successful session renewal.
+POST, PUT, PATCH, and DELETE requests never replay automatically, including on network errors, timeouts, or 5xx responses.
+A write rejected with 401 can renew the session, but rejects the original action with “Session renewed. Please submit again.”
+The user must explicitly submit the action again.
+TanStack mutations explicitly disable retries; query retries remain unchanged.
+
+The mocked `e2e/cold-start.spec.ts` suite covers delayed startup, identity retry, offline and timeout recovery, duplicate submissions, session expiry, and write non-replay.
+Its real 35-second login test alone uses a 90-second test timeout; the suite default stays at 15 seconds.
+Screenshots use Playwright per-test output paths so CI artifacts work on both macOS and Linux.
