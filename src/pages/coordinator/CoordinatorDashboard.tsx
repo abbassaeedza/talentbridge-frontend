@@ -5,6 +5,8 @@ import clsx from 'clsx';
 import { coordinatorApi, partyApi, projectApi, userApi } from '../../api/services';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
 import { PageHeader, StatCard, StatusBadge } from '../../components/ui/TalentBridgeUI';
+import QuerySection from '../../components/ui/QuerySection';
+import { parseServerDateTime } from '../../utils/dateTime';
 
 function chartRows(values?: Record<string, number>) {
   return Object.entries(values ?? {})
@@ -17,40 +19,44 @@ function chartRows(values?: Record<string, number>) {
 }
 
 export default function CoordinatorDashboard() {
-  const { data: pending } = useQuery({
+  const pendingQuery = useQuery({
     queryKey: ['pending-users'],
     queryFn: () => userApi.getPending(0, 100).then((response) => response.data),
   });
-  const { data: projects } = useQuery({
+  const projectsQuery = useQuery({
     queryKey: ['all-projects'],
     queryFn: () => projectApi.getAllUnpaged(),
   });
-  const { data: parties } = useQuery({
+  const partiesQuery = useQuery({
     queryKey: ['all-parties'],
     queryFn: () => partyApi.getAll().then((response) => response.data),
   });
-  const { data: analytics } = useQuery({
+  const analyticsQuery = useQuery({
     queryKey: ['coordinator-analytics'],
     queryFn: () => coordinatorApi.getAnalytics().then((response) => response.data),
   });
 
+  const pending = pendingQuery.data;
+  const projects = projectsQuery.data;
+  const parties = partiesQuery.data;
+  const analytics = analyticsQuery.data;
   const pendingProjects = projects?.filter((project) => project.status === 'PENDING_REVIEW').length ?? 0;
   const assignedParties = parties?.filter((party) => party.assignedProjectId).length ?? 0;
   const totalParties = parties?.length ?? 0;
   const upcomingDeadlines = (projects ?? [])
     .filter((project) => project.deadline
       && !project.finished
-      && new Date(project.deadline).getTime() > Date.now()
+      && (parseServerDateTime(project.deadline)?.getTime() ?? 0) > Date.now()
       && ['OPEN', 'ASSIGNED'].includes(project.status))
-    .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())
+    .sort((a, b) => (parseServerDateTime(a.deadline)?.getTime() ?? Infinity) - (parseServerDateTime(b.deadline)?.getTime() ?? Infinity))
     .slice(0, 5);
   const [nextDeadline, ...laterDeadlines] = upcomingDeadlines;
 
   const stats = [
-    { label: 'Pending approvals', value: pending?.totalElements ?? 0, icon: UserCheck, to: '/coordinator/students' },
-    { label: 'Projects to review', value: pendingProjects, icon: FolderKanban, to: '/coordinator/projects' },
-    { label: 'Total parties', value: totalParties, icon: Users, to: '/coordinator/parties' },
-    { label: 'Assigned parties', value: assignedParties, icon: Award, to: '/coordinator/evaluations' },
+    { label: 'Pending approvals', value: pending?.totalElements, icon: UserCheck, to: '/coordinator/students', query: pendingQuery },
+    { label: 'Projects to review', value: pendingProjects, icon: FolderKanban, to: '/coordinator/projects', query: projectsQuery },
+    { label: 'Total parties', value: totalParties, icon: Users, to: '/coordinator/parties', query: partiesQuery },
+    { label: 'Assigned parties', value: assignedParties, icon: Award, to: '/coordinator/evaluations', query: partiesQuery },
   ];
   const projectRows = chartRows(analytics?.projectsByStatus);
   const userRows = chartRows(analytics?.usersByRole);
@@ -65,26 +71,29 @@ export default function CoordinatorDashboard() {
 
       <div className='mb-5 grid grid-cols-2 gap-2 lg:grid-cols-4'>
         {stats.map((stat) => (
-          <Link key={stat.label} to={stat.to} className='rounded-lg focus-visible:outline-offset-4'>
-            <StatCard {...stat} />
-          </Link>
+          <QuerySection key={stat.label} query={stat.query} label={stat.label}>
+            <Link to={stat.to} className='block min-h-11 rounded-lg focus-visible:outline-offset-4'>
+              <StatCard {...stat} />
+            </Link>
+          </QuerySection>
         ))}
       </div>
 
       <div className='mb-5 grid gap-2 lg:grid-cols-3'>
-        <MeterList title='Projects by status' rows={projectRows} />
-        <MeterList title='Users by role' rows={userRows} />
-        <MeterList title='Submissions by status' rows={submissionRows} />
+        <QuerySection query={analyticsQuery} label='Projects by status'><MeterList title='Projects by status' rows={projectRows} /></QuerySection>
+        <QuerySection query={analyticsQuery} label='Users by role'><MeterList title='Users by role' rows={userRows} /></QuerySection>
+        <QuerySection query={analyticsQuery} label='Submissions by status'><MeterList title='Submissions by status' rows={submissionRows} /></QuerySection>
       </div>
 
       <section className={clsx('mb-5 grid gap-3', laterDeadlines.length > 0 && 'xl:grid-cols-[minmax(0,1.6fr)_minmax(16rem,0.8fr)]')}>
         <div>
           <div className='mb-2 flex items-center justify-between'>
             <h2 className='text-sm font-medium'>Upcoming deadlines</h2>
-            <Link to='/coordinator/projects' className='flex items-center gap-1 text-xs font-medium text-muted hover:text-foreground'>
+            <Link to='/coordinator/projects' className='flex min-h-11 min-w-11 items-center gap-1 text-xs font-medium text-muted hover:text-foreground'>
               View projects <ArrowRight size={13} />
             </Link>
           </div>
+          <QuerySection query={projectsQuery} label='Upcoming deadlines'>
           {nextDeadline ? (
             <DeadlineCountdown
               deadline={nextDeadline.deadline}
@@ -95,6 +104,7 @@ export default function CoordinatorDashboard() {
           ) : (
             <p className='panel px-4 py-8 text-sm text-muted'>No active project deadlines.</p>
           )}
+          </QuerySection>
         </div>
         {laterDeadlines.length > 0 && (
           <div>
@@ -120,6 +130,7 @@ export default function CoordinatorDashboard() {
 
       <div className='grid gap-2 lg:grid-cols-2'>
         <RecordList title='Pending approvals' to='/coordinator/students'>
+          <QuerySection query={pendingQuery} label='Pending approvals list'>
           {!pending?.content.length ? (
             <p className='px-3 py-5 text-sm text-muted'>No pending approvals.</p>
           ) : pending.content.slice(0, 5).map((account) => (
@@ -134,9 +145,11 @@ export default function CoordinatorDashboard() {
               <StatusBadge status='PENDING' />
             </Link>
           ))}
+          </QuerySection>
         </RecordList>
 
         <RecordList title='Recent projects' to='/coordinator/projects'>
+          <QuerySection query={projectsQuery} label='Recent projects'>
           {!projects?.length ? (
             <p className='px-3 py-5 text-sm text-muted'>No projects available.</p>
           ) : projects.slice(0, 5).map((project) => (
@@ -148,6 +161,7 @@ export default function CoordinatorDashboard() {
               <StatusBadge status={project.status} />
             </Link>
           ))}
+          </QuerySection>
         </RecordList>
       </div>
     </div>
@@ -185,7 +199,7 @@ function RecordList({ title, to, children }: { title: string; to: string; childr
     <section className='panel overflow-hidden'>
       <div className='flex items-center justify-between border-b border-border px-3 py-2'>
         <h2 className='text-sm font-medium'>{title}</h2>
-        <Link to={to} className='flex items-center gap-1 text-xs font-medium text-muted hover:text-foreground'>
+        <Link to={to} className='flex min-h-11 min-w-11 items-center gap-1 text-xs font-medium text-muted hover:text-foreground'>
           View all <ArrowRight size={13} />
         </Link>
       </div>

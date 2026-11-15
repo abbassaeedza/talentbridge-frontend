@@ -411,7 +411,7 @@ export default function AppLayout() {
         </header>
 
         <main className='flex-1 overflow-y-auto'>
-          <div className='mx-auto w-full max-w-[96rem] px-4 py-6 sm:px-6 sm:py-8 lg:px-8'>
+          <div className='mx-auto w-full max-w-[96rem] px-4 pt-6 pb-20 sm:px-6 sm:pt-8 sm:pb-20 lg:px-8'>
             <Outlet />
           </div>
         </main>

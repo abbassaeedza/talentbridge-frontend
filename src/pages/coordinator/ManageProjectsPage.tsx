@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectApi } from '../../api/services';
 import { AlertTriangle, CheckCircle, XCircle, Clock, Calendar, RefreshCw, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { format } from 'date-fns';
+import { formatDateTime, parseServerDateTime, toApiDateTime } from '../../utils/dateTime';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
 import type { GlobalDeadlinePreview } from '../../types';
 import { Link } from 'react-router-dom';
@@ -31,7 +31,9 @@ export default function ManageProjectsPage() {
   const [tab, setTab] = useState<TabStatus>('ALL');
   const [page, setPage] = useState(0);
   const [deadlines, setDeadlines] = useState<Record<string, string>>({});
+  const [invalidDeadlines, setInvalidDeadlines] = useState<Record<string, boolean>>({});
   const [globalDeadline, setGlobalDeadline] = useState('');
+  const [globalDeadlineValid, setGlobalDeadlineValid] = useState(true);
   const [globalEnabled, setGlobalEnabled] = useState(false);
   const [deadlinePreview, setDeadlinePreview] = useState<GlobalDeadlinePreview | null>(null);
 
@@ -49,7 +51,7 @@ export default function ManageProjectsPage() {
   useEffect(() => {
     if (!globalDeadlineQuery.data) return;
     setGlobalEnabled(globalDeadlineQuery.data.enabled);
-    setGlobalDeadline(globalDeadlineQuery.data.deadline?.slice(0, 16) ?? '');
+    setGlobalDeadline(globalDeadlineQuery.data.deadline ?? '');
   }, [globalDeadlineQuery.data]);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['all-projects-admin'] });
@@ -74,7 +76,7 @@ export default function ManageProjectsPage() {
 
   const deadlineMutation = useMutation({
     mutationFn: ({ id, deadline }: { id: string; deadline: string }) =>
-      projectApi.setDeadline(id, deadline),
+      projectApi.setDeadline(id, toApiDateTime(deadline)),
     onSuccess: () => { toast.success('Deadline set!'); invalidate(); },
     onError: () => toast.error('Failed to set deadline'),
   });
@@ -82,7 +84,7 @@ export default function ManageProjectsPage() {
   const globalDeadlineMutation = useMutation({
     mutationFn: () => projectApi.setGlobalDeadline({
       enabled: globalEnabled,
-      deadline: globalEnabled ? globalDeadline : globalDeadlineQuery.data?.deadline ?? null,
+      deadline: globalEnabled ? toApiDateTime(globalDeadline) : globalDeadlineQuery.data?.deadline ? toApiDateTime(globalDeadlineQuery.data.deadline) : null,
     }),
     onSuccess: async () => {
       await Promise.all([
@@ -97,12 +99,13 @@ export default function ManageProjectsPage() {
   });
 
   const previewMutation = useMutation({
-    mutationFn: () => projectApi.previewGlobalDeadline({ enabled: true, deadline: globalDeadline }).then((response) => response.data),
+    mutationFn: () => projectApi.previewGlobalDeadline({ enabled: true, deadline: toApiDateTime(globalDeadline) }).then((response) => response.data),
     onSuccess: setDeadlinePreview,
     onError: () => toast.error('Could not preview affected projects'),
   });
 
   const reviewGlobalChange = () => {
+    if (globalEnabled && (!globalDeadlineValid || !parseServerDateTime(globalDeadline))) return;
     if (globalEnabled) previewMutation.mutate();
     else setDeadlinePreview({
       affectedCounts: { PENDING_REVIEW: 0, OPEN: 0, ASSIGNED: 0 },
@@ -148,12 +151,12 @@ export default function ManageProjectsPage() {
             </p>
             <p className='mt-1 text-xs text-muted'>
               {globalDeadlineQuery.data?.deadline
-                ? format(new Date(globalDeadlineQuery.data.deadline), 'dd MMM yyyy HH:mm')
+                ? formatDateTime(globalDeadlineQuery.data.deadline)
                 : 'No deadline configured'}
             </p>
           </div>
-          <DateTimePicker label='Global deadline date and time' value={globalDeadline} onChange={setGlobalDeadline} isDisabled={!globalEnabled} />
-          <Button variant='primary' onPress={reviewGlobalChange} isDisabled={(globalEnabled && !globalDeadline) || previewMutation.isPending} className='lg:min-w-40'>
+          <DateTimePicker label='Global deadline date and time' value={globalDeadline} onChange={setGlobalDeadline} onValidityChange={setGlobalDeadlineValid} isDisabled={!globalEnabled} />
+          <Button variant='primary' onPress={reviewGlobalChange} isDisabled={(globalEnabled && (!globalDeadlineValid || !parseServerDateTime(globalDeadline))) || previewMutation.isPending} className='lg:min-w-40'>
             {previewMutation.isPending ? 'Loading preview...' : 'Preview changes'}
           </Button>
         </div>
@@ -231,7 +234,7 @@ export default function ManageProjectsPage() {
                         <DeadlineCountdown deadline={p.deadline ?? null} compact />
                         {p.deadline && (
                           <span className='text-xs text-muted'>
-                            {format(new Date(p.deadline), 'dd MMM yyyy HH:mm')}
+                            {formatDateTime(p.deadline)}
                           </span>
                         )}
                       </div>
@@ -260,11 +263,11 @@ export default function ManageProjectsPage() {
                       {/* Open and assigned projects keep independent deadlines */}
                       {(p.status === 'OPEN' || p.status === 'ASSIGNED') && (
                         <div className='flex items-end gap-2'>
-                          <DateTimePicker label={`Deadline for ${p.title}`} className='w-56' value={deadlines[p.id] ?? p.deadline?.slice(0, 19) ?? ''} onChange={(value) => setDeadlines((d) => ({ ...d, [p.id]: value }))} />
+                          <DateTimePicker label={`Deadline for ${p.title}`} className='w-56' value={deadlines[p.id] ?? p.deadline ?? ''} onChange={(value) => setDeadlines((d) => ({ ...d, [p.id]: value }))} onValidityChange={(valid) => setInvalidDeadlines((current) => current[p.id] === !valid ? current : { ...current, [p.id]: !valid })} />
                           <Button size='sm' variant='secondary'
                             aria-label={`Set deadline for ${p.title}`}
-                            onPress={() => deadlineMutation.mutate({ id: p.id, deadline: deadlines[p.id] ?? p.deadline?.slice(0, 19) ?? '' })}
-                            isDisabled={!(deadlines[p.id] ?? p.deadline) || deadlineMutation.isPending}>
+                            onPress={() => deadlineMutation.mutate({ id: p.id, deadline: deadlines[p.id] ?? p.deadline ?? '' })}
+                            isDisabled={invalidDeadlines[p.id] || !parseServerDateTime(deadlines[p.id] ?? p.deadline) || deadlineMutation.isPending}>
                             <Clock size={12} /> Set
                           </Button>
                           {p.status === 'OPEN' && (

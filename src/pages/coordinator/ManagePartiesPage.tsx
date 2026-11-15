@@ -24,6 +24,7 @@ import { Select } from '@heroui/react/select';
 import { Spinner } from '@heroui/react/spinner';
 import { EmptyState, ListToolbar, PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
 import DateTimePicker from '../../components/ui/DateTimePicker';
+import { parseServerDateTime, toApiDateTime } from '../../utils/dateTime';
 
 export default function ManagePartiesPage() {
   const qc = useQueryClient();
@@ -34,6 +35,7 @@ export default function ManagePartiesPage() {
   const [assignSup, setAssignSup] = useState<Record<string, string>>({});
   const [renameDraft, setRenameDraft] = useState<Record<string, string>>({});
   const [deadlineDraft, setDeadlineDraft] = useState<Record<string, string>>({});
+  const [invalidDeadlines, setInvalidDeadlines] = useState<Record<string, boolean>>({});
   const [expandedParty, setExpandedParty] = useState<string | null>(linkedPartyId);
 
   useEffect(() => {
@@ -100,7 +102,7 @@ export default function ManagePartiesPage() {
 
   const deadlineMutation = useMutation({
     mutationFn: ({ projectId, deadline }: { projectId: string; deadline: string }) =>
-      projectApi.setDeadline(projectId, deadline),
+      projectApi.setDeadline(projectId, toApiDateTime(deadline)),
     onSuccess: () => {
       toast.success('Project deadline updated');
       invalidate();
@@ -228,14 +230,14 @@ export default function ManagePartiesPage() {
 
               {party.assignedProjectId && (
                 <div className='flex min-w-0 items-end gap-2'>
-                  <DateTimePicker label={`Deadline for party ${party.name}`} className='min-w-0 flex-1' value={deadlineDraft[party.id] ?? party.assignedProjectDeadline?.slice(0, 19) ?? ''} onChange={(value) => setDeadlineDraft((draft) => ({ ...draft, [party.id]: value }))} />
+                  <DateTimePicker label={`Deadline for party ${party.name}`} className='min-w-0 flex-1' value={deadlineDraft[party.id] ?? party.assignedProjectDeadline ?? ''} onChange={(value) => setDeadlineDraft((draft) => ({ ...draft, [party.id]: value }))} onValidityChange={(valid) => setInvalidDeadlines((current) => current[party.id] === !valid ? current : { ...current, [party.id]: !valid })} />
                   <Button size='sm' variant='secondary'
                     aria-label={`Update deadline for party ${party.name}`}
                     onPress={() => deadlineMutation.mutate({
                       projectId: party.assignedProjectId!,
-                      deadline: deadlineDraft[party.id] ?? party.assignedProjectDeadline?.slice(0, 19) ?? '',
+                      deadline: deadlineDraft[party.id] ?? party.assignedProjectDeadline ?? '',
                     })}
-                    isDisabled={!(deadlineDraft[party.id] ?? party.assignedProjectDeadline) || deadlineMutation.isPending}
+                    isDisabled={invalidDeadlines[party.id] || !parseServerDateTime(deadlineDraft[party.id] ?? party.assignedProjectDeadline) || deadlineMutation.isPending}
                   >
                     <Clock size={13} /> Set
                   </Button>
