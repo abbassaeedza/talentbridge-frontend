@@ -28,13 +28,14 @@ Playwright uses two workers, no retries, rejects focused tests on CI, and starts
 
 Failed runs retain `test-results/`, `playwright-report/`, and any generated Linux snapshot PNGs for seven days in the `frontend-playwright-failure` artifact.
 These contain synthetic fixtures only, including actual screenshots and any generated expected screenshots when Linux baselines are missing.
-The first Linux run is expected to fail because only macOS baselines are committed.
-Download and inspect the CI screenshots before adding reviewed `*-chromium-linux.png` baselines alongside the unchanged `*-chromium-darwin.png` baselines.
+The initial Linux run 43718616847 at commit 625e116 failed with 55 passing tests and eight missing baselines, as expected when only macOS baselines were committed.
+All eight generated Linux screenshots from artifact 14163686971 were visually reviewed and are now committed as `*-chromium-linux.png` baselines alongside the unchanged `*-chromium-darwin.png` baselines.
+CI is pinned to Ubuntu 26.04 to match the reviewed baseline runner image confirmed in that run's primary job logs.
 Do not copy macOS screenshots into Linux filenames or accept generated screenshots without visual review.
 
 The release coordinator must register `Frontend checks` and enable strict required checks on `main`, including administrators, with zero required human approvals and no force pushes or branch deletion.
 Then prove that a failing PR cannot merge.
-Add the reviewed Linux baselines through a PR after that proof and protection setup.
+PR #3 was verified as blocked by the failing checks with `main` unchanged at 5d60 before these reviewed Linux baselines were added.
 Workflow files do not configure branch protection themselves.
 
 Keep Vercel's native GitHub deployments enabled.
