@@ -14,15 +14,14 @@ import { ToggleButton } from '@heroui/react/toggle-button';
 import { projectSupervisorInvitationApi } from '../../api/services';
 import DateTimePicker from '../../components/ui/DateTimePicker';
 import { parseServerDateTime, toApiDateTime } from '../../utils/dateTime';
-import { PROJECT_FIELDS, type Project, type ProjectDraft } from '../../types';
+import { PROJECT_FIELDS, type Project } from '../../types';
+import { PROJECT_DRAFT_EVENT, PROJECT_DRAFT_LIMITS as LIMITS, sanitizeProjectDraft } from '../../utils/projectDraft';
 
 const TOOL_SUGGESTIONS = [
   'React', 'TypeScript', 'Python', 'Node.js', 'Java', 'Spring Boot',
   'PostgreSQL', 'MongoDB', 'Docker', 'AWS', 'TensorFlow', 'PyTorch',
   'Vue.js', 'GraphQL', 'Redis',
 ];
-
-const LIMITS = { title: 100, text: 2000, short: 100, tools: 20 };
 
 function Count({ value, max }: { value: string; max: number }) {
   return <p className='mt-1 text-right text-[11px] text-muted'>{value.length}/{max}</p>;
@@ -88,6 +87,7 @@ export type ProjectFormData = Record<string, unknown> & {
 type Props = {
   initial?: Project;
   pending: boolean;
+  outcomeUnknown?: boolean;
   submitLabel: string;
   pendingLabel?: string;
   internalNameHelp: string;
@@ -99,6 +99,7 @@ type Props = {
 export default function ProjectForm({
   initial,
   pending,
+  outcomeUnknown = false,
   submitLabel,
   pendingLabel = 'Saving',
   internalNameHelp,
@@ -126,33 +127,27 @@ export default function ProjectForm({
 
   useEffect(() => {
     const populateDraft = (event: Event) => {
-      const draft = (event as CustomEvent<ProjectDraft>).detail;
-      if (!draft) return;
-      const text = (value: unknown, max: number) => typeof value === 'string' ? value.slice(0, max) : '';
+      const draft = sanitizeProjectDraft((event as CustomEvent<unknown>).detail);
       setForm((current) => ({
         ...current,
-        title: current.title || text(draft.title, LIMITS.title),
-        description: current.description || text(draft.description, LIMITS.text),
-        scope: current.scope || text(draft.scope, LIMITS.text),
-        deliverables: current.deliverables || text(draft.deliverables, LIMITS.text),
-        evaluationCriteria: current.evaluationCriteria || text(draft.evaluationCriteria, LIMITS.text),
+        title: current.title || draft.title || '',
+        description: current.description || draft.description || '',
+        scope: current.scope || draft.scope || '',
+        deliverables: current.deliverables || draft.deliverables || '',
+        evaluationCriteria: current.evaluationCriteria || draft.evaluationCriteria || '',
       }));
-      setTools((current) => current.length ? current : (draft.tools ?? [])
-        .filter((tool): tool is string => typeof tool === 'string' && !!tool.trim())
-        .map((tool) => tool.trim().slice(0, LIMITS.short))
-        .filter((tool, index, values) => values.indexOf(tool) === index)
-        .slice(0, LIMITS.tools));
+      setTools((current) => current.length ? current : draft.tools ?? []);
       setSelectedField((current) => {
         if (current) return current;
-        const field = text(draft.projectField, LIMITS.short);
+        const field = draft.projectField;
         if (!field) return current;
         if ((PROJECT_FIELDS as readonly string[]).includes(field)) return field;
         setCustomField(field);
         return 'Other';
       });
     };
-    window.addEventListener('talentbridge:project-draft', populateDraft);
-    return () => window.removeEventListener('talentbridge:project-draft', populateDraft);
+    window.addEventListener(PROJECT_DRAFT_EVENT, populateDraft);
+    return () => window.removeEventListener(PROJECT_DRAFT_EVENT, populateDraft);
   }, []);
 
   const set = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
@@ -172,7 +167,7 @@ export default function ProjectForm({
   });
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (!deadlineValid || (form.deadline && !parseServerDateTime(form.deadline))) return;
+    if (pending || outcomeUnknown || !deadlineValid || (form.deadline && !parseServerDateTime(form.deadline))) return;
     onSubmit(data());
   };
 
@@ -282,11 +277,11 @@ export default function ProjectForm({
       <div className='sticky bottom-0 -mx-2 flex flex-col-reverse gap-2 border-t border-border bg-background/95 px-2 py-4 backdrop-blur sm:flex-row sm:justify-end'>
         <Button type='button' variant='ghost' onPress={onCancel}>Cancel</Button>
         {onSaveDraft && (
-          <Button type='button' variant='secondary' onPress={() => onSaveDraft({ ...data(), saveAsDraft: true })} isDisabled={pending || !form.title || !form.description || !deadlineValid || (!!form.deadline && !parseServerDateTime(form.deadline))}>
+          <Button type='button' variant='secondary' onPress={() => { if (!outcomeUnknown && !pending) onSaveDraft({ ...data(), saveAsDraft: true }); }} isDisabled={outcomeUnknown || pending || !form.title || !form.description || !deadlineValid || (!!form.deadline && !parseServerDateTime(form.deadline))}>
             Save as draft
           </Button>
         )}
-        <Button type='submit' variant='primary' isDisabled={pending || !form.title || !form.description || !deadlineValid || (!!form.deadline && !parseServerDateTime(form.deadline))}>
+        <Button type='submit' variant='primary' isDisabled={outcomeUnknown || pending || !form.title || !form.description || !deadlineValid || (!!form.deadline && !parseServerDateTime(form.deadline))}>
           {pending ? <><Spinner size='sm' /> {pendingLabel}</> : submitLabel}
         </Button>
       </div>

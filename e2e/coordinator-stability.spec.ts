@@ -545,7 +545,8 @@ test('shows a safe backend chatbot failure', async ({ page }) => {
   await page.getByPlaceholder('Ask about TalentBridge').fill('Explain this project');
   await page.getByRole('button', { name: 'Send message' }).click();
 
-  await expect(page.getByText('AI service is temporarily unavailable')).toBeVisible();
+  await expect(page.getByRole('log')).toContainText('AI is temporarily unavailable. Navigation and workflow help are still available.');
+  await expect(page.getByRole('log')).not.toContainText('AI service is temporarily unavailable');
 });
 
 test('uses a safe fallback for malformed chatbot errors', async ({ page }) => {
@@ -567,5 +568,6 @@ test('uses a safe fallback for malformed chatbot errors', async ({ page }) => {
   await page.getByPlaceholder('Ask about TalentBridge').fill('Explain this project');
   await page.getByRole('button', { name: 'Send message' }).click();
 
-  await expect(page.getByText('Sorry, I ran into an error. Please try again.')).toBeVisible();
+  await expect(page.getByRole('log')).toContainText('AI is temporarily unavailable. Navigation and workflow help are still available.');
+  await expect(page.getByRole('log')).not.toContainText('unsafe');
 });

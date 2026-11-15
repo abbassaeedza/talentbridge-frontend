@@ -1,4 +1,4 @@
-import axios, { type AxiosResponse } from 'axios';
+import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import {
   clearAuthTokens,
   getAccessToken,
@@ -8,6 +8,7 @@ import {
 } from '../utils/authTokens';
 import type { AuthResponse } from '../types';
 import { isAuthRejection } from '../utils/authErrors';
+import { chatContextCache, isChatContextWrite } from '../utils/chatContextCache';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 let pendingRefresh: { token: string; promise: Promise<AxiosResponse<AuthResponse>> } | undefined;
@@ -17,6 +18,15 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
   timeout: 90000,
 });
+
+function invalidateChatContext(config: AxiosRequestConfig | undefined) {
+  if (!isChatContextWrite(config?.method, config?.url)) return;
+  const sentToken = String(config?.headers?.Authorization ?? '').replace(/^Bearer /, '');
+  const currentToken = getAccessToken();
+  if (!sentToken || !currentToken) return;
+  const sentSession = getJwtSessionKey(sentToken);
+  if (sentSession ? sentSession === getJwtSessionKey(currentToken) : sentToken === currentToken) chatContextCache.clear();
+}
 
 function signOutIfCurrent(refreshToken: string | null) {
   if (getRefreshToken() !== refreshToken) return;
@@ -56,9 +66,14 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    invalidateChatContext(res.config);
+    return res;
+  },
   async (error) => {
     const original = error.config;
+    // A transport/server failure may happen after a write committed.
+    invalidateChatContext(original);
     const credentialEndpoint = /\/api\/auth\/(login|register|refresh)(\?|$)/.test(original?.url ?? '');
     if (error.response?.status === 401 && original && !original._retry && !credentialEndpoint
       && original.headers?.Authorization) {

@@ -10,7 +10,8 @@ import type {
   Scorecard,
   PageResponse,
   ChatMessage,
-  ProjectDraft,
+  ChatResponse,
+  ChatContextSnapshot,
   Application,
   User,
   ProfileUpdateRequest,
@@ -218,18 +219,20 @@ export const evaluationApi = {
 
 // ── Chat ────────────────────────────────────────────────────────────
 export const chatApi = {
+  context: (signal?: AbortSignal) => api.get<ChatContextSnapshot>('/api/chat/context', { signal }),
   send: (
     message: string,
     history: ChatMessage[],
     context: string,
     projectId?: string,
+    signal?: AbortSignal,
   ) =>
-    api.post<{ message: string; model: string; projectDraft?: ProjectDraft }>('/api/chat', {
-      message,
-      history,
+    api.post<ChatResponse>('/api/chat', {
+      message: message.slice(0, 2000),
+      history: history.slice(-10).map(({ role, content }) => ({ role, content: content.slice(0, 2000) })),
       context,
       projectId,
-    }),
+    }, { signal }),
 };
 
 // ── Coordinator Analytics ──────────────────────────────────────────

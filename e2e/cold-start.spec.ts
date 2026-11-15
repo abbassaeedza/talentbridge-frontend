@@ -232,10 +232,15 @@ for (const failure of [503, 'offline', 'timeout'] as const) {
     await page.getByLabel('Project title', { exact: true }).fill('Draft stays here');
     await page.getByLabel('Project description', { exact: true }).fill('No automatic retry.');
     await page.getByRole('button', { name: 'Save as draft', exact: true }).click();
-    await expect(page.getByText('Failed to create project', { exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Save as draft', exact: true })).toBeEnabled();
+    await expect(page.getByRole('alert').filter({ hasText: 'Save outcome unknown' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save as draft', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Submit for review', exact: true })).toBeDisabled();
+    await expect(page.getByRole('link', { name: 'Inspect projects', exact: true })).toHaveAttribute('href', '/company/projects');
     expect(writes).toBe(1);
     await expect(page.getByLabel('Project title', { exact: true })).toHaveValue('Draft stays here');
+    await expect(page.getByLabel('Project description', { exact: true })).toHaveValue('No automatic retry.');
+    await page.getByLabel('Project title', { exact: true }).press('Enter');
+    expect(writes).toBe(1);
   });
 }
 
