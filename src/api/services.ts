@@ -1,4 +1,5 @@
-import api from './client';
+import api, { refreshSession } from './client';
+import { clearAuthTokens, getAccessToken, getRefreshToken, getJwtSessionKey } from '../utils/authTokens';
 import type {
   AuthResponse,
   Project,
@@ -31,10 +32,13 @@ export const authApi = {
     api.post<AuthResponse>('/api/auth/register', data),
   login: (email: string, password: string) =>
     api.post<AuthResponse>('/api/auth/login', { email, password }),
-  refresh: (refreshToken: string) =>
-    api.post<AuthResponse>('/api/auth/refresh', { refreshToken }),
-  changePassword: (currentPassword: string, newPassword: string) =>
-    api.put('/api/auth/password', { currentPassword, newPassword }),
+  refresh: refreshSession,
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    const session = getJwtSessionKey(getAccessToken());
+    const refreshToken = getRefreshToken();
+    await api.put('/api/auth/password', { currentPassword, newPassword });
+    if (session ? session === getJwtSessionKey(getAccessToken()) : refreshToken === getRefreshToken()) clearAuthTokens();
+  },
 };
 
 export const projectSupervisorInvitationApi = {

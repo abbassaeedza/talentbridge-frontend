@@ -7,6 +7,7 @@ import {
   ReactNode,
   useRef,
 } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { authApi, userApi } from '../api/services';
 import type { AuthResponse, User, UserRole } from '../types';
 import SessionTimeoutModal from '../components/shared/SessionTimeoutModal';
@@ -15,6 +16,7 @@ import {
   clearAuthTokens,
   getAccessToken,
   getJwtExpiryMs,
+  getJwtSessionKey,
   getRefreshToken,
   setAuthTokens,
 } from '../utils/authTokens';
@@ -36,6 +38,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
+  const sessionGeneration = useRef(0);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionWarningOpen, setSessionWarningOpen] = useState(false);
@@ -52,12 +56,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshUser = useCallback(async () => {
+    const generation = sessionGeneration.current;
+    const session = getJwtSessionKey(getAccessToken());
+    const stillCurrent = () => sessionGeneration.current === generation
+      && getJwtSessionKey(getAccessToken()) === session;
     try {
       const { data } = await userApi.getMe();
-      setUser(data);
+      if (stillCurrent() && getAccessToken()) setUser(data);
     } catch {
-      setUser(null);
-      clearAuthTokens();
+      if (stillCurrent()) {
+        setUser(null);
+        clearAuthTokens();
+      }
     }
   }, []);
 
@@ -68,11 +78,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    sessionGeneration.current += 1;
+    void queryClient.cancelQueries();
+    queryClient.clear();
     clearSessionTimers();
     setSessionWarningOpen(false);
+    setRefreshingSession(false);
     clearAuthTokens();
     setUser(null);
-  }, [clearSessionTimers]);
+  }, [clearSessionTimers, queryClient]);
 
   const expireSession = useCallback(() => {
     logout();
@@ -102,15 +116,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const msUntilWarning = Math.max(0, msUntilExpiry - SESSION_WARNING_MS);
     warningTimerRef.current = window.setTimeout(() => {
+      if (getAccessToken() !== token) return;
       setSessionWarningOpen(true);
       setSecondsRemaining(Math.max(0, Math.ceil((expiryMs - Date.now()) / 1000)));
     }, msUntilWarning);
 
-    expiryTimerRef.current = window.setTimeout(expireSession, msUntilExpiry);
+    expiryTimerRef.current = window.setTimeout(() => {
+      if (getAccessToken() === token) expireSession();
+    }, msUntilExpiry);
   }, [clearSessionTimers, expireSession, user]);
 
   useEffect(() => {
-    const syncSessionTimers = () => scheduleSessionTimeout();
+    const syncSessionTimers = (event?: Event) => {
+      if (!getAccessToken()) {
+        sessionGeneration.current += 1;
+        void queryClient.cancelQueries();
+        queryClient.clear();
+        setUser(null);
+        setSessionWarningOpen(false);
+        setRefreshingSession(false);
+      } else if (event instanceof StorageEvent && event.key === 'accessToken') {
+        const previous = getJwtSessionKey(event.oldValue);
+        const next = getJwtSessionKey(event.newValue);
+        if (previous && previous === next) {
+          if ((getJwtExpiryMs(event.newValue!) ?? 0) > Date.now() + SESSION_WARNING_MS) {
+            setSessionWarningOpen(false);
+            setRefreshingSession(false);
+          }
+        } else {
+          sessionGeneration.current += 1;
+          void queryClient.cancelQueries();
+          queryClient.clear();
+          setUser(null);
+          setSessionWarningOpen(false);
+          setRefreshingSession(false);
+          setLoading(true);
+          void refreshUser().finally(() => setLoading(false));
+        }
+      }
+      scheduleSessionTimeout();
+    };
 
     window.addEventListener(AUTH_TOKEN_CHANGED_EVENT, syncSessionTimers);
     window.addEventListener('storage', syncSessionTimers);
@@ -121,7 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('storage', syncSessionTimers);
       clearSessionTimers();
     };
-  }, [clearSessionTimers, scheduleSessionTimeout]);
+  }, [clearSessionTimers, scheduleSessionTimeout, queryClient, refreshUser]);
 
   useEffect(() => {
     if (!sessionWarningOpen) return;
@@ -154,6 +199,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshUser]);
 
   const completeLogin = async (data: AuthResponse) => {
+    sessionGeneration.current += 1;
+    clearSessionTimers();
+    setSessionWarningOpen(false);
+    setRefreshingSession(false);
+    void queryClient.cancelQueries();
+    queryClient.clear();
+    setUser(null);
     setAuthTokens(data.accessToken, data.refreshToken);
 
     // Redirect based on status before loading the full user.
@@ -188,17 +240,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const generation = sessionGeneration.current;
+    const session = getJwtSessionKey(getAccessToken());
+    const stillCurrent = () => sessionGeneration.current === generation
+      && getJwtSessionKey(getAccessToken()) === session;
     setRefreshingSession(true);
     try {
       const { data } = await authApi.refresh(refreshToken);
-      setAuthTokens(data.accessToken, data.refreshToken);
+      if (!stillCurrent() || getRefreshToken() !== data.refreshToken) return;
       setUser(data.user as unknown as User);
       await refreshUser();
-      setSessionWarningOpen(false);
+      if (stillCurrent()) setSessionWarningOpen(false);
     } catch {
-      expireSession();
+      if (stillCurrent() && getRefreshToken() === refreshToken) expireSession();
     } finally {
-      setRefreshingSession(false);
+      if (stillCurrent()) setRefreshingSession(false);
     }
   };
 
