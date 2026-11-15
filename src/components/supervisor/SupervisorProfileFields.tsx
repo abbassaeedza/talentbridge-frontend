@@ -27,7 +27,7 @@ export default function SupervisorProfileFields({ value, onChange }: Props) {
       </TextField>
       <TextField fullWidth>
         <Label>LinkedIn URL</Label>
-        <Input fullWidth type='url' maxLength={500} value={value.linkedinUrl ?? ''} onChange={(event) => set('linkedinUrl', event.target.value)} placeholder='https://linkedin.com/in/...' />
+        <Input fullWidth type='url' pattern='https?://.+' maxLength={500} value={value.linkedinUrl ?? ''} onChange={(event) => set('linkedinUrl', event.target.value)} placeholder='https://linkedin.com/in/...' />
       </TextField>
     </>
   );

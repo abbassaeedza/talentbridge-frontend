@@ -13,6 +13,7 @@ import type {
   ProjectDraft,
   Application,
   User,
+  ProfileUpdateRequest,
   StudentProfile,
   Notification,
   CoordinatorAnalytics,
@@ -75,7 +76,7 @@ export const userApi = {
   getScorecard: (userId: string) =>
     api.get<Scorecard>(`/api/users/${userId}/scorecard`),
   getMyScorecard: () => api.get<Scorecard>('/api/users/my/scorecard'),
-  updateMyProfile: (data: Record<string, unknown>) =>
+  updateMyProfile: (data: ProfileUpdateRequest) =>
     api.put<User>('/api/users/me/profile', data),
   getPending: (page = 0, size = 20) =>
     api.get<PageResponse<User>>('/api/users/pending', {

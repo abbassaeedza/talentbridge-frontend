@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
 import { Building2, Check, Github, Globe, GraduationCap, Linkedin, Mail, MapPin, Pencil, Phone, Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Avatar } from '@heroui/react/avatar';
@@ -15,10 +14,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { userApi } from '../../api/services';
 import { PageHeader } from '../../components/ui/TalentBridgeUI';
 import { defaultAvatarUrl } from '../../utils/avatar';
+import { profileUpdatePayload, type ProfileForm } from '../../utils/accountFlows';
+import { getAccessToken, getJwtSessionKey } from '../../utils/authTokens';
+import type { User } from '../../types';
 
-const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Postgraduate'];
+const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Masters', 'PhD', 'Postgraduate'];
 
-function Field({ label, value, onChange, ...props }: { label: string; value: string | number; onChange: (value: string) => void } & Omit<React.ComponentProps<typeof Input>, 'value' | 'onChange'>) {
+function Field({ label, value, onChange, ...props }: { label: string; value?: string | number | null; onChange: (value: string) => void } & Omit<React.ComponentProps<typeof Input>, 'value' | 'onChange'>) {
   return <TextField fullWidth><Label>{label}</Label><Input fullWidth value={String(value ?? '')} onChange={(event) => onChange(event.target.value)} {...props} /></TextField>;
 }
 
@@ -49,7 +51,7 @@ function SkillsInput({ value, onChange }: { value: string[]; onChange: (value: s
       <div className='mt-3 flex flex-wrap gap-2'>
         {value.map((skill) => (
           <span key={skill} className='inline-flex items-center gap-1.5 rounded-sm bg-default px-2 py-1 text-xs font-medium'>
-            {skill}<Button isIconOnly size='sm' variant='ghost' aria-label={`Remove ${skill}`} onPress={() => onChange(value.filter((item) => item !== skill))}><X size={12} /></Button>
+            {skill}<Button type='button' isIconOnly size='sm' variant='ghost' aria-label={`Remove ${skill}`} onPress={() => onChange(value.filter((item) => item !== skill))}><X size={12} /></Button>
           </span>
         ))}
       </div>
@@ -58,33 +60,81 @@ function SkillsInput({ value, onChange }: { value: string[]; onChange: (value: s
 }
 
 export default function ProfilePage() {
-  const { user, refreshUser } = useAuth();
+  const { user } = useAuth();
+  return user ? <ProfileEditor key={user.id} user={user} /> : null;
+}
+
+function ProfileEditor({ user }: { user: User }) {
+  const { refreshUser, authError } = useAuth();
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState<Record<string, any>>({});
-  if (!user) return null;
-  const student = (user as any).studentProfile;
-  const company = (user as any).companyProfile;
+  const [form, setForm] = useState<ProfileForm>({});
+  const [pending, setPending] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const busy = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const student = user.studentProfile;
+  const savedYear = student?.yearOfStudy;
+  const years = savedYear?.trim() && savedYear.length <= 50 && !YEARS.includes(savedYear)
+    ? [...YEARS, savedYear] : YEARS;
+  const company = user.companyProfile;
   const supervisor = user.supervisorProfile;
   const isStudent = user.role === 'STUDENT';
   const isCompany = user.role === 'COMPANY';
   const isSupervisor = user.role === 'PARTY_SUPERVISOR' || user.role === 'PROJECT_SUPERVISOR';
   const initials = `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`;
   const photo = supervisor?.profilePhotoUrl ? new URL(supervisor.profilePhotoUrl, import.meta.env.VITE_API_URL || 'http://localhost:8080').toString() : undefined;
-  const set = (key: string, value: any) => setForm((current) => ({ ...current, [key]: value }));
+  const set = <K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) => setForm((current) => ({ ...current, [key]: value }));
   const startEdit = () => {
     setForm({
       firstName: user.firstName ?? '', lastName: user.lastName ?? '', phoneNumber: user.phoneNumber ?? '',
-      university: student?.university ?? '', major: student?.major ?? '', yearOfStudy: student?.yearOfStudy ?? '', bio: student?.bio ?? '',
-      linkedinUrl: student?.linkedinUrl ?? '', portfolioUrl: student?.portfolioUrl ?? '', pastExperience: student?.pastExperience ?? '', skills: student?.skills ?? [], gpa: student?.gpa ?? '',
-      companyName: company?.companyName ?? '', industry: company?.industry ?? '', description: company?.description ?? '', website: company?.website ?? '', city: company?.city ?? '', country: company?.country ?? '',
+      ...(isStudent ? {
+        university: student?.university ?? '', major: student?.major ?? '', yearOfStudy: student?.yearOfStudy ?? '', bio: student?.bio ?? '',
+        linkedinUrl: student?.linkedinUrl ?? '', portfolioUrl: student?.portfolioUrl ?? '', pastExperience: student?.pastExperience ?? '', skills: student?.skills ?? [], gpa: student?.gpa ?? '',
+      } : {}),
+      ...(isCompany ? {
+        companyName: company?.companyName ?? '', industry: company?.industry ?? '', description: company?.description ?? '', website: company?.website ?? '', city: company?.city ?? '', country: company?.country ?? '',
+      } : {}),
     });
+    setSaved(false);
+    setError(null);
     setEditing(true);
   };
-  const mutation = useMutation({
-    mutationFn: () => userApi.updateMyProfile({ ...form, gpa: form.gpa ? Number(form.gpa) : undefined }),
-    onSuccess: async () => { await refreshUser(); setEditing(false); toast.success('Profile updated'); },
-    onError: (error: any) => toast.error(error?.response?.data?.message || 'Could not update profile'),
-  });
+  const save = async () => {
+    if (busy.current) return;
+    const required = [form.firstName, form.lastName,
+      ...(isStudent ? [form.university, form.yearOfStudy, form.major] : []),
+      ...(isCompany ? [form.companyName] : [])];
+    if (!saved && required.some(value => !value?.trim())) {
+      setError('Enter the required names and, for students, university, year of study, and major.');
+      return;
+    }
+    const session = getJwtSessionKey(getAccessToken()) ?? getAccessToken();
+    const stillCurrent = () => mounted.current && !!getAccessToken()
+      && session === (getJwtSessionKey(getAccessToken()) ?? getAccessToken());
+    busy.current = true;
+    setPending(true);
+    setError(null);
+    try {
+      if (!saved) {
+        const payload = profileUpdatePayload(user.role, form);
+        await userApi.updateMyProfile(payload);
+        if (!stillCurrent()) return;
+        setSaved(true);
+      }
+      const refreshed = await refreshUser();
+      if (stillCurrent() && refreshed) {
+        setEditing(false);
+        toast.success('Profile updated');
+      }
+    } catch (error: any) {
+      if (stillCurrent()) setError(error?.response?.data?.message || 'Could not update profile. Your changes are still here.');
+    } finally {
+      busy.current = false;
+      if (mounted.current) setPending(false);
+    }
+  };
   const subtitle = isStudent
     ? [student?.major, student?.university].filter(Boolean).join(' · ')
     : isCompany ? company?.companyName
@@ -112,13 +162,14 @@ export default function ProfilePage() {
       </section>
 
       {editing ? (
-        <div className='space-y-8 py-7'>
+        <form className='space-y-8 py-7' onInvalid={() => setError('Check required names, university, year of study, major, GPA (0 to 4), and URLs (http or https).')} onSubmit={event => { event.preventDefault(); void save(); }}>
+          <fieldset className='space-y-8' disabled={pending || saved}>
           <section>
             <h3 className='mb-5 text-base font-semibold'>Account details</h3>
             <div className='grid gap-5 sm:grid-cols-2'>
-              <Field label='First name' value={form.firstName} onChange={(value) => set('firstName', value)} maxLength={100} />
-              <Field label='Last name' value={form.lastName} onChange={(value) => set('lastName', value)} maxLength={100} />
-              <Field label='Phone number' value={form.phoneNumber} onChange={(value) => set('phoneNumber', value)} maxLength={30} />
+              <Field label='First name' required value={form.firstName} onChange={(value) => set('firstName', value)} maxLength={100} />
+              <Field label='Last name' required value={form.lastName} onChange={(value) => set('lastName', value)} maxLength={100} />
+              <Field label='Phone number' value={form.phoneNumber} onChange={(value) => set('phoneNumber', value)} maxLength={50} />
             </div>
           </section>
 
@@ -126,18 +177,18 @@ export default function ProfilePage() {
             <section className='border-t border-separator pt-7'>
               <h3 className='mb-5 text-base font-semibold'>Academic profile</h3>
               <div className='grid gap-5 sm:grid-cols-2'>
-                <Field label='University' value={form.university} onChange={(value) => set('university', value)} maxLength={255} />
-                <Field label='Major' value={form.major} onChange={(value) => set('major', value)} maxLength={255} />
-                <Select.Root fullWidth aria-label='Year of study' selectedKey={form.yearOfStudy || null} onSelectionChange={(key) => set('yearOfStudy', String(key))}>
-                  <Label>Year of study</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{YEARS.map((year) => <ListBox.Item key={year} id={year} textValue={year}>{year}</ListBox.Item>)}</ListBox></Select.Popover>
+                <Field label='University' required value={form.university} onChange={(value) => set('university', value)} maxLength={255} />
+                <Field label='Major' required value={form.major} onChange={(value) => set('major', value)} maxLength={255} />
+                <Select.Root fullWidth isRequired aria-label='Year of study' selectedKey={form.yearOfStudy || null} onSelectionChange={(key) => set('yearOfStudy', key === null ? '' : String(key))}>
+                  <Label>Year of study</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{years.map((year) => <ListBox.Item key={year} id={year} textValue={year}>{year}</ListBox.Item>)}</ListBox></Select.Popover>
                 </Select.Root>
                 <Field label='GPA' value={form.gpa} onChange={(value) => set('gpa', value)} type='number' min='0' max='4' step='0.01' />
-                <Field label='LinkedIn URL' value={form.linkedinUrl} onChange={(value) => set('linkedinUrl', value)} type='url' maxLength={500} />
-                <Field label='Portfolio URL' value={form.portfolioUrl} onChange={(value) => set('portfolioUrl', value)} type='url' maxLength={500} />
+                <Field label='LinkedIn URL' value={form.linkedinUrl} onChange={(value) => set('linkedinUrl', value)} type='url' pattern='https?://.+' maxLength={500} />
+                <Field label='Portfolio URL' value={form.portfolioUrl} onChange={(value) => set('portfolioUrl', value)} type='url' pattern='https?://.+' maxLength={500} />
               </div>
-              <TextField fullWidth className='mt-5'><Label>Bio</Label><TextArea fullWidth rows={3} maxLength={2000} value={form.bio} onChange={(event) => set('bio', event.target.value)} /></TextField>
+              <TextField fullWidth className='mt-5'><Label>Bio</Label><TextArea fullWidth rows={3} maxLength={2000} value={form.bio ?? ''} onChange={(event) => set('bio', event.target.value)} /></TextField>
               <div className='mt-5'><Label>Skills</Label><div className='mt-2'><SkillsInput value={form.skills ?? []} onChange={(value) => set('skills', value)} /></div></div>
-              <TextField fullWidth className='mt-5'><Label>Past experience</Label><TextArea fullWidth rows={4} maxLength={3000} value={form.pastExperience} onChange={(event) => set('pastExperience', event.target.value)} /></TextField>
+              <TextField fullWidth className='mt-5'><Label>Past experience</Label><TextArea fullWidth rows={4} maxLength={3000} value={form.pastExperience ?? ''} onChange={(event) => set('pastExperience', event.target.value)} /></TextField>
             </section>
           )}
 
@@ -145,21 +196,26 @@ export default function ProfilePage() {
             <section className='border-t border-separator pt-7'>
               <h3 className='mb-5 text-base font-semibold'>Company profile</h3>
               <div className='grid gap-5 sm:grid-cols-2'>
-                <Field label='Company name' value={form.companyName} onChange={(value) => set('companyName', value)} maxLength={255} />
-                <Field label='Industry' value={form.industry} onChange={(value) => set('industry', value)} maxLength={255} />
-                <Field label='Website' value={form.website} onChange={(value) => set('website', value)} type='url' maxLength={500} />
-                <Field label='City' value={form.city} onChange={(value) => set('city', value)} maxLength={255} />
-                <Field label='Country' value={form.country} onChange={(value) => set('country', value)} maxLength={255} />
+                <Field label='Company name' required value={form.companyName} onChange={(value) => set('companyName', value)} maxLength={255} />
+                <Field label='Industry' value={form.industry} onChange={(value) => set('industry', value)} maxLength={100} />
+                <Field label='Website' value={form.website} onChange={(value) => set('website', value)} type='url' pattern='https?://.+' maxLength={500} />
+                <Field label='City' value={form.city} onChange={(value) => set('city', value)} maxLength={100} />
+                <Field label='Country' value={form.country} onChange={(value) => set('country', value)} maxLength={100} />
               </div>
-              <TextField fullWidth className='mt-5'><Label>Company description</Label><TextArea fullWidth rows={4} maxLength={2000} value={form.description} onChange={(event) => set('description', event.target.value)} /></TextField>
+              <TextField fullWidth className='mt-5'><Label>Company description</Label><TextArea fullWidth rows={4} maxLength={2000} value={form.description ?? ''} onChange={(event) => set('description', event.target.value)} /></TextField>
             </section>
           )}
 
-          <div className='sticky bottom-0 flex justify-end gap-2 border-t border-border bg-background/95 py-4 backdrop-blur'>
-            <Button variant='ghost' onPress={() => setEditing(false)}><X size={15} /> Cancel</Button>
-            <Button variant='primary' isDisabled={mutation.isPending} onPress={() => mutation.mutate()}>{mutation.isPending ? <Spinner size='sm' /> : <Check size={15} />} Save changes</Button>
+          </fieldset>
+          <div className='sticky bottom-0 space-y-3 border-t border-border bg-background/95 py-4 backdrop-blur'>
+            {error && <p role='alert' className='text-sm leading-6 text-danger'>{error}</p>}
+            {saved && authError && <p role='alert' className='text-sm leading-6 text-muted'>Your profile was saved. {authError} Retry reloads your saved profile without saving again.</p>}
+            <div className='flex justify-end gap-2'>
+            {!saved && <Button type='button' className='min-h-11' variant='ghost' isDisabled={pending} onPress={() => setEditing(false)}><X size={15} /> Cancel</Button>}
+            <Button type='submit' formNoValidate={saved} className='min-h-11' variant='primary' isDisabled={pending}>{pending ? <Spinner size='sm' /> : <Check size={15} />} {saved ? 'Retry' : 'Save changes'}</Button>
+            </div>
           </div>
-        </div>
+        </form>
       ) : (
         <div className='py-7'>
           <h3 className='mb-2 text-base font-semibold'>Details</h3>
@@ -186,7 +242,7 @@ export default function ProfilePage() {
           </>}
           {isStudent && (
             <div className='mt-7 grid gap-7 border-t border-separator pt-7 sm:grid-cols-2'>
-              <section><h3 className='text-sm font-semibold'>Skills</h3><div className='mt-3 flex flex-wrap gap-2'>{(student?.skills ?? []).length ? student.skills.map((skill: string) => <span key={skill} className='rounded-sm bg-default px-2 py-1 text-xs'>{skill}</span>) : <p className='text-sm text-muted'>No skills added.</p>}</div></section>
+              <section><h3 className='text-sm font-semibold'>Skills</h3><div className='mt-3 flex flex-wrap gap-2'>{(student?.skills ?? []).length ? student?.skills.map((skill: string) => <span key={skill} className='rounded-sm bg-default px-2 py-1 text-xs'>{skill}</span>) : <p className='text-sm text-muted'>No skills added.</p>}</div></section>
               <section><h3 className='text-sm font-semibold'>Past experience</h3><p className='mt-3 whitespace-pre-wrap text-sm leading-6 text-muted'>{student?.pastExperience || 'No experience added.'}</p></section>
             </div>
           )}

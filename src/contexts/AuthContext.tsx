@@ -29,8 +29,8 @@ interface AuthContextType {
   loading: boolean;
   authError: string | null;
   retryUser: () => void;
-  login: (email: string, password: string) => Promise<void>;
-  completeExternalLogin: (data: AuthResponse) => Promise<void>;
+  login: (email: string, password: string) => Promise<boolean>;
+  completeExternalLogin: (data: AuthResponse) => Promise<boolean>;
   logout: () => void;
   refreshUser: () => Promise<boolean>;
   isRole: (...roles: UserRole[]) => boolean;
@@ -246,25 +246,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.user as unknown as User);
       setLoading(false);
       window.location.href = '/rejected';
-      return;
+      return false;
     }
 
     if (data.user.status === 'PENDING') {
       setUser(data.user as unknown as User);
       setLoading(false);
       window.location.href = '/pending';
-      return;
+      return false;
     }
 
-    await refreshUser();
+    return refreshUser();
   };
 
   const login = async (email: string, password: string) => {
+    const generation = sessionGeneration.current;
+    const initialAccess = getAccessToken();
+    const initialRefresh = getRefreshToken();
     const { data } = await authApi.login(email, password);
+    if (sessionGeneration.current !== generation || getAccessToken() !== initialAccess
+      || getRefreshToken() !== initialRefresh) return false;
     await completeLogin(data);
+    return sessionGeneration.current === generation + 1;
   };
 
-  const completeExternalLogin = async (data: AuthResponse) => completeLogin(data);
+  const externalLoginGeneration = sessionGeneration.current;
+  const completeExternalLogin = async (data: AuthResponse) => {
+    if (sessionGeneration.current !== externalLoginGeneration || getAccessToken()) return false;
+    return completeLogin(data);
+  };
 
   const stayLoggedIn = async () => {
     if (refreshingSession) return;
