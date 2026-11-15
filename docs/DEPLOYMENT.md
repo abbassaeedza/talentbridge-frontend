@@ -13,10 +13,34 @@ This guide deploys the TalentBridge React application from its GitHub repository
 1. Open the Vercel dashboard and select **Add New > Project**.
 2. Import `abbassaeedza/talentbridge-frontend`.
 3. Keep the detected **Vite** framework preset.
-4. Set the build command to `npm run build`.
+4. Keep the committed build command `npm test && npm run build`.
 5. Set the output directory to `dist`.
 
 The committed `vercel.json` sends all browser routes to `index.html`, so React Router routes work after refresh.
+`package.json` selects Node.js 24.x for both Vercel builds and local development.
+
+## CI and protected releases
+
+GitHub Actions runs the stable `Frontend checks` job on pull requests targeting `main` and pushes to `main`.
+It uses Node.js 24, `npm ci`, every `src/**/*.test.ts` unit test, the production build, and the full Chromium E2E suite with mocked APIs.
+The CI API URL is loopback-only; no production backend, credentials, or Vercel token are needed.
+Playwright uses two workers, no retries, rejects focused tests on CI, and starts its own development server on CI.
+
+Failed runs retain `test-results/`, `playwright-report/`, and any generated Linux snapshot PNGs for seven days in the `frontend-playwright-failure` artifact.
+These contain synthetic fixtures only, including actual screenshots and any generated expected screenshots when Linux baselines are missing.
+The initial Linux run 43718616847 at commit 625e116 failed with 55 passing tests and eight missing baselines, as expected when only macOS baselines were committed.
+All eight generated Linux screenshots from artifact 14163686971 were visually reviewed and are now committed as `*-chromium-linux.png` baselines alongside the unchanged `*-chromium-darwin.png` baselines.
+CI is pinned to Ubuntu 26.04 to match the reviewed baseline runner image confirmed in that run's primary job logs.
+Do not copy macOS screenshots into Linux filenames or accept generated screenshots without visual review.
+
+The release coordinator must register `Frontend checks` and enable strict required checks on `main`, including administrators, with zero required human approvals and no force pushes or branch deletion.
+Then prove that a failing PR cannot merge.
+PR #3 was verified as blocked by the failing checks with `main` unchanged at 5d60 before these reviewed Linux baselines were added.
+Workflow files do not configure branch protection themselves.
+
+Keep Vercel's native GitHub deployments enabled.
+Required PR checks gate merging; Vercel does not wait for post-merge GitHub Actions.
+The committed `buildCommand` independently runs unit tests before building each Vercel deployment, but does not run E2E there.
 
 ## Environment variables
 

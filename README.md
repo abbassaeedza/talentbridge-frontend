@@ -25,7 +25,7 @@ This repository contains its React single-page application.
 
 ## Requirements
 
-- Node.js 20 or newer
+- Node.js 24.x
 - npm
 - A running TalentBridge backend
 
@@ -57,13 +57,15 @@ Demo account passwords are configured by the backend operator and must not be em
 ```bash
 npm run dev      # Start development server
 npm run build    # Type-check and create production build
-npm test         # Run lightweight unit tests
+npm test         # Run all src/**/*.test.ts unit tests
 npm run test:e2e # Run the Chromium end-to-end suite
 npm run preview  # Preview production build locally
 ```
 
 Production files are written to `dist/`.
 Login tests intercept API requests and use synthetic `example.test` credentials, not production accounts or backend seed passwords.
+CI runs unit tests, the build, and the complete mocked Chromium suite on PRs and pushes to `main` as `Frontend checks`.
+See [CI and protected releases](docs/DEPLOYMENT.md#ci-and-protected-releases) for failure artifacts and the pending reviewed Linux screenshot baselines.
 
 ## Deployment
 

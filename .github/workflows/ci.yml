@@ -1,0 +1,39 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Frontend checks
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    env:
+      VITE_API_URL: http://127.0.0.1:8080
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: frontend-playwright-failure
+          path: |
+            test-results/
+            playwright-report/
+            e2e/**/*-linux.png
+          retention-days: 7
