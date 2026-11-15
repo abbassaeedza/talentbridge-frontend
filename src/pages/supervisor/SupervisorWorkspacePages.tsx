@@ -16,12 +16,14 @@ import { Select } from '@heroui/react/select';
 import { SearchField } from '@heroui/react/search-field';
 import { Skeleton } from '@heroui/react/skeleton';
 import { EmptyState as SharedEmptyState, ListToolbar, PageHeader, StatCard, StatusBadge } from '../../components/ui/TalentBridgeUI';
+import QuerySection from '../../components/ui/QuerySection';
+import { parseServerDateTime } from '../../utils/dateTime';
 
 type ItemKind = 'project' | 'party';
 type SortValue = 'deadline' | 'name' | 'status';
 
 const submitted = (status: string) => status === 'SUBMITTED' || status === 'COMPLETED';
-const dateValue = (value?: string) => value ? new Date(value).getTime() : Number.POSITIVE_INFINITY;
+const dateValue = (value?: string) => parseServerDateTime(value)?.getTime() ?? Number.POSITIVE_INFINITY;
 const matchesSubmission = (filter: string, hasSubmission: boolean, status?: string) => {
   if (filter === 'ALL') return true;
   if (filter === 'HAS_SUBMISSION') return hasSubmission;
@@ -50,10 +52,11 @@ export function SupervisorOverviewPage({ kind }: { kind: ItemKind }) {
     enabled: kind === 'party',
   });
   const items = kind === 'project' ? projects.data : parties.data;
-  const loading = kind === 'project' ? projects.isLoading : parties.isLoading;
+  const query = kind === 'project' ? projects : parties;
   const nearest = useMemo(() => [...(items ?? [])].filter((item) => {
     const deadline = kind === 'project' ? (item as Project).deadline : (item as Party).assignedProjectDeadline;
-    return deadline && dateValue(deadline) > Date.now();
+    const due = dateValue(deadline);
+    return Number.isFinite(due) && due > Date.now();
   }).sort((a, b) => dateValue(kind === 'project' ? (a as Project).deadline : (a as Party).assignedProjectDeadline)
     - dateValue(kind === 'project' ? (b as Project).deadline : (b as Party).assignedProjectDeadline))[0], [items, kind]);
 
@@ -64,13 +67,14 @@ export function SupervisorOverviewPage({ kind }: { kind: ItemKind }) {
   return (
     <div className=''>
       <PageHeader title={title} description={`Welcome back, ${user?.firstName}. Review the work that needs attention next.`} />
-      {loading ? <LoadingCards /> : !items?.length ? <EmptyState icon={kind === 'project' ? Briefcase : Users}>No supervised {kind === 'project' ? 'projects' : 'parties'} yet.</EmptyState> : (
+      <QuerySection query={query} label={`Supervised ${kind === 'project' ? 'projects' : 'parties'}`}>
+      {!items?.length ? <EmptyState icon={kind === 'project' ? Briefcase : Users}>{`No supervised ${kind === 'project' ? 'projects' : 'parties'} yet.`}</EmptyState> : (
         <div className='grid gap-3 lg:grid-cols-[1.3fr_.7fr]'>
           <div className='panel p-4'>
             <p className='mb-2 text-xs text-muted'>Nearest deadline</p>
             {nearest ? (
               <>
-                <Link to={kind === 'project' ? `/project-supervisor/projects/${project!.id}` : `/party-supervisor/parties/${party!.id}`} className='text-sm font-medium text-foreground hover:text-accent'>{kind === 'project' ? project!.title : party!.name}</Link>
+                <Link to={kind === 'project' ? `/project-supervisor/projects/${project!.id}` : `/party-supervisor/parties/${party!.id}`} className='inline-flex min-h-11 min-w-11 items-center text-sm font-medium text-foreground hover:text-accent'>{kind === 'project' ? project!.title : party!.name}</Link>
                 <p className='mt-1 text-xs text-muted'>{kind === 'project' ? project!.assignedPartyName || 'Awaiting party assignment' : party!.assignedProjectTitle}</p>
                 <div className='mt-3'><DeadlineCountdown deadline={(kind === 'project' ? project!.deadline : party!.assignedProjectDeadline) ?? null} submitted={kind === 'party' && submitted(party!.status)} compact /></div>
               </>
@@ -79,6 +83,7 @@ export function SupervisorOverviewPage({ kind }: { kind: ItemKind }) {
           <StatCard icon={kind === 'project' ? Briefcase : Users} label={`Supervised ${kind === 'project' ? 'projects' : 'parties'}`} value={items.length} />
         </div>
       )}
+      </QuerySection>
     </div>
   );
 }

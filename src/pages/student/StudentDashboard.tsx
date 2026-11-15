@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import { Link } from 'react-router-dom';
 import { projectApi, partyApi, userApi } from '../../api/services';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,7 +12,6 @@ import {
   ArrowRight,
   Briefcase,
 } from 'lucide-react';
-import clsx from 'clsx';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
 import toast from 'react-hot-toast';
 import { createGitHubOAuthRequest } from '../../utils/githubOAuth';
@@ -19,14 +19,15 @@ import { Avatar } from '@heroui/react/avatar';
 import { Button, buttonVariants } from '@heroui/react/button';
 import { Card } from '@heroui/react/card';
 import { ProgressBar } from '@heroui/react/progress-bar';
-import { Skeleton } from '@heroui/react/skeleton';
 import { PageHeader, StatCard, StatusBadge } from '../../components/ui/TalentBridgeUI';
+import QuerySection from '../../components/ui/QuerySection';
 import { defaultAvatarUrl } from '../../utils/avatar';
+import type { Scorecard } from '../../types';
 
 export default function StudentDashboard() {
   const { user } = useAuth();
 
-  const { data: currentUser = user } = useQuery({
+  const currentUserQuery = useQuery({
     queryKey: ['current-user', 'student-dashboard'],
     queryFn: () => userApi.getMe().then((response) => response.data),
     initialData: user ?? undefined,
@@ -34,6 +35,7 @@ export default function StudentDashboard() {
     staleTime: 0,
     refetchOnMount: 'always',
   });
+  const currentUser = currentUserQuery.data ?? user;
 
   const connectGitHub = () => {
     const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
@@ -49,42 +51,45 @@ export default function StudentDashboard() {
     window.location.assign(request.url);
   };
 
-  const { data: projects } = useQuery({
+  const projectsQuery = useQuery({
     queryKey: ['open-projects'],
     queryFn: () =>
       projectApi
         .getOpen({ page: 0, size: 6 })
-        .then((r) => r.data)
-        .catch(() => null),
+        .then((r) => r.data),
     retry: false,
   });
 
-  const { data: party, isPending: partyPending } = useQuery({
-    queryKey: ['my-party'],
-    queryFn: () => partyApi.getMyParty().then((r) => r.data),
+  const partyQuery = useQuery({
+    queryKey: ['my-party', 'dashboard'],
+    queryFn: () => partyApi.getMyParty().then((r) => r.data).catch((error: unknown) => {
+      if (isAxiosError(error) && error.response?.status === 404) return null;
+      throw error;
+    }),
     retry: false,
   });
 
-  const { data: globalDeadline } = useQuery({
+  const globalDeadlineQuery = useQuery({
     queryKey: ['global-deadline'],
     queryFn: () =>
       projectApi
         .getGlobalDeadline()
-        .then((r) => r.data.enabled ? r.data.deadline : null)
-        .catch(() => null),
+        .then((r) => r.data),
     retry: false,
   });
 
-  const { data: scorecard } = useQuery({
-    queryKey: ['my-scorecard'],
-    queryFn: () =>
-      userApi
-        .getMyScorecard()
-        .then((r) => r.data)
-        .catch(() => null),
+  const scorecardQuery = useQuery({
+    queryKey: ['my-scorecard', 'dashboard'],
+    queryFn: async () => {
+      const { data }: { data: Scorecard | '' | null } = await userApi.getMyScorecard();
+      return data || null;
+    },
     retry: false,
   });
 
+  const projects = projectsQuery.data;
+  const party = partyQuery.data;
+  const scorecard = scorecardQuery.data;
   const hasGithub = !!currentUser?.githubUsername;
   const members = party?.members ?? [];
   const entries = scorecard?.entries ?? [];
@@ -92,16 +97,15 @@ export default function StudentDashboard() {
   const projectSubmitted = party?.status === 'SUBMITTED' || party?.status === 'COMPLETED';
   const dashboardDeadline = hasAssignedProject
     ? party?.assignedProjectDeadline
-    : globalDeadline;
+    : globalDeadlineQuery.data?.enabled ? globalDeadlineQuery.data.deadline : null;
+  const deadlineQuery = party === undefined || hasAssignedProject ? partyQuery : globalDeadlineQuery;
 
   return (
     <div className=''>
       <PageHeader title={`Overview${currentUser?.firstName ? ` for ${currentUser.firstName}` : ''}`} description='Your party, project deadline, GitHub connection, and results.' />
 
       <div className='mb-5'>
-        {partyPending ? (
-          <Skeleton className='h-24 rounded-lg' />
-        ) : (
+        <QuerySection query={deadlineQuery} label='Application deadline'>
           <DeadlineCountdown
             deadline={dashboardDeadline}
             label={hasAssignedProject ? 'Assigned project deadline' : 'Global application deadline'}
@@ -109,10 +113,11 @@ export default function StudentDashboard() {
             submitted={hasAssignedProject && projectSubmitted}
             hero
           />
-        )}
+        </QuerySection>
       </div>
 
       {/* GitHub connection */}
+      <QuerySection query={currentUserQuery} label='GitHub connection'>
       {hasGithub ? (
         <div className='mb-6 flex flex-wrap items-center gap-4 panel p-4'>
           <div className='flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-default'>
@@ -125,7 +130,7 @@ export default function StudentDashboard() {
               target='_blank'
               rel='noreferrer'
               aria-label={`@${currentUser!.githubUsername}`}
-              className='mt-0.5 inline-flex items-center gap-1 text-xs text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground'
+              className='mt-0.5 inline-flex min-h-11 items-center gap-1 text-xs text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground'
             >
               @{currentUser!.githubUsername} <ExternalLink size={11} />
             </a>
@@ -150,13 +155,14 @@ export default function StudentDashboard() {
           </Button>
         </div>
       )}
+      </QuerySection>
 
       {/* Stats */}
       <div className='grid grid-cols-2 lg:grid-cols-4 gap-2 mb-5'>
-        <Link to='/student/party'><StatCard icon={Users} label='Party status' value={party ? party.status : 'No party'} /></Link>
-        <Link to='/student/projects'><StatCard icon={FolderKanban} label='Open projects' value={projects?.totalElements ?? '-'} /></Link>
-        <Link to='/student/scorecard'><StatCard icon={Star} label='Average score' value={scorecard ? `${scorecard.averageScore}/100` : '-'} /></Link>
-        <StatCard icon={Briefcase} label='Projects completed' value={scorecard?.totalProjects ?? 0} />
+        <QuerySection query={partyQuery} label='Party status'><Link className='block min-h-11' to='/student/party'><StatCard icon={Users} label='Party status' value={party ? party.status : 'No party'} /></Link></QuerySection>
+        <QuerySection query={projectsQuery} label='Open projects'><Link className='block min-h-11' to='/student/projects'><StatCard icon={FolderKanban} label='Open projects' value={projects?.totalElements} /></Link></QuerySection>
+        <QuerySection query={scorecardQuery} label='Average score'><Link className='block min-h-11' to='/student/scorecard'><StatCard icon={Star} label='Average score' value={scorecard ? `${scorecard.averageScore}/100` : '-'} /></Link></QuerySection>
+        <QuerySection query={scorecardQuery} label='Projects completed'><StatCard icon={Briefcase} label='Projects completed' value={scorecard?.totalProjects ?? 0} /></QuerySection>
       </div>
 
       <div className='grid lg:grid-cols-2 gap-3 mb-5'>
@@ -166,12 +172,13 @@ export default function StudentDashboard() {
             <h2 className=' font-semibold text-foreground'>My Party</h2>
             <Link
               to='/student/party'
-              className='text-xs text-accent hover:text-accent flex items-center gap-1'
+              className='min-h-11 min-w-11 text-xs text-accent hover:text-accent flex items-center gap-1'
             >
               Manage <ArrowRight size={12} />
             </Link>
           </div>
 
+          <QuerySection query={partyQuery} label='My party'>
           {party ? (
             <div>
               <div className='flex items-center gap-3 mb-3'>
@@ -219,11 +226,12 @@ export default function StudentDashboard() {
               <p className='text-muted text-sm mb-3'>
                 You're not in a party yet.
               </p>
-              <Link to='/student/party' className={buttonVariants({ variant: 'primary', size: 'sm' })}>
+              <Link to='/student/party' className={`${buttonVariants({ variant: 'primary', size: 'sm' })} min-h-11`}>
                 Create or join a party
               </Link>
             </div>
           )}
+          </QuerySection>
         </Card.Content></Card>
 
         {/* Scorecard mini */}
@@ -234,12 +242,13 @@ export default function StudentDashboard() {
             </h2>
             <Link
               to='/student/scorecard'
-              className='text-xs text-accent hover:text-accent flex items-center gap-1'
+              className='min-h-11 min-w-11 text-xs text-accent hover:text-accent flex items-center gap-1'
             >
               View all <ArrowRight size={12} />
             </Link>
           </div>
 
+          <QuerySection query={scorecardQuery} label='My scorecard'>
           {entries.length > 0 ? (
             <div className='space-y-3'>
               {entries.slice(0, 3).map((e) => (
@@ -261,6 +270,7 @@ export default function StudentDashboard() {
               No evaluations yet.
             </p>
           )}
+          </QuerySection>
         </Card.Content></Card>
       </div>
 

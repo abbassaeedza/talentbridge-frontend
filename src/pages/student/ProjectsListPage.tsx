@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { projectApi } from '../../api/services';
 import { PROJECT_FIELDS } from '../../types';
 import { Search, Users, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatDateTime } from '../../utils/dateTime';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
 import { Button } from '@heroui/react/button';
 import { ButtonGroup } from '@heroui/react/button-group';
@@ -183,7 +183,7 @@ export default function ProjectsListPage() {
                     <DeadlineCountdown deadline={p.deadline ?? null} compact />
                     {p.deadline && (
                       <span className='text-[10px] text-muted'>
-                        {format(new Date(p.deadline), 'dd MMM yyyy')}
+                        {formatDateTime(p.deadline)}
                       </span>
                     )}
                   </div>

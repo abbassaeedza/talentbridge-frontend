@@ -13,6 +13,7 @@ import { TextField } from '@heroui/react/textfield';
 import { ToggleButton } from '@heroui/react/toggle-button';
 import { projectSupervisorInvitationApi } from '../../api/services';
 import DateTimePicker from '../../components/ui/DateTimePicker';
+import { parseServerDateTime, toApiDateTime } from '../../utils/dateTime';
 import { PROJECT_FIELDS, type Project, type ProjectDraft } from '../../types';
 
 const TOOL_SUGGESTIONS = [
@@ -111,13 +112,14 @@ export default function ProjectForm({
   const [toolInput, setToolInput] = useState('');
   const [selectedField, setSelectedField] = useState(knownField ? initialField : initialField ? 'Other' : '');
   const [customField, setCustomField] = useState(knownField ? '' : initialField);
+  const [deadlineValid, setDeadlineValid] = useState(true);
   const [form, setForm] = useState({
     title: initial?.title ?? '',
     description: initial?.description ?? '',
     scope: initial?.scope ?? '',
     deliverables: initial?.deliverables ?? '',
     evaluationCriteria: initial?.evaluationCriteria ?? '',
-    deadline: initial?.deadline?.slice(0, 16) ?? '',
+    deadline: initial?.deadline ?? '',
     internalName: initial?.internalName ?? '',
     projectSupervisorId: initial?.projectSupervisorId ?? '',
   });
@@ -165,11 +167,12 @@ export default function ProjectForm({
     ...form,
     tools,
     projectField: selectedField === 'Other' ? customField.trim() || undefined : selectedField || undefined,
-    deadline: form.deadline || undefined,
+    deadline: form.deadline ? toApiDateTime(form.deadline) : undefined,
     projectSupervisorId: form.projectSupervisorId || undefined,
   });
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    if (!deadlineValid || (form.deadline && !parseServerDateTime(form.deadline))) return;
     onSubmit(data());
   };
 
@@ -271,7 +274,7 @@ export default function ProjectForm({
       <section className='border-t border-separator pt-7'>
         <h2 className='text-base font-semibold'>Assignment</h2>
         <div className='mt-5 grid gap-5 sm:grid-cols-2'>
-          <DateTimePicker label='Application deadline' value={form.deadline} onChange={(value) => set('deadline', value)} />
+          <DateTimePicker label='Application deadline' value={form.deadline} onChange={(value) => set('deadline', value)} onValidityChange={setDeadlineValid} />
           <SupervisorSelect value={form.projectSupervisorId} onChange={(value) => set('projectSupervisorId', value)} />
         </div>
       </section>
@@ -279,11 +282,11 @@ export default function ProjectForm({
       <div className='sticky bottom-0 -mx-2 flex flex-col-reverse gap-2 border-t border-border bg-background/95 px-2 py-4 backdrop-blur sm:flex-row sm:justify-end'>
         <Button type='button' variant='ghost' onPress={onCancel}>Cancel</Button>
         {onSaveDraft && (
-          <Button type='button' variant='secondary' onPress={() => onSaveDraft({ ...data(), saveAsDraft: true })} isDisabled={pending || !form.title || !form.description}>
+          <Button type='button' variant='secondary' onPress={() => onSaveDraft({ ...data(), saveAsDraft: true })} isDisabled={pending || !form.title || !form.description || !deadlineValid || (!!form.deadline && !parseServerDateTime(form.deadline))}>
             Save as draft
           </Button>
         )}
-        <Button type='submit' variant='primary' isDisabled={pending || !form.title || !form.description}>
+        <Button type='submit' variant='primary' isDisabled={pending || !form.title || !form.description || !deadlineValid || (!!form.deadline && !parseServerDateTime(form.deadline))}>
           {pending ? <><Spinner size='sm' /> {pendingLabel}</> : submitLabel}
         </Button>
       </div>

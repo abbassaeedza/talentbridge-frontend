@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2, Clock3 } from 'lucide-react';
 import clsx from 'clsx';
+import { formatDateTime, parseServerDateTime } from '../../utils/dateTime';
 
 interface Props {
   deadline: string | null | undefined;
@@ -12,8 +13,8 @@ interface Props {
   className?: string;
 }
 
-function getTimeLeft(deadline: string) {
-  const difference = new Date(deadline).getTime() - Date.now();
+function getTimeLeft(deadline: number) {
+  const difference = deadline - Date.now();
   if (difference <= 0) return null;
   const seconds = Math.floor(difference / 1000);
   return {
@@ -33,16 +34,6 @@ const TONE_TEXT = {
   success: 'text-success',
 } as const;
 
-function dueLabel(deadline: string) {
-  return new Date(deadline).toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
 export default function DeadlineCountdown({
   deadline,
   submitted = false,
@@ -53,12 +44,13 @@ export default function DeadlineCountdown({
   className,
 }: Props) {
   const [, refresh] = useState(0);
+  const timestamp = parseServerDateTime(deadline)?.getTime();
 
   useEffect(() => {
-    if (!deadline || submitted) return;
+    if (timestamp === undefined || submitted) return;
     const timer = window.setInterval(() => refresh((value) => value + 1), 1000);
     return () => window.clearInterval(timer);
-  }, [deadline, submitted]);
+  }, [timestamp, submitted]);
 
   if (submitted) {
     return hero ? (
@@ -76,21 +68,22 @@ export default function DeadlineCountdown({
     );
   }
 
-  if (!deadline) {
+  if (timestamp === undefined) {
     return hero ? (
       <div className={clsx('panel p-5', className)}>
         {label && <p className='text-xs text-muted'>{label}</p>}
         {title && <h3 className='mt-1 truncate text-lg font-medium'>{title}</h3>}
-        <p className='mt-5 flex items-center gap-2 text-sm text-muted'><Clock3 size={16} /> No deadline scheduled</p>
+        <p className='mt-5 flex items-center gap-2 text-sm text-muted'><Clock3 size={16} /> {deadline ? 'Deadline unavailable' : 'No deadline scheduled'}</p>
       </div>
     ) : (
       <span className={clsx('inline-flex items-center gap-1.5 text-xs text-muted', className)}>
-        <Clock3 size={13} /> No deadline
+        <Clock3 size={13} /> {deadline ? 'Deadline unavailable' : 'No deadline'}
       </span>
     );
   }
 
-  const remaining = getTimeLeft(deadline);
+  const remaining = getTimeLeft(timestamp);
+  const due = formatDateTime(deadline);
   const expired = !remaining;
   const urgent = remaining && remaining.totalHours < 48;
   const warning = remaining && !urgent && remaining.totalHours <= 24 * 7;
@@ -102,10 +95,10 @@ export default function DeadlineCountdown({
       <div className={clsx('panel p-5', className)}>
         <Header label={label} title={title} status={status} tone={tone} />
         <p className='mt-5 font-mono text-4xl tabular-nums tracking-tight text-danger sm:text-5xl'>00:00:00</p>
-        <p className='mt-2 text-sm text-muted'>Passed {dueLabel(deadline)}</p>
+        <p className='mt-2 text-sm text-muted'>Passed {due}</p>
       </div>
     ) : (
-      <span className={clsx('inline-flex items-center font-mono text-[11px] tabular-nums text-danger', className)}>Expired</span>
+      <span title={`Passed ${due}`} className={clsx('inline-flex items-center font-mono text-[11px] tabular-nums text-danger', className)}>Expired</span>
     );
   }
 
@@ -118,7 +111,7 @@ export default function DeadlineCountdown({
         <p className={clsx('mt-5 font-mono text-4xl tabular-nums tracking-tight sm:text-5xl', TONE_TEXT[tone])} aria-label={`${time} remaining`}>
           {time}
         </p>
-        <p className='mt-2 text-sm text-muted'>Due {dueLabel(deadline)}</p>
+        <p className='mt-2 text-sm text-muted'>Due {due}</p>
       </div>
     );
   }
@@ -127,6 +120,7 @@ export default function DeadlineCountdown({
     return (
       <span
         aria-label={`${status}: ${time} remaining`}
+        title={`Due ${due}`}
         className={clsx('inline-flex items-center font-mono text-[11px] tabular-nums', TONE_TEXT[tone], className)}
       >
         {time}
@@ -138,7 +132,7 @@ export default function DeadlineCountdown({
     <div className={clsx('panel p-4', className)}>
       {label && <p className='text-xs text-muted'>{label}</p>}
       <p className={clsx('mt-1 font-mono text-xl tracking-tight tabular-nums', TONE_TEXT[tone])}>{time}</p>
-      <p className='mt-1 text-xs text-muted'>Due {dueLabel(deadline)}</p>
+      <p className='mt-1 text-xs text-muted'>Due {due}</p>
     </div>
   );
 }

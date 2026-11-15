@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Clock3, MailPlus, RefreshCw, UserCheck, UserX } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatDateTime } from '../../utils/dateTime';
 import toast from 'react-hot-toast';
 import { Button } from '@heroui/react/button';
 import { Input } from '@heroui/react/input';
@@ -26,7 +26,7 @@ export default function ProjectSupervisorsPage() {
     <PageHeader title='Project supervisors' description='Invite colleagues and manage their access to company projects.' action={<Button variant='primary' onPress={() => setModalOpen(true)}><MailPlus size={16} /> Invite supervisor</Button>} />
     {isLoading ? <div className='space-y-3'>{[0, 1].map((item) => <Skeleton key={item} className='h-20 rounded-lg' />)}</div> : invitations.length === 0 ? <EmptyState icon={UserCheck} title='No project supervisors' description='Invite a colleague when a project needs company-side supervision.' /> : <div className='divide-y divide-separator rounded-lg border border-border bg-surface'>{invitations.map((invitation) => <article key={invitation.id} className='flex flex-col gap-4 p-4 sm:flex-row sm:items-center'>
       <span className='flex size-10 shrink-0 items-center justify-center rounded-md bg-default text-muted'><UserCheck size={18} /></span>
-      <div className='min-w-0 flex-1'><p className='truncate text-sm font-medium'>{invitation.email}</p><p className='mt-1 flex items-center gap-1 text-xs text-muted'><Clock3 size={12} /> Expires {format(new Date(invitation.expiresAt), 'dd MMM yyyy, HH:mm')}</p></div>
+      <div className='min-w-0 flex-1'><p className='truncate text-sm font-medium'>{invitation.email}</p><p className='mt-1 flex items-center gap-1 text-xs text-muted'><Clock3 size={12} /> Expires {formatDateTime(invitation.expiresAt)}</p></div>
       <StatusBadge status={invitation.status} />
       {invitation.status === 'PENDING' && <div className='flex gap-2'><Button size='sm' variant='secondary' aria-label={`Resend invitation to ${invitation.email}`} onPress={() => resend.mutate(invitation.id)} isDisabled={resend.isPending}><RefreshCw size={14} /> Resend</Button><Button size='sm' variant='danger-soft' aria-label={`Revoke invitation to ${invitation.email}`} onPress={() => revoke.mutate(invitation.id)} isDisabled={revoke.isPending}><UserX size={14} /> Revoke</Button></div>}
     </article>)}</div>}
