@@ -4,7 +4,7 @@ This guide deploys the TalentBridge React application from its GitHub repository
 
 ## Prerequisites
 
-- Backend deployed on Render with a public `https://...onrender.com` URL
+- Backend deployed on Google Cloud Run with a public HTTPS URL
 - GitHub OAuth App client ID
 - Access to the `abbassaeedza/talentbridge-frontend` repository
 
@@ -23,7 +23,7 @@ The committed `vercel.json` sends all browser routes to `index.html`, so React R
 Add these variables for the Production environment:
 
 ```text
-VITE_API_URL=https://your-render-service.onrender.com
+VITE_API_URL=https://talentbridge-backend-5665rby4oa-el.a.run.app
 VITE_GITHUB_CLIENT_ID=your-github-oauth-client-id
 ```
 
@@ -31,6 +31,8 @@ Do not add the GitHub client secret, Supabase key, JWT secret, database password
 Every `VITE_` value becomes public browser code.
 Do not add account passwords, including demo account passwords, to Vercel environment variables.
 All accounts use the normal email and password form, which calls `POST /api/auth/login`.
+Backend credentials are pinned Google Secret Manager references and never belong in Vercel configuration.
+JWT signing-key rotations require a new sign-in; they do not change the demo password.
 
 ## GitHub OAuth App
 
@@ -41,7 +43,7 @@ Homepage URL: https://your-vercel-project.vercel.app
 Authorization callback URL: https://your-vercel-project.vercel.app/github/callback
 ```
 
-Use the same callback URL for the Render `GITHUB_REDIRECT_URI` variable.
+Use the same callback URL for the Cloud Run `GITHUB_REDIRECT_URI` variable.
 
 ## Deploy
 
@@ -53,7 +55,7 @@ Changing a Vercel environment variable requires a new deployment before browser 
 
 1. Open `/login` directly and refresh the page.
 2. Register or sign in.
-3. Confirm API requests target the Render URL and do not show CORS errors.
+3. Confirm API requests target the Cloud Run URL and do not show CORS errors.
 4. Sign in with operator-provided coordinator credentials and confirm the coordinator dashboard opens.
 5. Sign in as a student and connect GitHub.
 6. Confirm GitHub returns to `/github/callback` and the student dashboard shows the linked username.
@@ -67,5 +69,5 @@ Changing a Vercel environment variable requires a new deployment before browser 
 ## Free-tier limits
 
 Vercel hosting remains free within Hobby limits.
-Render can take about one minute to answer its first request after sleeping.
+The Cloud Run backend scales to zero and may take time to answer its first request after idle.
 Custom domains are optional and domain registration is not included.
