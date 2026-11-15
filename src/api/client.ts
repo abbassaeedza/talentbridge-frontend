@@ -7,6 +7,7 @@ import {
   setAuthTokens,
 } from '../utils/authTokens';
 import type { AuthResponse } from '../types';
+import { isAuthRejection } from '../utils/authErrors';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 let pendingRefresh: { token: string; promise: Promise<AxiosResponse<AuthResponse>> } | undefined;
@@ -14,7 +15,7 @@ let pendingRefresh: { token: string; promise: Promise<AxiosResponse<AuthResponse
 const api = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 30000,
+  timeout: 90000,
 });
 
 function signOutIfCurrent(refreshToken: string | null) {
@@ -38,7 +39,7 @@ export function refreshSession(refreshToken: string): Promise<AxiosResponse<Auth
       setAuthTokens(data.accessToken, data.refreshToken);
       return response;
     }).catch(error => {
-      if (axios.isAxiosError(error) && [400, 401, 403].includes(error.response?.status ?? 0)) signOutIfCurrent(refreshToken);
+      if (isAuthRejection(error)) signOutIfCurrent(refreshToken);
       throw error;
     }).finally(() => {
       if (pendingRefresh?.promise === promise) pendingRefresh = undefined;
@@ -70,13 +71,17 @@ api.interceptors.response.use(
       if (refreshToken) {
         try {
           const currentAccess = getAccessToken();
-          if (currentAccess && sentToken !== currentAccess) return api(original);
-          const { data } = await refreshSession(refreshToken);
-          if (getRefreshToken() !== data.refreshToken) return Promise.reject(error);
-          original.headers = original.headers ?? {};
-          original.headers.Authorization = `Bearer ${data.accessToken}`;
-          return api(original);
-        } catch { /* The shared refresh operation owns invalidation. */ }
+          if (!currentAccess || sentToken === currentAccess) {
+            const { data } = await refreshSession(refreshToken);
+            if (getRefreshToken() !== data.refreshToken) return Promise.reject(error);
+          }
+        } catch (refreshError) {
+          // Preserve transient refresh failures instead of misreporting the original 401.
+          return Promise.reject(refreshError);
+        }
+        if (['get', 'head'].includes(original.method?.toLowerCase() ?? 'get')) return api(original);
+        error.message = 'Session renewed. Please submit again.';
+        error.response.data = { ...error.response.data, message: error.message };
       } else {
         signOutIfCurrent(refreshToken);
       }

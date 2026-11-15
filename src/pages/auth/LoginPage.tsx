@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -9,6 +9,8 @@ import { Spinner } from '@heroui/react/spinner';
 import { TextField } from '@heroui/react/textfield';
 import { useAuth } from '../../contexts/AuthContext';
 import { PublicShell } from '../../components/ui/TalentBridgeUI';
+import ServerStartingFeedback from '../../components/shared/ServerStartingFeedback';
+import { isAuthRejection, SERVER_RETRY_MESSAGE } from '../../utils/authErrors';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -17,17 +19,27 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
+  const busy = useRef(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!email || !password || pending) return;
+    if (!email || !password || busy.current) return;
+    busy.current = true;
+    setErrorMessage(null);
     setPending(true);
     try {
       await login(email, password);
       navigate('/dashboard');
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Email or password is incorrect');
+      if (isAuthRejection(error)) {
+        toast.error(error?.response?.data?.message || 'Email or password is incorrect');
+      } else {
+        setErrorMessage(SERVER_RETRY_MESSAGE);
+        if (error?.response?.data?.message) toast.error(error.response.data.message);
+      }
     } finally {
+      busy.current = false;
       setPending(false);
     }
   };
@@ -78,13 +90,15 @@ export default function LoginPage() {
           </div>
         </TextField>
 
-        <Button type='submit' fullWidth size='lg' variant='primary' isDisabled={!!pending}>
+        <Button type='submit' fullWidth size='lg' variant='primary' className={pending ? 'min-h-11' : undefined} isDisabled={!!pending}>
           {pending ? (
             <><Spinner size='sm' /> Signing in...</>
           ) : (
             <><span>Sign in</span><ArrowRight size={17} /></>
           )}
         </Button>
+        <ServerStartingFeedback pending={pending} />
+        {errorMessage && <p role='alert' className='text-sm leading-6 text-muted'>{errorMessage}</p>}
       </form>
 
       <p className='mt-6 text-center text-sm text-muted'>

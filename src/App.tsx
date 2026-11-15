@@ -62,6 +62,7 @@ import {
   SupervisorOverviewPage,
 } from './pages/supervisor/SupervisorWorkspacePages';
 import ProjectSupervisorInvitationPage from './pages/auth/ProjectSupervisorInvitationPage';
+import ServerStartingFeedback from './components/shared/ServerStartingFeedback';
 
 // Shared
 import ProfilePage from './pages/shared/ProfilePage';
@@ -69,7 +70,7 @@ import StudentProfilePage from './pages/shared/StudentProfilePage';
 import NotificationSettingsPage from './pages/shared/NotificationSettingsPage';
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
+  defaultOptions: { queries: { retry: 1, staleTime: 30_000 }, mutations: { retry: false } },
 });
 
 // ── Rejected screen ──────────────────────────────────────────────────────────
@@ -119,9 +120,18 @@ function NotFoundPage() {
 
 // ── Loading screen ────────────────────────────────────────────────────────────
 function FullScreenLoader() {
+  const { loading, authError, retryUser } = useAuth();
   return (
     <div className='flex min-h-dvh items-center justify-center bg-background'>
-      <div className='flex items-center gap-3 text-sm text-muted'><Spinner size='sm' /> Loading TalentBridge</div>
+      <div className='max-w-sm space-y-3 px-6 text-center text-balance'>
+        {authError && !loading ? <>
+          <p role='alert' className='text-sm leading-6 text-muted'>{authError}</p>
+          <Button className='min-h-11' variant='primary' onPress={retryUser}>Retry</Button>
+        </> : <>
+          <div className='flex items-center justify-center gap-3 text-sm text-muted'><Spinner size='sm' /> Loading TalentBridge</div>
+          <ServerStartingFeedback pending={loading} />
+        </>}
+      </div>
     </div>
   );
 }
@@ -163,22 +173,22 @@ function GitHubCallbackPage() {
 // ── Route guards ──────────────────────────────────────────────────────────────
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) return <FullScreenLoader />;
+  const { user, loading, authError } = useAuth();
+  if (loading || (!user && authError)) return <FullScreenLoader />;
   if (user) return <Navigate to='/dashboard' replace />;
   return <>{children}</>;
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) return <FullScreenLoader />;
+  const { user, loading, authError } = useAuth();
+  if (loading || (!user && authError)) return <FullScreenLoader />;
   if (!user) return <Navigate to='/login' replace />;
   return <>{children}</>;
 }
 
 function AppGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading, isApproved, onboardingComplete } = useAuth();
-  if (loading) return <FullScreenLoader />;
+  const { user, loading, authError, isApproved, onboardingComplete } = useAuth();
+  if (loading || (!user && authError)) return <FullScreenLoader />;
   if (!user) return <Navigate to='/login' replace />;
   if ((user as any).status === 'REJECTED')
     return <Navigate to='/rejected' replace />;

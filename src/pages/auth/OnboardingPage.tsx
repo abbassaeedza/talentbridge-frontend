@@ -34,9 +34,10 @@ export default function OnboardingPage() {
 }
 
 function StudentOnboarding() {
-  const { refreshUser } = useAuth();
+  const { refreshUser, authError } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState('');
   const [form, setForm] = useState({ university: '', yearOfStudy: '', major: '', bio: '', linkedinUrl: '', gpa: '' });
@@ -48,11 +49,14 @@ function StudentOnboarding() {
   };
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!skills.length) return void toast.error('Add at least one skill');
+    if (!saved && !skills.length) return void toast.error('Add at least one skill');
     setLoading(true);
     try {
-      await userApi.completeOnboarding({ ...form, skills, gpa: form.gpa ? Number(form.gpa) : undefined });
-      await refreshUser();
+      if (!saved) {
+        await userApi.completeOnboarding({ ...form, skills, gpa: form.gpa ? Number(form.gpa) : undefined });
+        setSaved(true);
+      }
+      if (!await refreshUser()) return;
       toast.success('Profile completed');
       navigate('/student/dashboard');
     } catch (error: any) {
@@ -104,7 +108,8 @@ function StudentOnboarding() {
             <TextArea fullWidth rows={3} maxLength={2000} value={form.bio} onChange={(event) => set('bio', event.target.value)} placeholder='Briefly describe your interests and experience.' />
           </TextField>
           <Field label='LinkedIn URL (optional)' value={form.linkedinUrl} onChange={(value) => set('linkedinUrl', value)} type='url' maxLength={500} placeholder='https://linkedin.com/in/...' />
-          <Button type='submit' fullWidth size='lg' variant='primary' isDisabled={loading}>{loading ? <Spinner size='sm' /> : 'Complete profile'}</Button>
+          {saved && authError && <p role='alert' className='text-sm leading-6 text-muted'>Your profile was saved. {authError}</p>}
+          <Button type='submit' fullWidth size='lg' variant='primary' isDisabled={loading}>{loading ? <Spinner size='sm' /> : saved ? 'Retry' : 'Complete profile'}</Button>
         </form>
       </div>
     </PublicShell>
@@ -112,18 +117,22 @@ function StudentOnboarding() {
 }
 
 function SupervisorOnboarding() {
-  const { refreshUser } = useAuth();
+  const { refreshUser, authError } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [photo, setPhoto] = useState<File>();
   const [professional, setProfessional] = useState<SupervisorProfessionalFields>({ jobTitle: '', department: '', bio: '', linkedinUrl: '' });
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
     try {
-      await userApi.completeSupervisorOnboarding({ ...professional, linkedinUrl: professional.linkedinUrl || undefined });
-      if (photo) await userApi.uploadSupervisorProfilePhoto(photo).catch(() => toast.error('Profile saved, but the photo could not be uploaded'));
-      await refreshUser();
+      if (!saved) {
+        await userApi.completeSupervisorOnboarding({ ...professional, linkedinUrl: professional.linkedinUrl || undefined });
+        setSaved(true);
+        if (photo) await userApi.uploadSupervisorProfilePhoto(photo).catch(() => toast.error('Profile saved, but the photo could not be uploaded'));
+      }
+      if (!await refreshUser()) return;
       toast.success('Profile completed');
       navigate('/party-supervisor/overview', { replace: true });
     } catch (error: any) {
@@ -143,7 +152,8 @@ function SupervisorOnboarding() {
             <Label>Profile photo</Label>
             <Input fullWidth type='file' accept='image/*' onChange={(event) => setPhoto(event.target.files?.[0])} />
           </TextField>
-          <Button type='submit' fullWidth size='lg' variant='primary' isDisabled={loading}>{loading ? <Spinner size='sm' /> : 'Complete profile'}</Button>
+          {saved && authError && <p role='alert' className='text-sm leading-6 text-muted'>Your profile was saved. {authError}</p>}
+          <Button type='submit' fullWidth size='lg' variant='primary' isDisabled={loading}>{loading ? <Spinner size='sm' /> : saved ? 'Retry' : 'Complete profile'}</Button>
         </form>
       </div>
     </PublicShell>
