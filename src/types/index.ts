@@ -294,6 +294,102 @@ export interface ProjectDraft {
   tools?: string[]
 }
 
+export interface SummarySet<T> {
+  items: T[]
+  total: number
+  truncated: boolean
+}
+
+export interface ChatProjectSummary {
+  id: string
+  title: string
+  status: string
+  companyName: string | null
+  deadlineUTC: string | null
+  finished: boolean
+  partyApplicationCount: number
+}
+
+export interface ChatProjectBrief extends ChatProjectSummary {
+  description: string | null
+  scope: string | null
+  deliverables: string | null
+  evaluationCriteria: string | null
+  tools: string[]
+  projectField: string | null
+  truncatedFields: string[]
+}
+
+export interface ChatPartySummary {
+  id: string
+  name: string
+  status: string
+  memberCount: number
+  supervisorName: string | null
+  assignedProjectId: string | null
+  viewerIsLeader: boolean
+}
+
+export interface ChatApplicationSummary {
+  id: string
+  partyId: string
+  partyName: string
+  projectId: string
+  projectTitle: string
+  rankPosition: number | null
+  status: string
+}
+
+export interface ChatSubmissionSummary {
+  id: string
+  partyId: string
+  partyName: string
+  projectId: string
+  projectTitle: string
+  status: string
+  submittedAtUTC: string | null
+}
+
+export interface ChatContextSnapshot {
+  viewer: { id: string; role: UserRole; name: string }
+  snapshotTimeUTC: string
+  globalDeadline: { enabled: boolean; deadlineUTC: string | null }
+  openProjects: SummarySet<ChatProjectSummary>
+  projects: SummarySet<ChatProjectSummary>
+  parties: SummarySet<ChatPartySummary>
+  applications: SummarySet<ChatApplicationSummary>
+  submissions: SummarySet<ChatSubmissionSummary>
+  evaluations: SummarySet<{
+    id: string; submissionId: string; projectId: string; finalized: boolean; evaluatedAtUTC: string | null
+    totalScore: number | null; aiDetectionScore: number | null; codeQualityScore: number | null
+    functionalityScore: number | null; scopeAlignmentScore: number | null; teamCollaborationScore: number | null
+    myIndividualScore: number | null; myContributionPercentage: number | null; myTotalCommits: number | null
+  }>
+  partyDirectory: SummarySet<ChatPartySummary> | null
+  counts: {
+    projectsByStatus: Record<string, number>
+    partiesByStatus: Record<string, number>
+    applicationsByStatus: Record<string, number>
+    submissionsByStatus: Record<string, number>
+    finalizedEvaluations: number
+    users: { total: number; byRole: Record<string, number>; byStatus: Record<string, number> } | null
+  }
+  myAssignedProject: ChatProjectBrief | null
+  myScorecard: {
+    averageScore: number | null
+    totalProjects: number
+    entries: SummarySet<{ id: string; projectId: string; projectTitle: string; score: number | null; semester: string | null; academicYear: number | null }>
+  } | null
+  upcomingDeadlines: SummarySet<{ projectId: string; title: string; deadlineUTC: string }>
+}
+
+export interface ChatResponse {
+  message: string
+  model: string
+  projectDraft?: ProjectDraft
+  source?: 'llm'
+}
+
 export interface PageResponse<T> {
   content: T[]
   totalPages: number
