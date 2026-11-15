@@ -92,6 +92,8 @@ for (const role of ['STUDENT', 'PARTY_SUPERVISOR'] as const) {
     await field.fill(student ? 'Saved University' : 'Saved title');
     if (student) {
       await page.getByLabel('Major or field of study', { exact: true }).fill('Computer science');
+      await page.getByRole('button', { name: 'Year of study' }).click();
+      await page.getByRole('option', { name: '3rd Year', exact: true }).click();
       await page.getByRole('button', { name: '+ React', exact: true }).click();
     } else {
       await page.getByLabel('Department', { exact: true }).fill('Platform');
@@ -214,7 +216,8 @@ test('background identity 503 after profile save keeps the current user and page
   await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
   await page.getByLabel('Phone number', { exact: true }).fill('123456789');
   await page.getByRole('button', { name: 'Save changes', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: /profile.*saved.*retry/i })).toBeVisible();
+  await expect(page.getByLabel('Phone number', { exact: true })).toHaveValue('123456789');
   await expect(page.getByRole('heading', { name: 'Cold Fixture', exact: true })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem('refreshToken'))).toBe('cold-refresh');
 });

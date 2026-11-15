@@ -52,6 +52,27 @@ export interface CompanyProfile {
   city?: string
 }
 
+export interface ProfileUpdateRequest {
+  firstName?: string
+  lastName?: string
+  phoneNumber?: string | null
+  university?: string
+  major?: string
+  yearOfStudy?: string
+  bio?: string | null
+  linkedinUrl?: string | null
+  portfolioUrl?: string | null
+  pastExperience?: string | null
+  skills?: string[]
+  gpa?: number | null
+  companyName?: string
+  industry?: string | null
+  description?: string | null
+  website?: string | null
+  city?: string | null
+  country?: string | null
+}
+
 export interface SupervisorProfile {
   id: string
   jobTitle: string

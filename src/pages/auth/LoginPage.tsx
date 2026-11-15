@@ -11,6 +11,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { PublicShell } from '../../components/ui/TalentBridgeUI';
 import ServerStartingFeedback from '../../components/shared/ServerStartingFeedback';
 import { isAuthRejection, SERVER_RETRY_MESSAGE } from '../../utils/authErrors';
+import { invitationReturnPath } from '../../utils/accountFlows';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -29,8 +30,8 @@ export default function LoginPage() {
     setErrorMessage(null);
     setPending(true);
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      if (!await login(email, password)) return;
+      navigate(invitationReturnPath(window.location.search));
     } catch (error: any) {
       if (isAuthRejection(error)) {
         toast.error(error?.response?.data?.message || 'Email or password is incorrect');

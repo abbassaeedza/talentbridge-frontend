@@ -18,6 +18,7 @@ import { AlertTriangle, Ghost } from 'lucide-react';
 import { Button } from '@heroui/react/button';
 import { Spinner } from '@heroui/react/spinner';
 import { PublicShell } from './components/ui/TalentBridgeUI';
+import { invitationReturnPath } from './utils/accountFlows';
 
 // Auth pages
 import LoginPage from './pages/auth/LoginPage';
@@ -175,7 +176,7 @@ function GitHubCallbackPage() {
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, authError } = useAuth();
   if (loading || (!user && authError)) return <FullScreenLoader />;
-  if (user) return <Navigate to='/dashboard' replace />;
+  if (user) return <Navigate to={invitationReturnPath(window.location.search)} replace />;
   return <>{children}</>;
 }
 
