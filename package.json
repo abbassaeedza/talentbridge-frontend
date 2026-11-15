@@ -3,10 +3,13 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "test": "node --test --experimental-strip-types src/utils/githubOAuth.test.ts src/utils/avatar.test.ts",
+    "test": "node --test \"src/**/*.test.ts\"",
     "test:e2e": "playwright test",
     "preview": "vite preview"
   },
