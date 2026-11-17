@@ -294,11 +294,21 @@ test('filters student and company approval states with tabs', async ({ page }) =
 
 test('selects all filtered students and requires a bulk rejection reason', async ({ page }) => {
   await mockCoordinatorApi(page);
+  let releaseStudents!: () => void;
+  const studentsPending = new Promise<void>(resolve => { releaseStudents = resolve; });
+  await page.route('**/api/users/students', async route => {
+    await studentsPending;
+    await route.fallback();
+  });
   await page.route('**/api/users/*/reject**', route => route.fulfill({ contentType: 'application/json', body: '{}' }));
   await loginAsCoordinator(page);
   await page.getByRole('link', { name: 'Students', exact: true }).click();
 
-  await page.getByRole('checkbox', { name: /Select all .* filtered students/ }).press('Space');
+  await expect(page.getByRole('checkbox', { name: 'Select all 0 filtered students', exact: true })).toBeVisible();
+  releaseStudents();
+  const selectAll = page.getByRole('checkbox', { name: 'Select all 25 filtered students', exact: true });
+  await selectAll.press('Space');
+  await expect(selectAll).toBeChecked();
 
   await expect(page.getByText('25 selected')).toBeVisible();
   await expect(page.getByRole('button', { name: /Reject 25/ })).toBeDisabled();

@@ -446,7 +446,7 @@ test('demo rejection is recoverable and does not fall back to credential login',
 
 for (const width of [360, 390]) {
   for (const enabled of [false, true]) {
-    test(`mobile ${width} runtime ${enabled} stays within the viewport and supports keyboard`, async ({ page }) => {
+    test(`mobile ${width} runtime ${enabled} stays within the viewport and supports keyboard`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 844 });
       await runtime(page, enabled);
       await page.goto('/login');
@@ -460,7 +460,7 @@ for (const width of [360, 390]) {
         await expect(button(page)).toBeFocused();
       } else await expect(button(page)).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-      await page.screenshot({ path: `/private/tmp/talentbridge-demo-mobile-${width}-${enabled}.png`, fullPage: true });
+      await page.screenshot({ path: testInfo.outputPath(`demo-mobile-${width}-${enabled}.png`), fullPage: true });
     });
   }
 }
