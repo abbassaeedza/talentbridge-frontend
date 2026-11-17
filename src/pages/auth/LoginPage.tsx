@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, FlaskConical } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { Button } from '@heroui/react/button';
 import { Input } from '@heroui/react/input';
@@ -12,23 +13,36 @@ import { PublicShell } from '../../components/ui/TalentBridgeUI';
 import ServerStartingFeedback from '../../components/shared/ServerStartingFeedback';
 import { isAuthRejection, SERVER_RETRY_MESSAGE } from '../../utils/authErrors';
 import { invitationReturnPath } from '../../utils/accountFlows';
+import { authApi } from '../../api/services';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, demoLogin } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState<'sign-in' | 'demo' | null>(null);
   const busy = useRef(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const demoConfig = useQuery({
+    queryKey: ['auth-config'],
+    queryFn: async () => (await authApi.getConfig()).data?.demoMode === true,
+    gcTime: 0,
+    staleTime: 0,
+    retry: false,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: false,
+    refetchInterval: false,
+  });
+  const demoAvailable = demoConfig.isSuccess && !demoConfig.isFetching && demoConfig.data === true;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!email || !password || busy.current) return;
     busy.current = true;
     setErrorMessage(null);
-    setPending(true);
+    setPending('sign-in');
     try {
       if (!await login(email, password)) return;
       navigate(invitationReturnPath(window.location.search));
@@ -41,7 +55,28 @@ export default function LoginPage() {
       }
     } finally {
       busy.current = false;
-      setPending(false);
+      setPending(null);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    if (!demoAvailable || busy.current) return;
+    busy.current = true;
+    setErrorMessage(null);
+    setPending('demo');
+    try {
+      if (!await demoLogin()) return;
+      navigate('/dashboard');
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        void demoConfig.refetch();
+        setErrorMessage('The coordinator demo is no longer available. Sign in with your account.');
+      } else {
+        setErrorMessage(isAuthRejection(error) ? 'The coordinator demo is unavailable.' : SERVER_RETRY_MESSAGE);
+      }
+    } finally {
+      busy.current = false;
+      setPending(null);
     }
   };
 
@@ -92,13 +127,13 @@ export default function LoginPage() {
         </TextField>
 
         <Button type='submit' fullWidth size='lg' variant='primary' className={pending ? 'min-h-11' : undefined} isDisabled={!!pending}>
-          {pending ? (
+          {pending === 'sign-in' ? (
             <><Spinner size='sm' /> Signing in...</>
           ) : (
             <><span>Sign in</span><ArrowRight size={17} /></>
           )}
         </Button>
-        <ServerStartingFeedback pending={pending} />
+        <ServerStartingFeedback pending={!!pending || demoConfig.isFetching} />
         {errorMessage && <p role='alert' className='text-sm leading-6 text-muted'>{errorMessage}</p>}
       </form>
 
@@ -108,6 +143,34 @@ export default function LoginPage() {
           Register
         </Link>
       </p>
+
+      {demoConfig.isFetching && <p role='status' className='mt-6 text-sm text-muted'>Checking demo availability...</p>}
+      {demoConfig.isError && !demoConfig.isFetching && (
+        <div className='mt-6 space-y-2'>
+          <p role='status' className='text-sm text-muted'>Couldn't check demo availability. You can still sign in with your account.</p>
+          <Button type='button' variant='secondary' className='min-h-11' isDisabled={!!pending} onPress={() => { void demoConfig.refetch(); }}>
+            Retry demo availability
+          </Button>
+        </div>
+      )}
+
+      {demoAvailable && (
+        <>
+          <div className='my-7 flex items-center gap-3 text-xs text-muted'>
+            <span className='h-px flex-1 bg-separator' />
+            <span>Demo environment</span>
+            <span className='h-px flex-1 bg-separator' />
+          </div>
+          <Button type='button' fullWidth size='lg' variant='secondary' className='min-h-11' isDisabled={!!pending} onPress={handleDemoLogin}>
+            {pending === 'demo' ? (
+              <><Spinner size='sm' /> Opening demo...</>
+            ) : (
+              <><FlaskConical size={17} /> Open coordinator demo</>
+            )}
+          </Button>
+          <p className='mt-2 text-center text-sm text-muted'>Use the dedicated coordinator demo account, not your personal account.</p>
+        </>
+      )}
 
     </PublicShell>
   );

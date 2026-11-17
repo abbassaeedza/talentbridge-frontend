@@ -74,7 +74,7 @@ api.interceptors.response.use(
     const original = error.config;
     // A transport/server failure may happen after a write committed.
     invalidateChatContext(original);
-    const credentialEndpoint = /\/api\/auth\/(login|register|refresh)(\?|$)/.test(original?.url ?? '');
+    const credentialEndpoint = /\/api\/auth\/(login|demo-login|config|register|refresh)(\?|$)/.test(original?.url ?? '');
     if (error.response?.status === 401 && original && !original._retry && !credentialEndpoint
       && original.headers?.Authorization) {
       const sentToken = String(original.headers.Authorization).replace(/^Bearer /, '');

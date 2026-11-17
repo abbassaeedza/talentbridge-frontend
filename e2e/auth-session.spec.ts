@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/auth/config', route => route.fulfill({ json: { demoMode: false } }));
+});
+
 test('concurrent unauthorized requests share one refresh and retry with fresh credentials', async ({ page }) => {
   let refreshes = 0;
   await page.route('**/api/auth/refresh', async route => {

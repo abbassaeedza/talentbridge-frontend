@@ -69,6 +69,7 @@ async function dashboardApi(page: Page, dashboard: Dashboard) {
       return;
     }
     const values: Record<string, unknown> = {
+      '/api/auth/config': { demoMode: false },
       '/api/users/notifications': { notifications: [], unreadCount: 0 },
       '/api/parties/my': state.empty ? null : party,
       '/api/projects': state.empty ? paged([]) : { ...paged([project]), totalElements: 22 },
