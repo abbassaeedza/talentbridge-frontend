@@ -104,7 +104,11 @@ async function loginAsCoordinator(page: Page) {
 test('login desktop light', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await setTheme(page, 'light');
+  await page.route('**/api/auth/config', route => route.fulfill({ json: { demoMode: false } }));
+  const config = page.waitForResponse('**/api/auth/config');
   await page.goto('/login');
+  await (await config).finished();
+  await expect(page.getByText('Checking demo availability...', { exact: true })).toHaveCount(0);
   await expect(page).toHaveScreenshot('login-desktop-light.png', { animations: 'disabled' });
 });
 

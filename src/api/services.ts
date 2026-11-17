@@ -30,6 +30,8 @@ import type {
 
 // ── Auth ────────────────────────────────────────────────────────────
 export const authApi = {
+  getConfig: () => api.get<{ demoMode: boolean }>('/api/auth/config'),
+  demoLogin: () => api.post<AuthResponse>('/api/auth/demo-login'),
   register: (data: Record<string, unknown>) =>
     api.post<AuthResponse>('/api/auth/register', data),
   login: (email: string, password: string) =>

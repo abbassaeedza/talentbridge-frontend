@@ -30,6 +30,7 @@ interface AuthContextType {
   authError: string | null;
   retryUser: () => void;
   login: (email: string, password: string) => Promise<boolean>;
+  demoLogin: () => Promise<boolean>;
   completeExternalLogin: (data: AuthResponse) => Promise<boolean>;
   logout: () => void;
   refreshUser: () => Promise<boolean>;
@@ -259,16 +260,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return refreshUser();
   };
 
-  const login = async (email: string, password: string) => {
+  const authenticate = async (request: () => Promise<{ data: AuthResponse }>) => {
     const generation = sessionGeneration.current;
     const initialAccess = getAccessToken();
     const initialRefresh = getRefreshToken();
-    const { data } = await authApi.login(email, password);
+    const { data } = await request();
     if (sessionGeneration.current !== generation || getAccessToken() !== initialAccess
       || getRefreshToken() !== initialRefresh) return false;
     await completeLogin(data);
     return sessionGeneration.current === generation + 1;
   };
+
+  const login = (email: string, password: string) => authenticate(() => authApi.login(email, password));
+  const demoLogin = () => authenticate(authApi.demoLogin);
 
   const externalLoginGeneration = sessionGeneration.current;
   const completeExternalLogin = async (data: AuthResponse) => {
@@ -322,6 +326,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         authError,
         retryUser,
         login,
+        demoLogin,
         completeExternalLogin,
         logout,
         refreshUser,

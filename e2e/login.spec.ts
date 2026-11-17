@@ -21,14 +21,14 @@ test.beforeEach(async ({ page }) => {
   await mockCredentialLogin(page, coordinator);
 });
 
-test('requires credentials and offers no password-free demo shortcut', async ({ page }) => {
+test('requires credentials when runtime demo availability is unavailable', async ({ page }) => {
   const authRequests: string[] = [];
   page.on('request', request => {
-    if (request.url().includes('/api/auth/')) authRequests.push(request.url());
+    if (request.url().includes('/api/auth/') && request.method() === 'POST') authRequests.push(request.url());
   });
 
   await page.goto('/login');
-  await expect(page.getByRole('button', { name: /demo/i })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Open coordinator demo', exact: true })).toHaveCount(0);
   await expect(page.getByText('Demo environment', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('Email address')).toHaveValue('');
   const password = page.getByRole('textbox', { name: /^Password/ });
