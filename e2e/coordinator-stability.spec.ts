@@ -217,6 +217,95 @@ test('previews and shows a new global deadline without reloading', async ({ page
   await expect(page.getByText(/02 Jan 2031/).first()).toBeVisible();
 });
 
+test('global deadline waits for its initial setting before accepting keyboard edits', async ({ page }) => {
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  let reads = 0;
+  await mockCoordinatorApi(page, {
+    onGlobalDeadline: async route => {
+      reads += 1;
+      await pending;
+      await route.fulfill({ json: { enabled: false, deadline: openProject.deadline } });
+    },
+  });
+  await loginAsCoordinator(page);
+  await page.getByRole('link', { name: 'Projects', exact: true }).click();
+  const toggle = page.getByRole('switch', { name: 'Enable global deadline', exact: true });
+  const preview = page.getByRole('button', { name: 'Preview changes', exact: true });
+  try {
+    await expect.poll(() => reads).toBe(1);
+    await expect(toggle).toBeDisabled();
+    await expect(preview).toBeDisabled();
+    await expect(page.getByText('Global deadline is disabled', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('No deadline configured', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('status').filter({ hasText: 'Loading global deadline...' })).toBeVisible();
+    release();
+    await expect(toggle).toBeEnabled();
+    await toggle.press('Space');
+    await fillDateTime(page, 'Global deadline date and time', '2031-01-02T10:00');
+    await expect(toggle).toBeChecked();
+    await expect(preview).toBeEnabled();
+    await preview.click();
+    await expect(page.getByRole('dialog', { name: 'Confirm global deadline' })).toBeVisible();
+    await expect(toggle).toBeChecked();
+    expect(reads).toBe(1);
+  } finally { release(); }
+});
+
+test('global deadline errors disable edits and GET retry preserves draft intent', async ({ page }) => {
+  await page.clock.install();
+  let failed = true;
+  let reads = 0;
+  let writes = 0;
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  await mockCoordinatorApi(page, {
+    onGlobalDeadline: async route => {
+      if (route.request().method() !== 'GET') writes += 1;
+      reads += 1;
+      if (failed) return route.fulfill({ status: 503, json: {} });
+      await pending;
+      return route.fulfill({ json: { enabled: false, deadline: openProject.deadline } });
+    },
+  });
+  await loginAsCoordinator(page);
+  await page.getByRole('link', { name: 'Projects', exact: true }).click();
+  const toggle = page.getByRole('switch', { name: 'Enable global deadline', exact: true });
+  const preview = page.getByRole('button', { name: 'Preview changes', exact: true });
+  const retry = page.getByRole('button', { name: 'Retry global deadline', exact: true });
+  const setting = page.getByRole('region', { name: 'Global deadline', exact: true });
+  try {
+    await expect(setting.getByRole('alert')).toContainText("Couldn't load global deadline");
+    await expect(toggle).toBeDisabled();
+    await expect(preview).toBeDisabled();
+    await expect(page.getByText('Global deadline is disabled', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('No deadline configured', { exact: true })).toHaveCount(0);
+    const beforeRetry = reads;
+    failed = false;
+    await retry.click();
+    await expect.poll(() => reads).toBe(beforeRetry + 1);
+    await expect(toggle).toBeDisabled();
+    release();
+    await expect(toggle).toBeEnabled();
+    await toggle.press('Space');
+    await fillDateTime(page, 'Global deadline date and time', '2031-01-02T10:00');
+    await preview.focus();
+    failed = true;
+    await page.clock.fastForward(31_000);
+    await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')));
+    await expect(setting.getByRole('alert')).toContainText("Couldn't refresh global deadline");
+    await expect(toggle).toBeDisabled();
+    await expect(preview).toBeDisabled();
+    failed = false;
+    await retry.click();
+    await expect(toggle).toBeEnabled();
+    await expect(toggle).toBeChecked();
+    await expect(page.getByRole('group', { name: 'Global deadline date and time', exact: true }).locator('[data-type="year"]')).toHaveText('2031');
+    await expect(preview).toBeEnabled();
+    expect(writes).toBe(0);
+  } finally { release(); }
+});
+
 test('keeps project deadlines when global mode is disabled', async ({ page }) => {
   let deadline = openProject.deadline;
   let enabled = false;

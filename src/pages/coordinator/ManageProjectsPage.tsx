@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectApi } from '../../api/services';
 import { AlertTriangle, CheckCircle, XCircle, Clock, Calendar, RefreshCw, Users } from 'lucide-react';
@@ -15,6 +15,7 @@ import { Switch } from '@heroui/react/switch';
 import { Tabs } from '@heroui/react/tabs';
 import { PageHeader, StatusBadge } from '../../components/ui/TalentBridgeUI';
 import DateTimePicker from '../../components/ui/DateTimePicker';
+import QuerySection from '../../components/ui/QuerySection';
 
 type TabStatus = 'ALL' | 'PENDING_REVIEW' | 'OPEN' | 'ARCHIVED' | 'ASSIGNED';
 
@@ -47,8 +48,9 @@ export default function ManageProjectsPage() {
     queryKey: ['global-deadline'],
     queryFn: () => projectApi.getGlobalDeadline().then((response) => response.data),
   });
+  const globalDeadlineReady = globalDeadlineQuery.isSuccess && !globalDeadlineQuery.isFetching;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!globalDeadlineQuery.data) return;
     setGlobalEnabled(globalDeadlineQuery.data.enabled);
     setGlobalDeadline(globalDeadlineQuery.data.deadline ?? '');
@@ -105,6 +107,7 @@ export default function ManageProjectsPage() {
   });
 
   const reviewGlobalChange = () => {
+    if (!globalDeadlineReady) return;
     if (globalEnabled && (!globalDeadlineValid || !parseServerDateTime(globalDeadline))) return;
     if (globalEnabled) previewMutation.mutate();
     else setDeadlinePreview({
@@ -136,27 +139,29 @@ export default function ManageProjectsPage() {
               <p className='mt-1 text-xs text-muted'>Updates unfinished pending, open, and assigned projects.</p>
             </div>
           </div>
-          <Switch aria-label='Enable global deadline' isSelected={globalEnabled} onChange={setGlobalEnabled}>
+          <Switch aria-label='Enable global deadline' isSelected={globalEnabled} onChange={setGlobalEnabled} isDisabled={!globalDeadlineReady}>
             <Switch.Content>
               <Switch.Control><Switch.Thumb /></Switch.Control>
-              {globalEnabled ? 'Enabled' : 'Disabled'}
+              {!globalDeadlineReady ? (globalDeadlineQuery.isError ? 'Unavailable' : 'Loading...') : globalEnabled ? 'Enabled' : 'Disabled'}
             </Switch.Content>
           </Switch>
         </div>
         <div className='grid gap-4 p-5 lg:grid-cols-[1fr_1fr_auto] lg:items-end'>
           <div>
             <p className='text-[10px] font-bold uppercase tracking-wider text-muted'>Current setting</p>
-            <p className='mt-2 text-sm font-semibold text-foreground'>
-              {globalDeadlineQuery.data?.enabled ? 'Global deadline is enabled' : 'Global deadline is disabled'}
-            </p>
-            <p className='mt-1 text-xs text-muted'>
-              {globalDeadlineQuery.data?.deadline
-                ? formatDateTime(globalDeadlineQuery.data.deadline)
-                : 'No deadline configured'}
-            </p>
+            <QuerySection query={globalDeadlineQuery} label='Global deadline'>
+              <p className='mt-2 text-sm font-semibold text-foreground'>
+                {globalDeadlineQuery.data?.enabled ? 'Global deadline is enabled' : 'Global deadline is disabled'}
+              </p>
+              <p className='mt-1 text-xs text-muted'>
+                {globalDeadlineQuery.data?.deadline
+                  ? formatDateTime(globalDeadlineQuery.data.deadline)
+                  : 'No deadline configured'}
+              </p>
+            </QuerySection>
           </div>
-          <DateTimePicker label='Global deadline date and time' value={globalDeadline} onChange={setGlobalDeadline} onValidityChange={setGlobalDeadlineValid} isDisabled={!globalEnabled} />
-          <Button variant='primary' onPress={reviewGlobalChange} isDisabled={(globalEnabled && (!globalDeadlineValid || !parseServerDateTime(globalDeadline))) || previewMutation.isPending} className='lg:min-w-40'>
+          <DateTimePicker label='Global deadline date and time' value={globalDeadline} onChange={setGlobalDeadline} onValidityChange={setGlobalDeadlineValid} isDisabled={!globalDeadlineReady || !globalEnabled} />
+          <Button variant='primary' onPress={reviewGlobalChange} isDisabled={!globalDeadlineReady || (globalEnabled && (!globalDeadlineValid || !parseServerDateTime(globalDeadline))) || previewMutation.isPending} className='lg:min-w-40'>
             {previewMutation.isPending ? 'Loading preview...' : 'Preview changes'}
           </Button>
         </div>
@@ -183,7 +188,7 @@ export default function ManageProjectsPage() {
               </div>
             )}
             <p className='mt-4 text-xs text-muted'>{deadlinePreview.excludedFinishedCount} finished projects excluded</p>
-        </Modal.Body><Modal.Footer><Button variant='ghost' onPress={() => setDeadlinePreview(null)}>Cancel</Button><Button variant='primary' isDisabled={globalDeadlineMutation.isPending} onPress={() => globalDeadlineMutation.mutate()}>{globalDeadlineMutation.isPending && <Spinner size='sm' />}{globalDeadlineMutation.isPending ? 'Applying' : 'Confirm and apply'}</Button></Modal.Footer></>}
+        </Modal.Body><Modal.Footer><Button variant='ghost' onPress={() => setDeadlinePreview(null)}>Cancel</Button><Button variant='primary' isDisabled={!globalDeadlineReady || globalDeadlineMutation.isPending} onPress={() => globalDeadlineMutation.mutate()}>{globalDeadlineMutation.isPending && <Spinner size='sm' />}{globalDeadlineMutation.isPending ? 'Applying' : 'Confirm and apply'}</Button></Modal.Footer></>}
       </Modal.Dialog></Modal.Container></Modal.Backdrop></Modal>
 
       {/* Filter tabs */}
