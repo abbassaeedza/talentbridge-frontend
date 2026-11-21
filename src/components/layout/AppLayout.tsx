@@ -66,6 +66,7 @@ const NAV_BY_ROLE: Record<string, NavSection[]> = {
         { to: '/student/party', icon: Users, label: 'Party' },
         { to: '/student/supervisors', icon: UserCheck, label: 'Supervisors' },
         { to: '/student/submission', icon: Send, label: 'Submission' },
+        { to: '/student/questionnaires', icon: ClipboardList, label: 'Questionnaires' },
         { to: '/student/scorecard', icon: Star, label: 'Scorecard' },
       ],
     },
@@ -157,7 +158,7 @@ export default function AppLayout() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const { data: notificationData } = useQuery({
-    queryKey: ['notifications'],
+    queryKey: ['notifications', user?.role, user?.id],
     queryFn: () => userApi.getNotifications().then((response) => response.data),
     refetchInterval: 60_000,
   });
@@ -366,7 +367,13 @@ export default function AppLayout() {
                         variant='ghost'
                         key={notification.id}
                         className='h-auto w-full justify-start rounded-none border-b border-separator px-4 py-3 text-left last:border-0'
-                        onPress={() => !notification.read && markOne.mutate(notification.id)}
+                        onPress={() => {
+                          if (!notification.read) markOne.mutate(notification.id);
+                          if (user.role === 'STUDENT' && notification.referenceType === 'QUESTIONNAIRE' && notification.referenceId) {
+                            setNotificationsOpen(false);
+                            navigate(`/student/questionnaires/${encodeURIComponent(notification.referenceId)}`);
+                          }
+                        }}
                       >
                         <span className={clsx('mt-1.5 size-1.5 shrink-0 rounded-full', notification.read ? 'bg-transparent' : 'bg-accent')} />
                         <span className='min-w-0'>

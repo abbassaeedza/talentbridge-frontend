@@ -191,6 +191,8 @@ export interface Application {
 
 export interface Submission {
   id: string
+  version?: number
+  assessmentVersion?: number
   partyId?: string
   partyName?: string
   party?: { id: string; name: string }
@@ -203,6 +205,37 @@ export interface Submission {
   status: SubmissionStatus
   submittedAt?: string
   notes?: string
+}
+
+export interface QuestionnaireSourceReference {
+  path: string
+  startLine: number
+  endLine: number
+}
+
+export interface QuestionnaireSummary {
+  id: string
+  submissionId: string
+  assessmentVersion: number
+  projectTitle: string
+  state: 'GENERATING' | 'OPEN' | 'READY_FOR_EVALUATION' | 'GRADING' | 'REVIEW' | 'FINALIZED' | 'FAILED'
+  answerState: 'PENDING' | 'DRAFT' | 'COMPLETE' | 'LOCKED_COMPLETE' | 'INCOMPLETE'
+  revision: number
+  answeredCount: number
+  editable: boolean
+  opensAt: string | null
+  closesAt: string | null
+  serverNow: string
+}
+
+export interface Questionnaire extends QuestionnaireSummary {
+  savedAt: string | null
+  questions: { id: string; position: number; prompt: string; sourceReferences: QuestionnaireSourceReference[]; answer: string }[]
+}
+
+export interface QuestionnaireAnswer {
+  questionId: string
+  text: string
 }
 
 export interface StudentEvaluationScore {

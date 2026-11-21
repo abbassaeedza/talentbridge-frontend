@@ -1,4 +1,5 @@
 import api, { refreshSession } from './client';
+import type { AxiosRequestConfig } from 'axios';
 import { clearAuthTokens, getAccessToken, getRefreshToken, getJwtSessionKey } from '../utils/authTokens';
 import type {
   AuthResponse,
@@ -6,6 +7,9 @@ import type {
   Party,
   PartyRules,
   Submission,
+  Questionnaire,
+  QuestionnaireSummary,
+  QuestionnaireAnswer,
   EvaluationReport,
   Scorecard,
   PageResponse,
@@ -196,15 +200,23 @@ export const partyApi = {
 
 // ── Submissions ─────────────────────────────────────────────────────
 export const submissionApi = {
-  saveDraft: (partyId: string, formData: FormData) =>
+  saveDraft: (partyId: string, formData: FormData, options?: AxiosRequestConfig) =>
     api.post<Submission>(`/api/submissions/${partyId}/draft`, formData, {
+      ...options,
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
-  finalSubmit: (partyId: string) =>
-    api.post<Submission>(`/api/submissions/${partyId}/submit`),
-  get: (partyId: string) => api.get<Submission>(`/api/submissions/${partyId}`),
+  finalSubmit: (partyId: string, expectedVersion: number, options?: AxiosRequestConfig) =>
+    api.post<Submission>(`/api/submissions/${partyId}/submit`, { expectedVersion }, options),
+  get: (partyId: string, options?: AxiosRequestConfig) => api.get<Submission>(`/api/submissions/${partyId}`, options),
   getByProject: (projectId: string) =>
     api.get<Submission[]>(`/api/submissions/project/${projectId}`),
+};
+
+export const questionnaireApi = {
+  list: (options: AxiosRequestConfig) => api.get<QuestionnaireSummary[]>('/api/questionnaires/my', options),
+  get: (id: string, options: AxiosRequestConfig) => api.get<Questionnaire>(`/api/questionnaires/${encodeURIComponent(id)}`, options),
+  save: (id: string, expectedRevision: number, answers: QuestionnaireAnswer[], options: AxiosRequestConfig) =>
+    api.put<Questionnaire>(`/api/questionnaires/${encodeURIComponent(id)}/answers`, { expectedRevision, answers }, options),
 };
 
 // ── Evaluations ─────────────────────────────────────────────────────

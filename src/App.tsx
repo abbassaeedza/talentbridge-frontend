@@ -33,6 +33,7 @@ import ProjectDetailPage from './pages/student/ProjectDetailPage';
 import MyPartyPage from './pages/student/MyPartyPage';
 import JoinPartyPage from './pages/student/JoinPartyPage';
 import SubmissionPage from './pages/student/SubmissionPage';
+import QuestionnairesPage, { QuestionnaireDetailPage } from './pages/student/QuestionnairesPage';
 import ScorecardPage from './pages/student/ScorecardPage';
 import SupervisorsPage from './pages/student/SupervisorsPage';
 
@@ -327,6 +328,8 @@ export default function App() {
                 <Route path='/student/projects/:id' element={<ProjectDetailPage />} />
                 <Route path='/student/party' element={<MyPartyPage />} />
                 <Route path='/student/submission' element={<SubmissionPage />} />
+                <Route path='/student/questionnaires' element={<QuestionnairesPage />} />
+                <Route path='/student/questionnaires/:assignmentId' element={<QuestionnaireDetailPage />} />
                 <Route path='/student/scorecard' element={<ScorecardPage />} />
                 <Route path='/student/supervisors' element={<SupervisorsPage />} />
                 <Route path='/student/profile' element={<ProfilePage />} />
