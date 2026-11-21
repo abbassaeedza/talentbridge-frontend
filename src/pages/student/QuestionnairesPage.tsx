@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import { Link, useParams } from 'react-router-dom';
 import { Button } from '@heroui/react/button';
 import { TextArea } from '@heroui/react/textarea';
@@ -13,6 +14,7 @@ import { getAccessToken, getJwtSessionKey } from '../../utils/authTokens';
 import { formatDateTime } from '../../utils/dateTime';
 import QuerySection from '../../components/ui/QuerySection';
 import { PageHeader } from '../../components/ui/TalentBridgeUI';
+import EvaluationReportPanel from '../../components/evaluation/EvaluationReportPanel';
 
 export function QuestionnaireList() {
   const { user } = useAuth();
@@ -61,6 +63,15 @@ function QuestionnaireDetail({ id }: { id: string }) {
   });
   const draft = useQuestionnaireDraft(query.data, id);
   const server = draft.server;
+  const report = useQuery({
+    queryKey: ['questionnaire-owner-report', user?.role, user?.id, session.owner, id],
+    queryFn: ({ signal }) => questionnaireApi.report(id, { ownerSession: session.owner ?? '', signal }).then(r => r.data).catch(error => {
+      if (isAxiosError(error) && error.response?.status === 404) return null;
+      throw error;
+    }),
+    enabled: !!session.owner && user?.role === 'STUDENT' && !!server && !draft.editable && server.answerState !== 'PENDING',
+    retry: false, refetchOnWindowFocus: false,
+  });
   const closed = !!server?.closesAt && !draft.editable;
   const hours = Math.floor((draft.remaining ?? 0) / 3600_000);
   const minutes = Math.floor(((draft.remaining ?? 0) % 3600_000) / 60_000);
@@ -113,6 +124,12 @@ function QuestionnaireDetail({ id }: { id: string }) {
             })}
           </div>
         </>}
+        {!draft.editable && server.answerState !== 'PENDING' && <div className='mt-6'>
+          <QuerySection query={report} label='Finalized report'>
+            {report.data?.finalized ? <EvaluationReportPanel report={report.data} /> : <p className='text-sm text-muted'>Your report is not available until coordinator finalization. No grade has been published yet.</p>}
+          </QuerySection>
+          <Button variant='secondary' className='mt-3 min-h-11' isDisabled={report.isFetching} onPress={() => { void report.refetch(); }}>Check finalized report</Button>
+        </div>}
       </>}
     </QuerySection>
   </div>;

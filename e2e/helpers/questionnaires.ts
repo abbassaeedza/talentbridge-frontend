@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import type { Questionnaire } from '../../src/types';
 
 export const student = {
   id: 'student-id', email: 'student@example.test', firstName: 'Demo', lastName: 'Student',
@@ -6,10 +7,12 @@ export const student = {
 };
 
 export function sessionToken(subject = student.email, version = 1, expiry = Math.floor(Date.now() / 1000) + 3600) {
-  return `${Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url')}.${Buffer.from(JSON.stringify({ sub: subject, ver: version, exp: expiry })).toString('base64url')}.synthetic-signature`;
+  const encode = (value: object) => btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(value))))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({ sub: subject, ver: version, exp: expiry })}.synthetic-signature`;
 }
 
-export function assignment(overrides: Record<string, unknown> = {}) {
+export function assignment(overrides: Partial<Questionnaire> = {}): Questionnaire {
   return {
     id: 'assignment-1', submissionId: 'submission-1', assessmentVersion: 2,
     projectTitle: 'Student support platform', state: 'OPEN', answerState: 'DRAFT',

@@ -10,6 +10,10 @@ import type {
   Questionnaire,
   QuestionnaireSummary,
   QuestionnaireAnswer,
+  CoordinatorSubmission,
+  EvaluationRun,
+  QuestionnaireGenerationReview,
+  PrivateQuestionnaireReview,
   EvaluationReport,
   Scorecard,
   PageResponse,
@@ -82,7 +86,7 @@ export const userApi = {
   },
   getScorecard: (userId: string) =>
     api.get<Scorecard>(`/api/users/${userId}/scorecard`),
-  getMyScorecard: () => api.get<Scorecard>('/api/users/my/scorecard'),
+  getMyScorecard: (options?: AxiosRequestConfig) => api.get<Scorecard>('/api/users/my/scorecard', options),
   updateMyProfile: (data: ProfileUpdateRequest) =>
     api.put<User>('/api/users/me/profile', data),
   getPending: (page = 0, size = 20) =>
@@ -200,6 +204,9 @@ export const partyApi = {
 
 // ── Submissions ─────────────────────────────────────────────────────
 export const submissionApi = {
+  list: (options?: AxiosRequestConfig) => api.get<CoordinatorSubmission[]>('/api/submissions', options),
+  questionnaireReview: (id: string, options?: AxiosRequestConfig) => api.get<QuestionnaireGenerationReview>(`/api/submissions/${id}/questionnaire-review`, options),
+  retryQuestionnaire: (id: string, options?: AxiosRequestConfig) => api.post<QuestionnaireGenerationReview>(`/api/submissions/${id}/questionnaire/retry`, undefined, options),
   saveDraft: (partyId: string, formData: FormData, options?: AxiosRequestConfig) =>
     api.post<Submission>(`/api/submissions/${partyId}/draft`, formData, {
       ...options,
@@ -213,6 +220,7 @@ export const submissionApi = {
 };
 
 export const questionnaireApi = {
+  report: (id: string, options?: AxiosRequestConfig) => api.get<EvaluationReport>(`/api/questionnaires/${encodeURIComponent(id)}/report`, options),
   list: (options: AxiosRequestConfig) => api.get<QuestionnaireSummary[]>('/api/questionnaires/my', options),
   get: (id: string, options: AxiosRequestConfig) => api.get<Questionnaire>(`/api/questionnaires/${encodeURIComponent(id)}`, options),
   save: (id: string, expectedRevision: number, answers: QuestionnaireAnswer[], options: AxiosRequestConfig) =>
@@ -221,14 +229,19 @@ export const questionnaireApi = {
 
 // ── Evaluations ─────────────────────────────────────────────────────
 export const evaluationApi = {
-  trigger: (submissionId: string) =>
-    api.post<EvaluationReport>(`/api/evaluations/trigger/${submissionId}`),
-  reevaluate: (reportId: string) =>
-    api.post<EvaluationReport>(`/api/evaluations/${reportId}/reevaluate`),
-  finalize: (reportId: string) =>
-    api.put<EvaluationReport>(`/api/evaluations/${reportId}/finalize`),
-  getBySubmission: (submissionId: string) =>
-    api.get<EvaluationReport>(`/api/evaluations/submission/${submissionId}`),
+  trigger: (submissionId: string, options?: AxiosRequestConfig) =>
+    api.post<EvaluationReport | EvaluationRun>(`/api/evaluations/trigger/${submissionId}`, undefined, options),
+  reevaluate: (reportId: string, options?: AxiosRequestConfig) =>
+    api.post<EvaluationReport | EvaluationRun>(`/api/evaluations/${reportId}/reevaluate`, undefined, options),
+  finalize: (reportId: string, options?: AxiosRequestConfig) =>
+    api.put<EvaluationReport>(`/api/evaluations/${reportId}/finalize`, undefined, options),
+  getBySubmission: (submissionId: string, options?: AxiosRequestConfig) =>
+    api.get<EvaluationReport>(`/api/evaluations/submission/${submissionId}`, options),
+  run: (id: string, options?: AxiosRequestConfig) => api.get<EvaluationRun>(`/api/evaluations/runs/${id}`, options),
+  retry: (id: string, options?: AxiosRequestConfig) => api.post<EvaluationRun>(`/api/evaluations/runs/${id}/retry`, undefined, options),
+  questionnaire: (submissionId: string, options?: AxiosRequestConfig) => api.get<PrivateQuestionnaireReview>(`/api/evaluations/submission/${submissionId}/questionnaire`, options),
+  adjustMark: (submissionId: string, questionId: string, data: { mark: number; reason: string }, options?: AxiosRequestConfig) =>
+    api.put<PrivateQuestionnaireReview>(`/api/evaluations/submission/${submissionId}/questions/${questionId}/mark`, data, options),
 };
 
 // ── Chat ────────────────────────────────────────────────────────────

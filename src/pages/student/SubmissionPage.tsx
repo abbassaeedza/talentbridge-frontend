@@ -60,7 +60,7 @@ function SubmissionForm({ party }: { party: Party }) {
   });
   const report = useQuery({
     queryKey: ['eval-report', user?.role, user?.id, session.owner, saved?.id],
-    queryFn: () => evaluationApi.getBySubmission(saved!.id).then(r => r.data),
+    queryFn: ({ signal }) => evaluationApi.getBySubmission(saved!.id, { ownerSession: session.owner ?? '', signal }).then(r => r.data),
     enabled: saved?.status === 'EVALUATED', retry: false,
   });
 
