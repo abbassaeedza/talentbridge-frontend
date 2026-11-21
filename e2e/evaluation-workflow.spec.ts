@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { sessionToken } from './helpers/questionnaires';
 
 const ids = {
   party: '00000000-0000-0000-0000-000000000201',
@@ -41,6 +42,7 @@ const company = {
 };
 
 const report = {
+  assessmentVersion: 1,
   id: ids.report,
   submissionId: ids.submission,
   aiDetectionScore: 72,
@@ -77,7 +79,7 @@ async function mockLogin(page: Page, user: typeof coordinator | typeof student |
   await page.route('**/api/auth/login', route => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify({
-      accessToken: 'access-token',
+      accessToken: sessionToken(user.email),
       refreshToken: 'refresh-token',
       tokenType: 'Bearer',
       user,
@@ -98,7 +100,7 @@ async function login(page: Page, user: typeof coordinator | typeof student | typ
   await expect(page).toHaveURL(new RegExp(`/${area}/dashboard$`));
 }
 
-test('shows weighted evaluation progress and the completed coordinator report', async ({ page }) => {
+test('shows the actual legacy request state and preserves the five-weight coordinator report', async ({ page }) => {
   await mockLogin(page, coordinator);
   await page.route('**/api/users/notifications**', route => route.fulfill({
     contentType: 'application/json',
@@ -115,6 +117,14 @@ test('shows weighted evaluation progress and the completed coordinator report', 
   }));
 
   let evaluated = false;
+  await page.route('**/api/submissions', route => route.fulfill({ json: [{
+    id: ids.submission, partyId: ids.party, partyName: 'Team Catalyst', projectId: ids.project,
+    projectTitle: 'Network Health Monitor', status: evaluated ? 'EVALUATED' : 'SUBMITTED',
+    assessmentVersion: 1, version: 1, repoUrl: 'https://github.com/example/network-health-monitor',
+    repoBranch: 'main', submittedAt: new Date().toISOString(), questionnaireState: null,
+    opensAt: null, closesAt: null, runId: null, runStatus: null, reportId: evaluated ? ids.report : null,
+    finalized: false, serverNow: new Date().toISOString(),
+  }] }));
   await page.route(`**/api/submissions/${ids.party}`, route => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify({
@@ -142,10 +152,8 @@ test('shows weighted evaluation progress and the completed coordinator report', 
 
   const progress = page.getByRole('status', { name: 'Evaluation progress' });
   await expect(progress).toBeVisible();
-  await expect(progress.getByText('AI Detection')).toBeVisible();
-  await expect(progress.getByText('20%')).toHaveCount(2);
-  await expect(progress.getByText('25%')).toHaveCount(2);
-  await expect(progress.getByText('10%')).toBeVisible();
+  await expect(progress).toContainText('Waiting for the server report');
+  await expect(progress.getByText('AI Detection')).toHaveCount(0);
 
   await expect(page.getByText('AI Evaluation Report')).toBeVisible();
   await expect(page.getByText(report.overallSummary)).toBeVisible();
@@ -153,8 +161,11 @@ test('shows weighted evaluation progress and the completed coordinator report', 
     'href',
     'https://github.com/tryinnewthings505-a11y',
   );
-  await expect(progress.getByLabel('AI Detection complete')).toBeVisible();
-  await expect(progress.getByLabel('Team Collaboration complete')).toBeVisible();
+  await expect(progress).toBeHidden();
+  const panel = page.locator('.evaluation-report-panel');
+  await expect(panel.getByText('20%', { exact: true })).toHaveCount(2);
+  await expect(panel.getByText('25%', { exact: true })).toHaveCount(2);
+  await expect(panel.getByText('10%', { exact: true })).toHaveCount(1);
 
   const reevaluationRequest = page.waitForRequest(request =>
     request.url().endsWith(`/api/evaluations/${ids.report}/reevaluate`)

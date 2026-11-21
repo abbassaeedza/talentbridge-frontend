@@ -7,6 +7,7 @@ import { evaluationApi, partyApi, projectApi, submissionApi, userApi } from '../
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
 import EvaluationReportPanel from '../../components/evaluation/EvaluationReportPanel';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSessionRequests } from '../../hooks/useSessionRequests';
 import type { Application, Party, Project, Scorecard, Submission } from '../../types';
 import toast from 'react-hot-toast';
 import { Button, buttonVariants } from '@heroui/react/button';
@@ -359,7 +360,9 @@ function SubmissionPanel({ submission }: { submission: Submission }) {
 }
 
 function EvaluationPanel({ submissionId }: { submissionId: string }) {
-  const query = useQuery({ queryKey: ['supervisor-evaluation', submissionId], queryFn: () => evaluationApi.getBySubmission(submissionId).then((response) => response.data), retry: false });
+  const { user } = useAuth();
+  const session = useSessionRequests();
+  const query = useQuery({ queryKey: ['supervisor-evaluation', user?.role, user?.id, session.owner, submissionId], queryFn: ({ signal }) => evaluationApi.getBySubmission(submissionId, { ownerSession: session.owner ?? '', signal }).then((response) => response.data), retry: false });
   if (query.isLoading || !query.data) return null;
   return (
     <div className='rounded-lg border border-border bg-surface overflow-hidden'>

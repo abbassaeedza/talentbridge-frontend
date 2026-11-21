@@ -10,6 +10,12 @@ import type { AuthResponse } from '../types';
 import { isAuthRejection } from '../utils/authErrors';
 import { chatContextCache, isChatContextWrite } from '../utils/chatContextCache';
 
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    ownerSession?: string;
+  }
+}
+
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 let pendingRefresh: { token: string; promise: Promise<AxiosResponse<AuthResponse>> } | undefined;
 
@@ -61,6 +67,10 @@ export function refreshSession(refreshToken: string): Promise<AxiosResponse<Auth
 
 api.interceptors.request.use((config) => {
   const token = getAccessToken();
+  if (config.ownerSession !== undefined
+    && (!config.ownerSession || config.ownerSession !== getJwtSessionKey(token) || config.signal?.aborted)) {
+    throw new axios.CanceledError('Session changed before request');
+  }
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });

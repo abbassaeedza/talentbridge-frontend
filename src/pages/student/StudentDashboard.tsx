@@ -23,6 +23,7 @@ import { PageHeader, StatCard, StatusBadge } from '../../components/ui/TalentBri
 import QuerySection from '../../components/ui/QuerySection';
 import { defaultAvatarUrl } from '../../utils/avatar';
 import type { Scorecard } from '../../types';
+import { QuestionnaireList } from './QuestionnairesPage';
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -115,6 +116,8 @@ export default function StudentDashboard() {
           />
         </QuerySection>
       </div>
+
+      <div className='mb-5'><QuestionnaireList /></div>
 
       {/* GitHub connection */}
       <QuerySection query={currentUserQuery} label='GitHub connection'>

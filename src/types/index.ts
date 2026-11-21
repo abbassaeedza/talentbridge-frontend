@@ -191,6 +191,8 @@ export interface Application {
 
 export interface Submission {
   id: string
+  version?: number
+  assessmentVersion?: number
   partyId?: string
   partyName?: string
   party?: { id: string; name: string }
@@ -205,9 +207,116 @@ export interface Submission {
   notes?: string
 }
 
+export interface QuestionnaireSourceReference {
+  path: string
+  startLine: number
+  endLine: number
+}
+
+export interface QuestionnaireSummary {
+  id: string
+  submissionId: string
+  assessmentVersion: number
+  projectTitle: string
+  state: 'GENERATING' | 'OPEN' | 'READY_FOR_EVALUATION' | 'GRADING' | 'REVIEW' | 'FINALIZED' | 'FAILED'
+  answerState: 'PENDING' | 'DRAFT' | 'COMPLETE' | 'LOCKED_COMPLETE' | 'INCOMPLETE'
+  revision: number
+  answeredCount: number
+  editable: boolean
+  opensAt: string | null
+  closesAt: string | null
+  serverNow: string
+}
+
+export interface Questionnaire extends QuestionnaireSummary {
+  savedAt: string | null
+  questions: { id: string; position: number; prompt: string; sourceReferences: QuestionnaireSourceReference[]; answer: string }[]
+}
+
+export interface QuestionnaireAnswer {
+  questionId: string
+  text: string
+}
+
+export interface CoordinatorSubmission {
+  id: string
+  partyId: string
+  partyName: string
+  projectId: string
+  projectTitle: string
+  status: SubmissionStatus
+  assessmentVersion: number
+  version: number
+  repoUrl: string | null
+  repoBranch: string | null
+  submittedAt: string | null
+  questionnaireState: QuestionnaireSummary['state'] | null
+  opensAt: string | null
+  closesAt: string | null
+  runId: string | null
+  runStatus: EvaluationRun['status'] | null
+  reportId: string | null
+  finalized: boolean
+  serverNow: string
+}
+
+export interface EvaluationRun {
+  id: string
+  submissionId: string
+  assessmentVersion: 2
+  status: 'RUNNING' | 'REVIEW' | 'FAILED' | 'FINALIZED' | 'SUPERSEDED'
+  reportId: string | null
+  serverNow: string
+  steps: {
+    id: string; jobId: string; position: number; kind: 'REPOSITORY' | 'QUESTIONNAIRE'; questionCount: number
+    status: 'PENDING' | 'DISPATCHED' | 'RUNNING' | 'DEFERRED' | 'SUCCEEDED' | 'FAILED'
+    attempts: number; dispatchGeneration: number; nextAttemptAt: string | null; leaseUntil: string | null; errorCode: string | null
+  }[]
+}
+
+export interface QuestionnaireGenerationReview {
+  submissionId: string
+  projectTitle: string
+  state: QuestionnaireSummary['state']
+  opensAt: string | null
+  closesAt: string | null
+  serverNow: string
+  members: { assignmentId: string; studentId: string; studentName: string; questionCount: number; answeredCount: number }[]
+  jobs: {
+    id: string; retryOf: string | null; kind: 'EVIDENCE' | 'GENERATE_MEMBER' | 'EVALUATE'
+    status: EvaluationRun['steps'][number]['status']; attempts: number; dispatchGeneration: number
+    nextAttemptAt: string | null; leaseUntil: string | null; errorCode: string | null
+  }[]
+}
+
+export interface PrivateQuestion {
+  id: string
+  position: number
+  prompt: string
+  rubric: string
+  sourceReferences: QuestionnaireSourceReference[]
+  answer: string
+  aiScore: number | null
+  effectiveScore: number | null
+  feedback: string | null
+  adjustments: { questionId: string; actorId: string; previousScore: number; adjustedScore: number; reason: string; adjustedAt: string }[]
+}
+
+export interface PrivateQuestionnaireReview {
+  submissionId: string
+  state: QuestionnaireSummary['state']
+  opensAt: string
+  closesAt: string
+  serverNow: string
+  members: {
+    assignmentId: string; studentId: string; studentName: string; gradeState: 'PENDING' | 'GRADED' | 'INCOMPLETE'
+    aiScore: number | null; effectiveScore: number | null; lockedAnswerRevision: number | null; questions: PrivateQuestion[]
+  }[]
+}
+
 export interface StudentEvaluationScore {
   id: string
-  student: { id: string; firstName: string; lastName: string; email: string; githubUsername?: string }
+  student: { id: string; firstName: string; lastName: string; email: string | null; githubUsername?: string }
   totalCommits: number
   contributionPercentage: number
   individualScore: number
@@ -233,6 +342,11 @@ export interface EvaluationReport {
   studentScores: StudentEvaluationScore[]
   evaluatedAt: string
   finalized: boolean
+  assessmentVersion?: number
+  repositoryScore?: number
+  questionnaireScore?: number
+  effectiveWeights?: { authenticity: number; quality: number; functionality: number; scope: number; collaboration: number; questionnaire: number }
+  contributorCoverage?: { capturedAt: string; limit: number; truncated: boolean; commitPinned: boolean }
 }
 
 export interface Scorecard {

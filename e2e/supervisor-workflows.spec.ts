@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page, Route } from '@playwright/test';
+import { sessionToken } from './helpers/questionnaires';
 
 const ids = {
   company: '00000000-0000-0000-0000-000000000101',
@@ -143,8 +144,8 @@ const evaluation = {
   finalized: true,
 };
 
-async function mockAuthenticated(page: Page, user: typeof users.company) {
-  await page.addInitScript(() => localStorage.setItem('accessToken', 'test-access-token'));
+async function mockAuthenticated(page: Page, user: (typeof users)[keyof typeof users]) {
+  await page.addInitScript(token => localStorage.setItem('accessToken', token), sessionToken(user.email));
   await page.route('**/api/users/me', route => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify(user),

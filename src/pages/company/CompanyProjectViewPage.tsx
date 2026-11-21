@@ -9,10 +9,14 @@ import { evaluationApi, partyApi, projectApi, submissionApi } from '../../api/se
 import EvaluationReportPanel from '../../components/evaluation/EvaluationReportPanel';
 import DeadlineCountdown from '../../components/shared/DeadlineCountdown';
 import { EmptyState, StatusBadge } from '../../components/ui/TalentBridgeUI';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSessionRequests } from '../../hooks/useSessionRequests';
 
 const STATUS_LABEL: Record<string, string> = { DRAFT: 'Draft', OPEN: 'Open', PENDING_REVIEW: 'Pending review', ASSIGNED: 'Assigned', ARCHIVED: 'Rejected', CLOSED: 'Closed' };
 
 export default function CompanyProjectViewPage() {
+  const { user } = useAuth();
+  const session = useSessionRequests();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [expandedParty, setExpandedParty] = useState<string | null>(null);
@@ -21,7 +25,7 @@ export default function CompanyProjectViewPage() {
   const { data: selectedParty } = useQuery({ queryKey: ['company-application-party', expandedParty], queryFn: () => partyApi.getById(expandedParty!).then((response) => response.data), enabled: !!expandedParty });
   const { data: submissions = [] } = useQuery({ queryKey: ['company-project-submissions', id], queryFn: () => submissionApi.getByProject(id!).then((response) => response.data), enabled: !!id, retry: false });
   const submission = submissions[0];
-  const { data: evaluation } = useQuery({ queryKey: ['eval-report', submission?.id], queryFn: () => evaluationApi.getBySubmission(submission!.id).then((response) => response.data), enabled: submission?.status === 'EVALUATED', retry: false });
+  const { data: evaluation } = useQuery({ queryKey: ['eval-report', user?.role, user?.id, session.owner, submission?.id], queryFn: ({ signal }) => evaluationApi.getBySubmission(submission!.id, { ownerSession: session.owner ?? '', signal }).then((response) => response.data), enabled: submission?.status === 'EVALUATED', retry: false });
   if (isLoading) return <div className='flex min-h-64 items-center justify-center'><Spinner /></div>;
   if (!project) return <EmptyState icon={Users} title='Project not found' action={<Link to='/company/projects' className={buttonVariants({ variant: 'secondary' })}>Back to projects</Link>} />;
   const details = [['Description', project.description], ['Project scope', project.scope], ['Expected deliverables', project.deliverables], ['Evaluation criteria', project.evaluationCriteria]].filter((item) => item[1]);
